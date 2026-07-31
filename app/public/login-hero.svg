@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1080 1920" width="1080" height="1920">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#6366F1"/><stop offset="0.55" stop-color="#4338CA"/><stop offset="1" stop-color="#080D1A"/>
+    </linearGradient>
+    <linearGradient id="g2" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#A5B4FC"/><stop offset="1" stop-color="#C4B5FD"/>
+    </linearGradient>
+  </defs>
+  <rect width="1080" height="1920" fill="url(#bg)"/>
+  <circle cx="880" cy="300" r="340" fill="#FFFFFF" opacity="0.08"/>
+  <circle cx="120" cy="1500" r="420" fill="#FFFFFF" opacity="0.05"/>
+  <g fill="none" stroke="#FFFFFF" stroke-opacity="0.35" stroke-width="6" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M0 1500 V1220 h140 v280 M140 1500 V1300 h120 v200 M260 1500 V1150 h160 v350 M420 1500 V1280 h130 v220 M550 1500 V1180 h150 v320 M700 1500 V1330 h120 v170 M820 1500 V1200 h160 v300 M980 1500 V1260 h100 v240"/>
+    <path d="M290 1150 l50 -60 50 60 M580 1180 l45 -55 45 55 M860 1200 l40 -50 40 50"/>
+  </g>
+  <g transform="translate(340 560) scale(4.2)" fill="none" stroke="url(#g2)" stroke-width="5" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M20 46 L48 22 L76 46"/>
+    <path d="M28 40 V70 M68 40 V70"/>
+    <circle cx="48" cy="52" r="9"/>
+    <path d="M48 61 V80 M48 72 H58 M48 80 H55"/>
+  </g>
+  <text x="540" y="1140" text-anchor="middle" font-family="Space Grotesk, sans-serif" font-size="96" font-weight="700" fill="#FFFFFF" letter-spacing="-3">Keynest</text>
+  <text x="540" y="1215" text-anchor="middle" font-family="Inter, sans-serif" font-size="38" font-weight="500" fill="#FFFFFF" fill-opacity="0.75">Gestión de inmuebles turísticos</text>
+</svg>

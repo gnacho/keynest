@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 675" width="1200" height="675">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#FB923C"/><stop offset="1" stop-color="#B45309"/>
+    </linearGradient>
+  </defs>
+  <rect width="1200" height="675" fill="url(#bg)"/>
+  <circle cx="1020" cy="120" r="210" fill="#FFFFFF" opacity="0.10"/>
+  <circle cx="150" cy="600" r="260" fill="#FFFFFF" opacity="0.07"/>
+  <g fill="none" stroke="#FFFFFF" stroke-opacity="0.55" stroke-width="6" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M700 200 h240 a20 20 0 0 1 20 20 v200 h-280 v-200 a20 20 0 0 1 20 -20"/>
+    <path d="M700 300 h280 M820 200 v220"/>
+    <path d="M180 420 v-140 a70 70 0 0 1 140 0 v140"/>
+    <path d="M150 420 h200"/>
+    <path d="M420 420 v-90 m0 0 q-50 -10 -60 -60 m60 60 q50 -10 60 -60 m-60 20 q-30 -40 -10 -80"/>
+  </g>
+  <text x="64" y="560" font-family="Space Grotesk, sans-serif" font-size="72" font-weight="700" fill="#FFFFFF" fill-opacity="0.92" letter-spacing="-2">Estudio Ruzafa</text>
+  <text x="66" y="612" font-family="Inter, sans-serif" font-size="30" font-weight="500" fill="#FFFFFF" fill-opacity="0.7">C/ Literato Azorín 8</text>
+</svg>

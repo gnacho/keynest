@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 600" width="800" height="600">
+  <defs><linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+    <stop offset="0" stop-color="#C4B5FD"/><stop offset="1" stop-color="#7C3AED"/>
+  </linearGradient></defs>
+  <rect width="800" height="600" fill="url(#bg)"/>
+  <circle cx="660" cy="100" r="150" fill="#FFFFFF" opacity="0.10"/>
+  <g fill="none" stroke="#FFFFFF" stroke-opacity="0.6" stroke-width="7" stroke-linecap="round" stroke-linejoin="round">
+    <rect x="230" y="180" width="340" height="220" rx="16"/>
+    <path d="M230 260 h340 M330 260 v140 M470 260 v140"/>
+    <path d="M270 220 h60 M470 220 h60 M360 460 h80"/>
+  </g>
+  <text x="48" y="540" font-family="Space Grotesk, sans-serif" font-size="44" font-weight="600" fill="#FFFFFF" fill-opacity="0.9">Cocina ordenada</text>
+</svg>

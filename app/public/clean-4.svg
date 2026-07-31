@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 600" width="800" height="600">
+  <defs><linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+    <stop offset="0" stop-color="#818CF8"/><stop offset="1" stop-color="#4338CA"/>
+  </linearGradient></defs>
+  <rect width="800" height="600" fill="url(#bg)"/>
+  <circle cx="660" cy="100" r="150" fill="#FFFFFF" opacity="0.10"/>
+  <g fill="none" stroke="#FFFFFF" stroke-opacity="0.6" stroke-width="7" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M240 340 v-60 a24 24 0 0 1 24 -24 h272 a24 24 0 0 1 24 24 v60"/>
+    <path d="M220 340 a20 20 0 0 1 40 0 v40 h280 v-40 a20 20 0 0 1 40 0 v60 a20 20 0 0 1 -20 20 h-320 a20 20 0 0 1 -20 -20 z"/>
+    <path d="M280 420 v24 M520 420 v24"/>
+  </g>
+  <text x="48" y="540" font-family="Space Grotesk, sans-serif" font-size="44" font-weight="600" fill="#FFFFFF" fill-opacity="0.9">Salón aspirado</text>
+</svg>

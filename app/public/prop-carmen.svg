@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 675" width="1200" height="675">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#8B5CF6"/><stop offset="1" stop-color="#4C1D95"/>
+    </linearGradient>
+  </defs>
+  <rect width="1200" height="675" fill="url(#bg)"/>
+  <circle cx="1020" cy="120" r="210" fill="#FFFFFF" opacity="0.10"/>
+  <circle cx="150" cy="600" r="260" fill="#FFFFFF" opacity="0.07"/>
+  <g fill="none" stroke="#FFFFFF" stroke-opacity="0.55" stroke-width="6" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M660 420 V230 L860 120 L1060 230 V420"/>
+    <path d="M700 420 V260 h320 v160"/>
+    <path d="M760 420 v-60 h60 v60 M880 420 v-90 h80 v90"/>
+    <path d="M160 420 q60 -180 200 -180 M200 420 q40 -120 140 -130"/>
+    <path d="M140 420 h260"/>
+  </g>
+  <text x="64" y="560" font-family="Space Grotesk, sans-serif" font-size="72" font-weight="700" fill="#FFFFFF" fill-opacity="0.92" letter-spacing="-2">Dúplex El Carmen</text>
+  <text x="66" y="612" font-family="Inter, sans-serif" font-size="30" font-weight="500" fill="#FFFFFF" fill-opacity="0.7">C/ Caballeros 22</text>
+</svg>

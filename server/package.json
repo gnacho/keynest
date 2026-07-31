@@ -1,0 +1,23 @@
+{
+  "name": "keynest-server",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "node src/index.js",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@hono/node-server": "^1.14.0",
+    "bcryptjs": "^3.0.2",
+    "better-sqlite3": "^12.2.0",
+    "hono": "^4.8.0",
+    "zod": "^4.0.0"
+  },
+  "allowScripts": {
+    "better-sqlite3@12.11.1": true
+  },
+  "devDependencies": {
+    "vitest": "^3.2.4"
+  }
+}

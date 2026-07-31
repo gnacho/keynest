@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="es" data-theme="light">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <title>Keynest — Gestión de Inmuebles</title>
+    <meta name="description" content="Reservas, limpieza, cerraduras y rentabilidad de tus inmuebles turísticos en una sola app." />
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <link rel="icon" type="image/svg+xml" href="/logo.svg" />
+    <link rel="apple-touch-icon" href="/icon-192.png" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="theme-color" content="#F4F6FA" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#080D1A" media="(prefers-color-scheme: dark)" />
+    <meta name="theme-color" id="theme-color-meta" content="#F4F6FA" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Space+Grotesk:wght@500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <script>
+      // Anti-FOUC: aplica el tema guardado antes del primer pintado
+      (function () {
+        try {
+          var t = localStorage.getItem('keynest-theme');
+          if (t !== 'dark' && t !== 'light') {
+            t = 'light'; // default: claro
+          }
+          document.documentElement.setAttribute('data-theme', t);
+          var m = document.getElementById('theme-color-meta');
+          if (m) m.setAttribute('content', t === 'dark' ? '#080D1A' : '#F4F6FA');
+        } catch (e) {}
+      })();
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

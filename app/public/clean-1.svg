@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 600" width="800" height="600">
+  <defs><linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+    <stop offset="0" stop-color="#A78BFA"/><stop offset="1" stop-color="#6D28D9"/>
+  </linearGradient></defs>
+  <rect width="800" height="600" fill="url(#bg)"/>
+  <circle cx="660" cy="100" r="150" fill="#FFFFFF" opacity="0.10"/>
+  <g fill="none" stroke="#FFFFFF" stroke-opacity="0.6" stroke-width="7" stroke-linecap="round" stroke-linejoin="round">
+    <rect x="240" y="260" width="320" height="120" rx="24"/>
+    <path d="M300 260 v-50 a30 30 0 0 1 60 0"/>
+    <path d="M360 190 h40 M280 420 h240 M320 420 v30 M480 420 v30"/>
+  </g>
+  <text x="48" y="540" font-family="Space Grotesk, sans-serif" font-size="44" font-weight="600" fill="#FFFFFF" fill-opacity="0.9">Baño impecable</text>
+</svg>
