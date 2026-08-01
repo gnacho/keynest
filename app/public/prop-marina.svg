@@ -15,6 +15,4 @@
     <path d="M120 260 h180 M120 300 h120 M150 220 v120"/>
     <path d="M420 200 q40 -50 80 0 q40 50 80 0"/>
   </g>
-  <text x="64" y="560" font-family="Space Grotesk, sans-serif" font-size="72" font-weight="700" fill="#FFFFFF" fill-opacity="0.92" letter-spacing="-2">Ático Marina</text>
-  <text x="66" y="612" font-family="Inter, sans-serif" font-size="30" font-weight="500" fill="#FFFFFF" fill-opacity="0.7">C/ del Mar 14, Valencia</text>
 </svg>

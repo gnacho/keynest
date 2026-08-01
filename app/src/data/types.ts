@@ -185,4 +185,5 @@ export interface Notification {
   text: string;
   time: Date;
   tone: SemColor;
+  to: string;
 }

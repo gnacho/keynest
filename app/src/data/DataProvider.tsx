@@ -156,7 +156,7 @@ interface BootstrapData {
   maintenance: ApiMaintenance[];
   people: ApiPerson[];
   categories: MaintCategory[];
-  config?: { cleaningMarginDays?: number; checkInTime?: string; checkOutTime?: string; batteryThreshold?: number; autoCleaning?: boolean };
+  config?: { cleaningMarginDays?: number; checkInTime?: string; checkOutTime?: string; batteryThreshold?: number; autoCleaning?: boolean; lookaheadDays?: number };
   sync: Record<string, { ok: boolean; at: number; count?: number; error?: string }>;
 }
 
@@ -203,7 +203,7 @@ export default function DataProvider({ children }: { children: ReactNode }) {
   const users = useRef<AppUser[]>([]);
   const categories = useRef<MaintCategory[]>([]);
   const marginDays = useRef(7);
-  const settings = useRef<AppSettings>({ checkInTime: '15:00', checkOutTime: '11:00', batteryThreshold: 30, autoCleaning: true });
+  const settings = useRef<AppSettings>({ checkInTime: '15:00', checkOutTime: '11:00', batteryThreshold: 30, autoCleaning: true, lookaheadDays: 7 });
   const locks = useRef<Lock[]>([]);
   const accesses = useRef<TedeeAccess[]>([]);
   const monthlyFinance = useRef<MonthlyFinance[]>([]);
@@ -231,6 +231,7 @@ export default function DataProvider({ children }: { children: ReactNode }) {
         checkOutTime: data.config?.checkOutTime ?? '11:00',
         batteryThreshold: data.config?.batteryThreshold ?? 30,
         autoCleaning: data.config?.autoCleaning ?? true,
+        lookaheadDays: data.config?.lookaheadDays ?? 7,
       };
       syncMap.current = data.sync ?? {};
       bump();
@@ -497,6 +498,7 @@ export default function DataProvider({ children }: { children: ReactNode }) {
             text: i18n.t('notif.salidaHoy', { name: p.name }),
             time: r.checkOut,
             tone: 'orange',
+            to: '/limpieza',
           });
         }
         for (const l of locks.current.filter((x) => x.battery < 30 || !x.online)) {
@@ -507,6 +509,7 @@ export default function DataProvider({ children }: { children: ReactNode }) {
             text: i18n.t('notif.bateriaBaja', { name: p.name, pct: l.battery }),
             time: l.lastSeen,
             tone: 'rose',
+            to: '/tedee',
           });
         }
         const newest = reservations.current
@@ -520,6 +523,7 @@ export default function DataProvider({ children }: { children: ReactNode }) {
               text: i18n.t('notif.nuevaReserva', { name: p.name }),
               time: addDays(today, -1),
               tone: 'blue',
+              to: '/reservas',
             });
           }
         }

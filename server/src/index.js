@@ -229,6 +229,7 @@ guarded.get('/bootstrap', (c) => {
     checkOutTime: kvGet(db, 'set_checkout') || '11:00',
     batteryThreshold: Number(kvGet(db, 'set_battery') || 30),
     autoCleaning: kvGet(db, 'set_autoclean') !== '0',
+    lookaheadDays: Number(kvGet(db, 'set_lookahead') || 7),
   }
   return c.json({ properties, reservations, cleanings, maintenance, people, categories: JSON.parse(categories), config: { cleaningMarginDays, ...settings }, sync: syncStatus(db), demo: c.get('user').is_demo, demoEnabled: auth.demoEnabled(prodDb) })
 })
@@ -556,6 +557,7 @@ const settingsSchema = z.object({
   checkOutTime: z.string().regex(/^\d{2}:\d{2}$/).optional(),
   batteryThreshold: z.coerce.number().int().min(5).max(90).optional(),
   autoCleaning: z.boolean().optional(),
+  lookaheadDays: z.coerce.number().int().min(1).max(30).optional(),
 })
 guarded.put('/config/settings', async (c) => {
   if (c.get('user').role !== 'admin') return c.json({ error: 'solo admin' }, 403)
@@ -568,6 +570,7 @@ guarded.put('/config/settings', async (c) => {
   if (d.checkOutTime) kvSet(db, 'set_checkout', d.checkOutTime)
   if (d.batteryThreshold !== undefined) kvSet(db, 'set_battery', String(d.batteryThreshold))
   if (d.autoCleaning !== undefined) kvSet(db, 'set_autoclean', d.autoCleaning ? '1' : '0')
+  if (d.lookaheadDays !== undefined) kvSet(db, 'set_lookahead', String(d.lookaheadDays))
   return c.json({ ok: true })
 })
 
@@ -607,8 +610,11 @@ app.get('/api/t/:token', (c) => {
   const props = prodDb.prepare('SELECT * FROM properties').all()
     .map((p) => ({ id: p.id, name: p.name, address: p.address, photo: p.photo, instructions: p.instructions, checklist: JSON.parse(p.checklist || '[]') }))
   const cleanings = prodDb.prepare(
-    "SELECT * FROM cleanings WHERE status != 'archivada' AND assignee_ids LIKE ? ORDER BY date",
-  ).all(`%"${person.id}"%`)
+    `SELECT * FROM cleanings
+     WHERE status != 'archivada'
+       AND EXISTS (SELECT 1 FROM json_each(assignee_ids) WHERE value = ?)
+     ORDER BY date`,
+  ).all(person.id)
     .map((cl) => {
       if (JSON.parse(cl.checks || '[]').length === 0) {
         const prop = props.find((p) => p.id === cl.property_id)
@@ -624,7 +630,10 @@ app.post('/api/t/:token/cleanings/:id/photo', async (c) => {
   if (!person) return c.json({ error: 'enlace no válido' }, 404)
   const cl = prodDb.prepare('SELECT * FROM cleanings WHERE id = ?').get(c.req.param('id'))
   if (!cl) return c.json({ error: 'no encontrada' }, 404)
-  if (!JSON.parse(cl.assignee_ids || '[]').includes(person.id)) return c.json({ error: 'no asignada' }, 403)
+  const assigned = prodDb.prepare(
+    'SELECT 1 ok FROM json_each((SELECT assignee_ids FROM cleanings WHERE id = ?)) WHERE value = ?',
+  ).get(cl.id, person.id)
+  if (!assigned) return c.json({ error: 'no asignada' }, 403)
   const body = await c.req.parseBody().catch(() => null)
   const file = body?.photo
   if (!file || !(file instanceof File)) return c.json({ error: 'falta el fichero (campo photo)' }, 400)

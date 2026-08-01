@@ -1,6 +1,7 @@
 import { useRef, useState } from 'react';
 import { Camera, Plus, X } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import PhotoLightbox from '@/components/tareas/PhotoLightbox';
 import { cn } from '@/lib/utils';
 
 interface CleaningPhotosProps {
@@ -16,6 +17,7 @@ export default function CleaningPhotos({ photos, onUpload, onRemove }: CleaningP
   const { t } = useTranslation();
   const inputRef = useRef<HTMLInputElement>(null);
   const [busy, setBusy] = useState(false);
+  const [viewer, setViewer] = useState<number | null>(null);
 
   const pick = async (file: File | undefined) => {
     if (!file) return;
@@ -38,12 +40,16 @@ export default function CleaningPhotos({ photos, onUpload, onRemove }: CleaningP
       />
       <div className="flex flex-wrap items-center gap-2">
         {photos.map((src, i) => (
-          <span
-            key={`${src}-${i}`}
-            className="relative h-16 w-16 overflow-hidden rounded-xl border"
-            style={{ borderColor: 'var(--border)' }}
-          >
-            <img src={src} alt={t('tareas.foto', { n: i + 1 })} className="h-full w-full object-cover" />
+          <span key={`${src}-${i}`} className="relative">
+            <button
+              type="button"
+              onClick={() => setViewer(i)}
+              aria-label={t('tareas.verFoto', { n: i + 1 })}
+              className="block h-16 w-16 overflow-hidden rounded-xl border transition-transform duration-150 hover:-translate-y-0.5"
+              style={{ borderColor: 'var(--border)' }}
+            >
+              <img src={src} alt={t('tareas.foto', { n: i + 1 })} className="h-full w-full object-cover" />
+            </button>
             {onRemove && (
               <button
                 type="button"
@@ -77,6 +83,7 @@ export default function CleaningPhotos({ photos, onUpload, onRemove }: CleaningP
           )}
         </button>
       </div>
+      <PhotoLightbox photos={photos} index={viewer} onIndexChange={setViewer} />
     </div>
   );
 }

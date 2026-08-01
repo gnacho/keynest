@@ -291,6 +291,7 @@ export default function Ajustes() {
   const [checkOutTime, setCheckOutTime] = useState(() => data.getSettings().checkOutTime);
   const [autoCleaning, setAutoCleaning] = useState(() => data.getSettings().autoCleaning);
   const [batteryThreshold, setBatteryThreshold] = useState(() => [data.getSettings().batteryThreshold]);
+  const [lookaheadDays, setLookaheadDays] = useState(() => data.getSettings().lookaheadDays);
   const savePref = (patch: Parameters<typeof data.saveSettings>[0]) => {
     void data.saveSettings(patch).catch(() => toast.error(tr('aj.errorGuardar')));
   };
@@ -610,7 +611,7 @@ export default function Ajustes() {
   const editProperty = editProp ? properties.find((p) => p.id === editProp) : undefined;
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex w-full max-w-2xl flex-col gap-6 xl:max-w-4xl 2xl:max-w-5xl">
       <Toaster position="top-center" />
 
       {/* ============================== Topbar */}
@@ -1234,7 +1235,7 @@ export default function Ajustes() {
 
           {/* ================================================= TAB CATEGORÍAS */}
           {tab === 'categorias' && (
-            <div className="flex max-w-2xl flex-col gap-3">
+            <div className="flex flex-col gap-3">
               <p className="text-[13px]" style={{ color: 'var(--text-muted)' }}>
                 {tr('aj.categoriasDesc')}
               </p>
@@ -1303,7 +1304,7 @@ export default function Ajustes() {
 
           {/* ================================================= TAB PREFERENCIAS */}
           {tab === 'preferencias' && (
-            <motion.div variants={containerV} initial="hidden" animate="show" className="card max-w-2xl divide-y" style={{ borderColor: 'var(--border)' }}>
+            <motion.div variants={containerV} initial="hidden" animate="show" className="card divide-y" style={{ borderColor: 'var(--border)' }}>
               {/* Tema */}
               <motion.div variants={itemV} className="flex min-h-14 flex-wrap items-center justify-between gap-3 px-4 py-3" style={{ borderColor: 'var(--border)' }}>
                 <div>
@@ -1544,6 +1545,34 @@ export default function Ajustes() {
                   >
                     {tr('aj.guardar')}
                   </button>
+                </div>
+              </motion.div>
+
+              {/* Días de aviso en el panel */}
+              <motion.div variants={itemV} className="flex min-h-14 flex-wrap items-center justify-between gap-3 px-4 py-3" style={{ borderColor: 'var(--border)' }}>
+                <div>
+                  <p className="text-sm font-semibold">{tr('aj.diasAviso')}</p>
+                  <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
+                    {tr('aj.diasAvisoDesc')}
+                  </p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="number"
+                    min={1}
+                    max={30}
+                    value={lookaheadDays}
+                    onChange={(e) => {
+                      const v = Number(e.target.value);
+                      if (Number.isFinite(v) && v >= 1 && v <= 30) { setLookaheadDays(v); savePref({ lookaheadDays: v }); }
+                    }}
+                    className={cn(inputCls, 'h-9 w-20 text-center')}
+                    style={inputStyle}
+                    aria-label={tr('aj.diasAviso')}
+                  />
+                  <span className="text-xs" style={{ color: 'var(--text-faint)' }}>
+                    {tr('aj.dias')}
+                  </span>
                 </div>
               </motion.div>
 

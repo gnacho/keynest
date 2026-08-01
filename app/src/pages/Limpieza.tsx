@@ -79,11 +79,13 @@ export default function Limpieza() {
 
   const pendientes = all.filter((c) => c.status === 'pendiente').length;
   const enCurso = all.filter((c) => c.status === 'en-curso').length;
+  const activas = all.filter((c) => c.status !== 'archivada').length;
 
-  /* ---- Lista filtrada + orden: activas primero, archivadas colapsadas al final ---- */
+  /* ---- Lista filtrada + orden: activas primero, archivadas solo si se piden ---- */
   const filtered = useMemo(() => {
     const list = all.filter((c) => {
       if (inmueble !== 'todos' && data.getProperty(c.propertyId)?.slug !== inmueble) return false;
+      if (estado === 'todos' && c.status === 'archivada') return false;
       if (estado !== 'todos' && c.status !== (estado as CleaningStatus)) return false;
       return true;
     });
@@ -107,7 +109,7 @@ export default function Limpieza() {
             {t('limp.titulo')}
           </h1>
           <p className="mt-0.5 text-[13px]" style={{ color: 'var(--text-muted)' }}>
-            {t('limp.tareas', { count: all.length })} · {t('limp.pendientes', { count: pendientes })} · {t('limp.enCurso', { count: enCurso })}
+            {t('limp.tareas', { count: activas })} · {t('limp.pendientes', { count: pendientes })} · {t('limp.enCurso', { count: enCurso })}
           </p>
         </div>
         <button

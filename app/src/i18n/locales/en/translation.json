@@ -43,7 +43,8 @@
     "si": "Yes",
     "no": "No",
     "entrada": "Check-in",
-    "salida": "Check-out"
+    "salida": "Check-out",
+    "manana": "Tomorrow"
   },
   "dash": {
     "saludoDia": "Good morning",
@@ -87,7 +88,19 @@
     "salidaHoy": "Check-out today {{time}}",
     "salidaEl": "Check-out {{date}}",
     "limpiezaSinAsignar": "Cleaning unassigned",
-    "hoy": "today"
+    "hoy": "today",
+    "entradasPeriodo": "Check-ins · next {{days}} days",
+    "salidasPeriodo": "Check-outs · next {{days}} days",
+    "limpiezasPeriodo": "Cleanings · next {{days}} days",
+    "ingresosPrevistosMes": "Expected income this month",
+    "reservasMes_one": "{{count}} reservation this month",
+    "reservasMes_other": "{{count}} reservations this month",
+    "ocupacionMes": "Occupancy this month",
+    "noches_one": "{{count}} night",
+    "noches_other": "{{count}} nights",
+    "reservasProximas": "Upcoming reservations",
+    "reparacionesAbiertas": "Open repairs",
+    "sinAccesos": "No recorded accesses"
   },
   "cal": {
     "titulo": "Calendar",
@@ -438,6 +451,12 @@
     "confirmarArchivar": "Confirm & archive · {{total}}",
     "productosLimpieza": "Cleaning supplies — {{name}}",
     "foto": "Photo {{n}}",
+    "verFoto": "View photo {{n}}",
+    "visorFotos": "Photo viewer",
+    "cerrarVisor": "Close viewer",
+    "fotoAnterior": "Previous photo",
+    "fotoSiguiente": "Next photo",
+    "fotoDe": "{{current}} of {{total}}",
     "anadirFotoReal": "Add photo",
     "editar": "Edit",
     "reabrir": "Reopen",
@@ -628,7 +647,9 @@
     "actualizarAhora": "Update now",
     "actualizando": "Updating…",
     "actualizadoOk": "Updated — the service is restarting, reload in a few seconds",
-    "errorActualizar": "Could not check/apply the update"
+    "errorActualizar": "Could not check/apply the update",
+    "diasAviso": "Lookahead days on dashboard",
+    "diasAvisoDesc": "How far ahead the dashboard shows check-ins, check-outs and pending cleanings"
   },
   "common2": {
     "confirmar": "Confirm",
@@ -643,5 +664,10 @@
     "adultos_other": "{{count}} adults",
     "ninos_one": "{{count}} child",
     "ninos_other": "{{count}} children"
+  },
+  "notif": {
+    "salidaHoy": "Check-out today · {{name}}",
+    "bateriaBaja": "Lock at {{name}}: battery at {{pct}}%",
+    "nuevaReserva": "New reservation at {{name}}"
   }
 }

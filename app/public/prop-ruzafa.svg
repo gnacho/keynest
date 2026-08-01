@@ -14,6 +14,4 @@
     <path d="M150 420 h200"/>
     <path d="M420 420 v-90 m0 0 q-50 -10 -60 -60 m60 60 q50 -10 60 -60 m-60 20 q-30 -40 -10 -80"/>
   </g>
-  <text x="64" y="560" font-family="Space Grotesk, sans-serif" font-size="72" font-weight="700" fill="#FFFFFF" fill-opacity="0.92" letter-spacing="-2">Estudio Ruzafa</text>
-  <text x="66" y="612" font-family="Inter, sans-serif" font-size="30" font-weight="500" fill="#FFFFFF" fill-opacity="0.7">C/ Literato Azorín 8</text>
 </svg>

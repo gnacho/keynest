@@ -14,6 +14,4 @@
     <path d="M180 420 v-160 h200 v160 M180 340 h200 M280 260 v160"/>
     <path d="M140 420 h920"/>
   </g>
-  <text x="64" y="560" font-family="Space Grotesk, sans-serif" font-size="72" font-weight="700" fill="#FFFFFF" fill-opacity="0.92" letter-spacing="-2">Apartamento Malvarrosa</text>
-  <text x="66" y="612" font-family="Inter, sans-serif" font-size="30" font-weight="500" fill="#FFFFFF" fill-opacity="0.7">Av. de la Malvarrosa 57</text>
 </svg>

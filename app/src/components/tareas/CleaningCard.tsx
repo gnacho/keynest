@@ -4,6 +4,7 @@ import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 import type { Variants } from 'framer-motion';
 import { Check, ChevronDown, Phone, Sparkles, X } from 'lucide-react';
 import CleaningPhotos from '@/components/tareas/CleaningPhotos';
+import PhotoLightbox from '@/components/tareas/PhotoLightbox';
 import PersonAvatar from '@/components/PersonAvatar';
 import PropertyAvatar from '@/components/PropertyAvatar';
 import StatusBadge from '@/components/StatusBadge';
@@ -62,6 +63,7 @@ export default function CleaningCard({ cleaning: c, variants, highlight = false,
   const [photos, setPhotos] = useState<string[]>(() => [...c.photos]);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [expanded, setExpanded] = useState(false);
+  const [photoViewer, setPhotoViewer] = useState<number | null>(null);
 
   const done = c.checks.filter((k) => k.done).length;
   const total = c.checks.length;
@@ -187,16 +189,16 @@ export default function CleaningCard({ cleaning: c, variants, highlight = false,
                   <div>
                     <div className="flex flex-wrap gap-2">
                       {photos.map((src, i) => (
-                        <a
+                        <button
                           key={`${src}-${i}`}
-                          href={src}
-                          target="_blank"
-                          rel="noreferrer"
+                          type="button"
+                          onClick={() => setPhotoViewer(i)}
+                          aria-label={t('tareas.verFoto', { n: i + 1 })}
                           className="block h-16 w-16 overflow-hidden rounded-xl border transition-transform duration-150 hover:-translate-y-0.5"
                           style={{ borderColor: 'var(--border)' }}
                         >
                           <img src={src} alt={t('tareas.foto', { n: i + 1 })} className="h-full w-full object-cover" loading="lazy" />
-                        </a>
+                        </button>
                       ))}
                     </div>
                     <p className="mt-1.5 text-[11px]" style={{ color: 'var(--text-faint)' }}>
@@ -208,6 +210,8 @@ export default function CleaningCard({ cleaning: c, variants, highlight = false,
             </motion.div>
           )}
         </AnimatePresence>
+
+        <PhotoLightbox photos={photos} index={photoViewer} onIndexChange={setPhotoViewer} />
 
         <ConfirmCleaningDialog
           open={editOpen}

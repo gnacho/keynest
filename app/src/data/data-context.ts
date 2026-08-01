@@ -40,6 +40,7 @@ export interface AppSettings {
   checkOutTime: string;
   batteryThreshold: number;
   autoCleaning: boolean;
+  lookaheadDays: number;
 }
 
 export interface PersonInput {

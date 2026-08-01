@@ -1,7 +1,7 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { animate, motion, useReducedMotion } from 'framer-motion';
+import { motion } from 'framer-motion';
 import type { Variants } from 'framer-motion';
 import {
   ArrowRight,
@@ -9,34 +9,27 @@ import {
   Bell,
   CalendarCheck2,
   Euro,
-  KeyRound,
   LogIn,
   LogOut,
-  Smartphone,
   Sparkles,
   Users,
 } from 'lucide-react';
-import { Bar, BarChart, ResponsiveContainer, Tooltip, XAxis } from 'recharts';
 import KpiCard from '@/components/KpiCard';
-import PropertyRow from '@/components/PropertyRow';
+import PropertyCard from '@/components/PropertyCard';
 import PropertyAvatar from '@/components/PropertyAvatar';
-import PersonAvatar from '@/components/PersonAvatar';
 import StatusBadge from '@/components/StatusBadge';
 import EmptyState from '@/components/EmptyState';
-import MoneyText from '@/components/MoneyText';
-import { ChartTooltip } from '@/components/ChartCard';
-import HoursStepper from '@/components/tareas/HoursStepper';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
+import { addDays, startOfDay } from 'date-fns';
 import { useTranslation } from 'react-i18next';
 import { useData } from '@/data/useData';
 import { cachedUser } from '@/lib/auth';
-import type { Cleaning, Reservation } from '@/data/types';
+import type { Property, Reservation } from '@/data/types';
 import {
   capitalize,
   fmtDateFull,
   fmtDateShort,
-  fmtMonth,
   fmtNumber,
   fmtPct,
   fmtRelative,
@@ -62,17 +55,33 @@ const rowV: Variants = {
   show: { transition: { staggerChildren: 0.05 } },
 };
 
-/* ------------------------------------------------- Count-up para cifras sueltas */
-function CountUp({ value, format, className }: { value: number; format: (v: number) => string; className?: string }) {
-  const reduce = useReducedMotion();
-  const [animated, setAnimated] = useState(0);
-  useEffect(() => {
-    if (reduce) return; // valor final directo, sin count-up
-    const c = animate(0, value, { duration: 0.9, ease: EASE_OUT_QUART, onUpdate: setAnimated });
-    return () => c.stop();
-  }, [value, reduce]);
-  const display = reduce ? value : animated;
-  return <span className={cn('tnum', className)}>{format(display)}</span>;
+/** Ingresos prorrateados por noche a partir de las reservas (mismo criterio que Rentabilidad). */
+function proratedIncome(reservations: Reservation[], propertyId: string | null, month: number, year: number): number {
+  let total = 0;
+  for (const r of reservations) {
+    if (propertyId && r.propertyId !== propertyId) continue;
+    const nights = Math.round((startOfDay(r.checkOut).getTime() - startOfDay(r.checkIn).getTime()) / 86400000);
+    if (nights <= 0) continue;
+    const perNight = r.amount / nights;
+    for (let n = 0; n < nights; n++) {
+      const d = addDays(startOfDay(r.checkIn), n);
+      if (d.getMonth() === month && d.getFullYear() === year) total += perNight;
+    }
+  }
+  return total;
+}
+
+function occupiedNightsMonth(reservations: Reservation[], propertyId: string, month: number, year: number): number {
+  let total = 0;
+  for (const r of reservations) {
+    if (r.propertyId !== propertyId) continue;
+    const nights = Math.round((startOfDay(r.checkOut).getTime() - startOfDay(r.checkIn).getTime()) / 86400000);
+    for (let n = 0; n < nights; n++) {
+      const d = addDays(startOfDay(r.checkIn), n);
+      if (d.getMonth() === month && d.getFullYear() === year) total++;
+    }
+  }
+  return total;
 }
 
 /* -------------------------------------- Carrusel scroll-snap con indicadores */
@@ -124,16 +133,11 @@ function Carousel({ children, itemClassName }: { children: ReactNode[]; itemClas
 export default function Dashboard() {
   const { t } = useTranslation();
   const navigate = useNavigate();
-  const reduce = useReducedMotion();
   const data = useData();
   const [notifOpen, setNotifOpen] = useState(false);
-  const [assignTarget, setAssignTarget] = useState<Cleaning | null>(null);
-  const [sheetHours, setSheetHours] = useState(2);
+  const [statsProp, setStatsProp] = useState<Property | null>(null);
 
   // Al abrir el sheet de asignación: previsión por defecto 2 h (o la ya guardada)
-  useEffect(() => {
-    if (assignTarget) setSheetHours(assignTarget.estimatedHours ?? 2);
-  }, [assignTarget]);
 
   const now = new Date();
   const today = now;
@@ -144,9 +148,8 @@ export default function Dashboard() {
   const properties = data.getProperties();
   const reservations = data.getReservations();
   const cleanings = data.getCleanings();
-  const accesses = data.getTedeeAccess();
-  const locks = data.getLocks();
-  const finance = data.getMonthlyFinance();
+  const maintenance = data.getMaintenance();
+  const tedeeAccess = data.getTedeeAccess();
   const notifications = data.getNotifications();
 
   /* ---- KPIs computados ---- */
@@ -165,30 +168,34 @@ export default function Dashboard() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [data.version]);
 
-  const checkInsToday = reservations.filter((r) => isSameDay(r.checkIn, today) && r.status !== 'completada');
-  const checkInsTomorrow = reservations.filter((r) => {
-    const t = new Date(today);
-    t.setDate(t.getDate() + 1);
-    return isSameDay(r.checkIn, t);
-  });
-  const checkOutsToday = reservations.filter((r) => isSameDay(r.checkOut, today) && r.status !== 'completada');
-  const cleaningsToday = cleanings.filter((c) => isSameDay(c.date, today));
-  const pendingCleanings = data.getPendingCleanings();
-  const unassigned = data.getUnassignedCleanings();
+  const lookaheadDays = data.getSettings().lookaheadDays;
+  const dayStartTs = (d: Date) => new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
+  const todayTs = dayStartTs(today);
+  const windowEndTs = todayTs + lookaheadDays * 86400000;
+  const inWindow = (d: Date) => { const t = dayStartTs(d); return t >= todayTs && t <= windowEndTs; };
+  const dayDiff = (d: Date) => Math.round((dayStartTs(d) - todayTs) / 86400000);
+  const checkInsNext = reservations
+    .filter((r) => r.status !== 'completada' && inWindow(r.checkIn))
+    .sort((a, b) => a.checkIn.getTime() - b.checkIn.getTime());
+  const checkOutsNext = reservations
+    .filter((r) => r.status !== 'completada' && inWindow(r.checkOut))
+    .sort((a, b) => a.checkOut.getTime() - b.checkOut.getTime());
+  const checkInsToday = checkInsNext.filter((r) => isSameDay(r.checkIn, today));
+  const cleaningsNext = cleanings.filter((c) => c.status !== 'archivada' && inWindow(c.date));
+  const pendingCleanings = data.getPendingCleanings().filter((c) => inWindow(c.date));
+  const unassigned = pendingCleanings.filter((c) => c.assigneeIds.length === 0);
 
-  const thisMonth = finance[finance.length - 1] ?? { income: 0, expenses: 0 };
-  const prevMonth = finance[finance.length - 2];
-  const incomeDelta = prevMonth && prevMonth.income > 0 ? ((thisMonth.income - prevMonth.income) / prevMonth.income) * 100 : undefined;
-  const netThis = thisMonth.income - thisMonth.expenses;
-  const netPrev = prevMonth ? prevMonth.income - prevMonth.expenses : 0;
-  const netDelta = netPrev !== 0 ? ((netThis - netPrev) / Math.abs(netPrev)) * 100 : undefined;
+  const monthNow = today.getMonth();
+  const yearNow = today.getFullYear();
+  const expectedMonthIncome = proratedIncome(reservations, null, monthNow, yearNow);
+  const monthReservations = reservations.filter(
+    (r) => (r.checkIn.getMonth() === monthNow && r.checkIn.getFullYear() === yearNow)
+      || (r.checkOut.getMonth() === monthNow && r.checkOut.getFullYear() === yearNow),
+  ).length;
 
   const nextCheckInTime = checkInsToday
     .map((r) => r.checkIn)
     .sort((a, b) => a.getTime() - b.getTime())[0];
-
-  const recentAccesses = accesses.slice(0, 5);
-  const problemLock = locks.find((l) => !l.online) ?? locks.find((l) => l.battery < 30);
 
   const cleaningForReservation = (r: Reservation) =>
     cleanings.find((c) => c.reservationId === r.id);
@@ -219,6 +226,17 @@ export default function Dashboard() {
           )}
         </span>
         <span className="flex flex-col items-end gap-1">
+          {(() => {
+            const dd = dayDiff(kind === 'in' ? r.checkIn : r.checkOut);
+            return (
+              <span
+                className="text-[11px] font-bold uppercase tracking-wide"
+                style={{ color: dd === 0 ? '#F43F5E' : dd === 1 ? '#F97316' : 'var(--text-faint)' }}
+              >
+                {dd === 0 ? t('dash.hoy') : dd === 1 ? t('common.manana') : fmtDateShort(kind === 'in' ? r.checkIn : r.checkOut)}
+              </span>
+            );
+          })()}
           <StatusBadge
             label={`${kind === 'in' ? t('common.entrada') : t('common.salida')} ${fmtTime(kind === 'in' ? r.checkIn : r.checkOut)}`}
             tone={kind === 'in' ? 'emerald' : 'orange'}
@@ -267,7 +285,12 @@ export default function Dashboard() {
                 Notificaciones
               </p>
               {notifications.map((n) => (
-                <div key={n.id} className="flex items-start gap-2.5 rounded-xl px-2 py-2 hover:bg-[var(--surface-2)]">
+                <button
+                  key={n.id}
+                  type="button"
+                  onClick={() => navigate(n.to)}
+                  className="flex w-full items-start gap-2.5 rounded-xl px-2 py-2 text-left transition-colors hover:bg-[var(--surface-2)]"
+                >
                   <span
                     className="mt-1.5 h-2 w-2 shrink-0 rounded-full"
                     style={{ backgroundColor: { orange: '#F97316', rose: '#F43F5E', blue: '#3B82F6', emerald: '#10B981', slate: '#64748B', violet: '#8B5CF6', indigo: '#6366F1' }[n.tone] }}
@@ -278,7 +301,7 @@ export default function Dashboard() {
                       {fmtRelative(n.time)}
                     </p>
                   </div>
-                </div>
+                </button>
               ))}
             </PopoverContent>
           </Popover>
@@ -293,16 +316,16 @@ export default function Dashboard() {
               <KpiCard icon={BedDouble} tone="blue" label={t('dash.ocupacionActual')} value={occupancyPct} unit="%" spark={spark14} sparkColor="#3B82F6" to="/calendario" className="h-full" />
             </motion.div>,
             <motion.div variants={itemV} key="k2" className="h-full">
-              <KpiCard icon={LogIn} tone="emerald" label={t('dash.entradasHoy')} value={checkInsToday.length} sub={nextCheckInTime ? t('dash.proximaLas', { time: fmtTime(nextCheckInTime) }) : t('dash.sinEntradas')} to="/reservas" className="h-full" />
+              <KpiCard icon={LogIn} tone="emerald" label={t('dash.entradasPeriodo', { days: lookaheadDays })} value={checkInsNext.length} sub={nextCheckInTime ? t('dash.proximaLas', { time: fmtTime(nextCheckInTime) }) : t('dash.sinEntradas')} to="/reservas" className="h-full" />
             </motion.div>,
             <motion.div variants={itemV} key="k3" className="h-full">
-              <KpiCard icon={LogOut} tone="orange" label={t('dash.salidasHoy')} value={checkOutsToday.length} sub={t('dash.limpiezasGeneradas', { count: cleaningsToday.length })} to="/limpieza" className="h-full" />
+              <KpiCard icon={LogOut} tone="orange" label={t('dash.salidasPeriodo', { days: lookaheadDays })} value={checkOutsNext.length} sub={t('dash.limpiezasGeneradas', { count: cleaningsNext.length })} to="/limpieza" className="h-full" />
             </motion.div>,
             <motion.div variants={itemV} key="k4" className="h-full">
-              <KpiCard icon={Sparkles} tone="violet" label={t('dash.limpiezasPendientes')} value={pendingCleanings.length} sub={t('dash.sinAsignar', { count: unassigned.length })} to="/limpieza" className="h-full" />
+              <KpiCard icon={Sparkles} tone="violet" label={t('dash.limpiezasPeriodo', { days: lookaheadDays })} value={pendingCleanings.length} sub={t('dash.sinAsignar', { count: unassigned.length })} to="/limpieza" className="h-full" />
             </motion.div>,
             <motion.div variants={itemV} key="k5" className="h-full">
-              <KpiCard icon={Euro} tone="emerald" label={t('dash.ingresosMes')} value={thisMonth.income} unit="€" money deltaPct={incomeDelta} sub={t('dash.vsMesAnterior')} to="/rentabilidad" className="h-full" />
+              <KpiCard icon={Euro} tone="emerald" label={t('dash.ingresosPrevistosMes')} value={expectedMonthIncome} unit="€" money sub={t('dash.reservasMes', { count: monthReservations })} to="/rentabilidad" className="h-full" />
             </motion.div>,
           ]}
         </Carousel>
@@ -320,11 +343,11 @@ export default function Dashboard() {
           <div className="h-[3px] w-full bg-emerald-500" />
           <div className="p-4">
             <h2 className="mb-2 font-display text-[17px] font-semibold">{t('dash.entradas')}</h2>
-            {checkInsToday.length + checkInsTomorrow.length === 0 ? (
+            {checkInsNext.length === 0 ? (
               <EmptyState icon={CalendarCheck2} title={t('dash.sinMovimientos')} text={t('dash.sinEntradasTxt')} />
             ) : (
               <motion.div variants={rowV} className="flex flex-col">
-                {[...checkInsToday, ...checkInsTomorrow].map((r) => movementRow(r, 'in'))}
+                {checkInsNext.map((r) => movementRow(r, 'in'))}
               </motion.div>
             )}
           </div>
@@ -333,202 +356,18 @@ export default function Dashboard() {
           <div className="h-[3px] w-full bg-orange-500" />
           <div className="p-4">
             <h2 className="mb-2 font-display text-[17px] font-semibold">{t('dash.salidas')}</h2>
-            {checkOutsToday.length === 0 ? (
+            {checkOutsNext.length === 0 ? (
               <EmptyState icon={CalendarCheck2} title={t('dash.sinMovimientos')} text={t('dash.sinSalidasTxt')} />
             ) : (
               <motion.div variants={rowV} className="flex flex-col">
-                {checkOutsToday.map((r) => movementRow(r, 'out'))}
+                {checkOutsNext.map((r) => movementRow(r, 'out'))}
               </motion.div>
             )}
           </div>
         </motion.div>
       </motion.section>
 
-      {/* ============================== Sección 3 — Limpiezas pendientes */}
-      <motion.section
-        variants={itemV}
-        initial="hidden"
-        whileInView="show"
-        viewport={{ once: true, margin: '-80px' }}
-        className="rounded-2xl border p-4 sm:p-5"
-        style={{ backgroundColor: 'rgb(139 92 246 / 0.08)', borderColor: 'rgb(139 92 246 / 0.25)' }}
-      >
-        <div className="mb-3 flex items-center justify-between gap-2">
-          <div className="flex items-center gap-2.5">
-            <h2 className="font-display text-[17px] font-semibold">{t('dash.limpiezasPendientes')}</h2>
-            <StatusBadge label={String(pendingCleanings.length)} tone="violet" />
-          </div>
-          <Link to="/limpieza" className="flex items-center gap-1 text-[13px] font-semibold text-violet-500 hover:underline">
-            {t('dash.verLimpieza')} <ArrowRight className="h-3.5 w-3.5" />
-          </Link>
-        </div>
-        <motion.div variants={rowV} className="flex flex-col gap-1">
-          {pendingCleanings.map((c) => {
-            const p = data.getProperty(c.propertyId)!;
-            const person = c.assigneeIds.length > 0 ? data.getPerson(c.assigneeIds[0]) : undefined;
-            const isToday = isSameDay(c.date, today);
-            return (
-              <motion.div key={c.id} variants={itemV} className="flex items-center gap-3 rounded-xl px-2 py-2">
-                <span className="flex h-8 w-8 items-center justify-center rounded-xl" style={{ backgroundColor: 'var(--vi-chip-bg)' }}>
-                  <Sparkles className="h-4 w-4 text-violet-500" />
-                </span>
-                <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-semibold">{p.name}</p>
-                  <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
-                    {isToday ? t('dash.salidaHoy', { time: fmtTime(c.date) }) : t('dash.salidaEl', { date: fmtDateShort(c.date) })}
-                  </p>
-                </div>
-                {person ? (
-                  <span className="flex items-center gap-2">
-                    <PersonAvatar name={person.name} initials={person.initials} size={28} />
-                    <span className="hidden text-xs font-medium sm:block" style={{ color: 'var(--text-muted)' }}>
-                      {person.name}
-                    </span>
-                  </span>
-                ) : (
-                  <button
-                    type="button"
-                    onClick={() => setAssignTarget(c)}
-                    className={cn(
-                      'rounded-full border border-dashed border-violet-400 px-3 py-1 text-xs font-semibold text-violet-500',
-                      !reduce && 'animate-ring-pulse',
-                    )}
-                  >
-                    Asignar
-                  </button>
-                )}
-              </motion.div>
-            );
-          })}
-        </motion.div>
-      </motion.section>
-
-      {/* ============================== Sección 4 — Accesos Tedee */}
-      <motion.section
-        variants={itemV}
-        initial="hidden"
-        whileInView="show"
-        viewport={{ once: true, margin: '-80px' }}
-        className="card p-4 sm:p-5"
-      >
-        <div className="mb-3 flex items-center justify-between gap-2">
-          <h2 className="font-display text-[17px] font-semibold">{t('dash.accesosRecientes')}</h2>
-          <Link to="/tedee" className="flex items-center gap-1 text-[13px] font-semibold text-[#6366F1] hover:underline">
-            {t('dash.verTedee')} <ArrowRight className="h-3.5 w-3.5" />
-          </Link>
-        </div>
-        {problemLock && (
-          <div
-            className="mb-3 flex items-center gap-2 rounded-xl px-3 py-2 text-xs font-medium"
-            style={
-              problemLock.battery < 30
-                ? { backgroundColor: 'var(--ro-chip-bg)', color: 'var(--ro-chip-text)' }
-                : { backgroundColor: '#FEF3C7', color: '#92400E' }
-            }
-          >
-            <span className="h-1.5 w-1.5 rounded-full bg-current" />
-            {data.getProperty(problemLock.propertyId)!.name}{' '}
-            {problemLock.online ? t('dash.bateriaAl', { pct: problemLock.battery }) : t('dash.offlineDesde', { time: fmtRelative(problemLock.lastSeen) })}
-          </div>
-        )}
-        <motion.div variants={rowV} className="flex flex-col">
-          {recentAccesses.map((a) => {
-            const p = data.getProperty(a.propertyId)!;
-            const lock = locks.find((l) => l.id === a.lockId)!;
-            const Icon = a.type === 'remota' ? Smartphone : KeyRound;
-            const color = a.type === 'entrada' ? '#10B981' : a.type === 'salida' ? '#F97316' : '#3B82F6';
-            const bg = a.type === 'entrada' ? 'var(--em-chip-bg)' : a.type === 'salida' ? 'var(--or-chip-bg)' : 'var(--bl-chip-bg)';
-            return (
-              <motion.div key={a.id} variants={itemV} className="flex items-center gap-3 rounded-xl px-2 py-2">
-                <span className="flex h-8 w-8 items-center justify-center rounded-xl" style={{ backgroundColor: bg }}>
-                  <Icon className="h-4 w-4" style={{ color }} />
-                </span>
-                <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-medium">
-                    {t('dash.abrio', { actor: a.actorName, name: p.name })}
-                  </p>
-                  <p className="text-xs" style={{ color: 'var(--text-faint)' }}>
-                    {fmtRelative(a.at)}
-                  </p>
-                </div>
-                <span
-                  className={cn('h-2 w-2 rounded-full', lock.online ? 'bg-emerald-500' : 'border border-slate-400 bg-slate-400/40', lock.online && !reduce && 'animate-dot-pulse')}
-                  title={lock.online ? 'Online' : 'Offline'}
-                />
-              </motion.div>
-            );
-          })}
-        </motion.div>
-      </motion.section>
-
-      {/* ============================== Sección 5 — Rentabilidad rápida */}
-      <motion.section
-        variants={itemV}
-        initial="hidden"
-        whileInView="show"
-        viewport={{ once: true, margin: '-80px' }}
-      >
-        <button
-          type="button"
-          onClick={() => navigate('/rentabilidad')}
-          className="card grid w-full gap-4 p-4 text-left transition-transform duration-150 hover:-translate-y-0.5 sm:p-5 lg:grid-cols-2"
-        >
-          <div className="flex flex-col gap-3">
-            <h2 className="font-display text-[17px] font-semibold">
-              {t('dash.rentabilidadDe', { month: fmtMonth(today) })}
-            </h2>
-            <div className="flex flex-wrap items-end gap-x-6 gap-y-2">
-              <div>
-                <p className="text-[11px] font-semibold uppercase tracking-[0.08em]" style={{ color: 'var(--text-faint)' }}>
-                  {t('dash.ingresos')}
-                </p>
-                <CountUp
-                  value={thisMonth.income}
-                  format={(v) => `${fmtNumber(v)} €`}
-                  className="font-display text-2xl font-semibold text-emerald-500"
-                />
-              </div>
-              <div>
-                <p className="text-[11px] font-semibold uppercase tracking-[0.08em]" style={{ color: 'var(--text-faint)' }}>
-                  {t('dash.gastos')}
-                </p>
-                <CountUp
-                  value={thisMonth.expenses}
-                  format={(v) => `${fmtNumber(v)} €`}
-                  className="font-display text-2xl font-semibold text-rose-500"
-                />
-              </div>
-              <div>
-                <p className="text-[11px] font-semibold uppercase tracking-[0.08em]" style={{ color: 'var(--text-faint)' }}>
-                  {t('dash.neto')}
-                </p>
-                <CountUp
-                  value={Math.abs(netThis)}
-                  format={(v) => `${fmtNumber(v)} €`}
-                  className={cn('font-display text-[28px] font-bold', netThis >= 0 ? 'text-emerald-500' : 'text-rose-500')}
-                />
-              </div>
-            </div>
-            {netDelta !== undefined && (
-              <p className="text-xs font-semibold" style={{ color: netDelta >= 0 ? '#10B981' : '#F43F5E' }}>
-                {netDelta >= 0 ? '↑' : '↓'} {fmtPct(Math.abs(netDelta))} {t('dash.vsMesAnterior')}
-              </p>
-            )}
-          </div>
-          <div className="h-[120px]">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={finance} margin={{ top: 4, bottom: 0, left: 0, right: 0 }} barGap={3}>
-                <XAxis dataKey="label" tickLine={false} axisLine={false} tick={{ fontSize: 11, fill: 'var(--text-faint)' }} />
-                <Tooltip content={<ChartTooltip />} cursor={{ fill: 'var(--surface-2)' }} />
-                <Bar dataKey="income" name={t('dash.ingresos')} fill="#10B981" radius={[4, 4, 0, 0]} isAnimationActive={!reduce} animationBegin={200} animationDuration={600} />
-                <Bar dataKey="expenses" name={t('dash.gastos')} fill="#F43F5E" radius={[4, 4, 0, 0]} isAnimationActive={!reduce} animationBegin={200} animationDuration={600} />
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-        </button>
-      </motion.section>
-
-      {/* ============================== Sección 6 — Tus inmuebles */}
+      {/* ============================== Sección 3 — Inmuebles */}
       <motion.section
         variants={containerV}
         initial="hidden"
@@ -542,70 +381,102 @@ export default function Dashboard() {
             {t('dash.gestionar')} <ArrowRight className="h-3.5 w-3.5" />
           </Link>
         </div>
-        {/* Lista compacta: una fila por inmueble (thumb + estado + 4 acciones) */}
-        <motion.div variants={itemV} className="card divide-y divide-[var(--border)] py-1">
+        <div className="grid gap-4 lg:grid-cols-2 xl:grid-cols-3">
           {properties.map((p) => (
-            <PropertyRow key={p.id} property={p} />
+            <motion.div
+              key={p.id}
+              variants={itemV}
+              onClick={(e) => {
+                if ((e.target as HTMLElement).closest('a,button')) return;
+                setStatsProp(p);
+              }}
+              className="cursor-pointer"
+            >
+              <PropertyCard property={p} />
+            </motion.div>
           ))}
-        </motion.div>
+        </div>
       </motion.section>
 
-      {/* ============================== Sheet de asignación */}
-      <Sheet open={assignTarget !== null} onOpenChange={(o) => !o && setAssignTarget(null)}>
+      {/* ============================== Sheet de estadísticas del inmueble */}
+      <Sheet open={statsProp !== null} onOpenChange={(o) => !o && setStatsProp(null)}>
         <SheetContent
           side="bottom"
-          className="rounded-t-3xl border-[var(--border)] bg-[var(--surface)] pb-[calc(24px+env(safe-area-inset-bottom))] lg:inset-y-0 lg:right-0 lg:left-auto lg:h-full lg:w-[400px] lg:rounded-none lg:border-l"
+          className="rounded-t-3xl border-[var(--border)] bg-[var(--surface)] pb-[calc(24px+env(safe-area-inset-bottom))] lg:inset-y-0 lg:right-0 lg:left-auto lg:h-full lg:w-[420px] lg:rounded-none lg:border-l"
         >
-          <SheetHeader className="pb-3 text-left">
-            <SheetTitle className="font-display text-lg font-semibold">{t('dash.asignarLimpieza')}</SheetTitle>
-          </SheetHeader>
-          {assignTarget && (
-            <div className="flex flex-col gap-3">
-              <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
-                {data.getProperty(assignTarget.propertyId)!.name} ·{' '}
-                {isSameDay(assignTarget.date, today) ? t('dash.hoy') : fmtDateShort(assignTarget.date)}
-              </p>
-              <div className="flex flex-wrap items-center gap-x-4 gap-y-2 rounded-2xl border px-3 py-2.5" style={{ borderColor: 'var(--border)' }}>
-                <span className="text-xs font-medium" style={{ color: 'var(--text-muted)' }}>
-                  {t('dash.previsionHoras')}
-                </span>
-                <HoursStepper
-                  compact
-                  value={sheetHours}
-                  onChange={setSheetHours}
-                  ariaLabel="previsión de horas"
-                />
-                <span className="text-[11px]" style={{ color: 'var(--text-faint)' }}>
-                  {t('dash.horasPorPersona')}
-                </span>
-              </div>
-              {data
-                .getPeople()
-                .filter((p) => p.role === 'limpieza')
-                .map((person) => (
-                  <button
-                    key={person.id}
-                    type="button"
-                    onClick={() => {
-                      data.assignCleaning(assignTarget.id, person.id, sheetHours);
-                      setAssignTarget(null);
-                    }}
-                    className="flex items-center gap-3 rounded-2xl border p-3 text-left transition-colors duration-150 hover:bg-[var(--surface-2)]"
-                    style={{ borderColor: 'var(--border)' }}
-                  >
-                    <PersonAvatar name={person.name} initials={person.initials} size={36} />
-                    <span className="min-w-0 flex-1">
-                      <span className="block text-sm font-semibold">{person.name}</span>
-                      <span className="block text-xs" style={{ color: 'var(--text-muted)' }}>
-                        {person.specialty} · <MoneyText value={person.hourlyRate} className="text-xs" />
-                        /h
+          {statsProp && (() => {
+            const income = proratedIncome(reservations, statsProp.id, monthNow, yearNow);
+            const nights = occupiedNightsMonth(reservations, statsProp.id, monthNow, yearNow);
+            const daysInMonth = new Date(yearNow, monthNow + 1, 0).getDate();
+            const occPct = (nights / daysInMonth) * 100;
+            const upcoming = reservations.filter((r) => r.propertyId === statsProp.id && r.checkOut >= today && r.status !== 'completada').length;
+            const pendClean = cleanings.filter((c) => c.propertyId === statsProp.id && c.status !== 'archivada').length;
+            const openMaint = maintenance.filter((m) => m.propertyId === statsProp.id && m.status !== 'finalizada').length;
+            const accs = tedeeAccess.filter((a) => a.propertyId === statsProp.id).slice(0, 5);
+            const q = `?inmueble=${statsProp.slug}`;
+            const links = [
+              { to: `/calendario${q}`, label: t('calendario') },
+              { to: `/reservas${q}`, label: t('reservas') },
+              { to: `/limpieza${q}`, label: t('limpieza') },
+              { to: `/mantenimiento${q}`, label: t('mantenimiento') },
+              { to: `/rentabilidad${q}`, label: t('rentabilidad') },
+            ];
+            const rows = [
+              { label: t('dash.ingresosPrevistosMes'), value: `${fmtNumber(income)} €`, color: '#10B981' },
+              { label: t('dash.ocupacionMes'), value: `${fmtPct(occPct)} · ${t('dash.noches', { count: nights })}`, color: '#3B82F6' },
+              { label: t('dash.reservasProximas'), value: String(upcoming), color: '#6366F1' },
+              { label: t('dash.limpiezasPendientes'), value: String(pendClean), color: '#8B5CF6' },
+              { label: t('dash.reparacionesAbiertas'), value: String(openMaint), color: '#F97316' },
+            ];
+            return (
+              <div className="flex flex-col gap-4">
+                <SheetHeader className="pb-0 text-left">
+                  <SheetTitle className="font-display text-lg font-semibold">{statsProp.name}</SheetTitle>
+                </SheetHeader>
+                <div className="card divide-y divide-[var(--border)]">
+                  {rows.map((r) => (
+                    <div key={r.label} className="flex items-center justify-between px-4 py-2.5">
+                      <span className="flex items-center gap-2 text-sm" style={{ color: 'var(--text-muted)' }}>
+                        <span className="h-2 w-2 rounded-full" style={{ backgroundColor: r.color }} />
+                        {r.label}
                       </span>
-                    </span>
-                    <ArrowRight className="h-4 w-4" style={{ color: 'var(--text-faint)' }} />
-                  </button>
-                ))}
-            </div>
-          )}
+                      <span className="tnum text-sm font-semibold">{r.value}</span>
+                    </div>
+                  ))}
+                </div>
+                <div>
+                  <p className="mb-2 text-[11px] font-semibold uppercase tracking-[0.08em]" style={{ color: 'var(--text-faint)' }}>
+                    {t('dash.accesosRecientes')}
+                  </p>
+                  {accs.length === 0 ? (
+                    <p className="text-sm" style={{ color: 'var(--text-faint)' }}>{t('dash.sinAccesos')}</p>
+                  ) : (
+                    <div className="flex flex-col">
+                      {accs.map((a) => (
+                        <div key={a.id} className="flex items-center justify-between rounded-xl px-2 py-1.5">
+                          <span className="truncate text-sm">{t('dash.abrio', { actor: a.actorName, name: statsProp.name })}</span>
+                          <span className="ml-2 shrink-0 text-xs" style={{ color: 'var(--text-faint)' }}>{fmtRelative(a.at)}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {links.map((l) => (
+                    <Link
+                      key={l.to}
+                      to={l.to}
+                      onClick={() => setStatsProp(null)}
+                      className="rounded-full border px-3 py-1.5 text-xs font-semibold transition-colors hover:bg-[var(--surface-2)]"
+                      style={{ borderColor: 'var(--border)', color: 'var(--text-muted)' }}
+                    >
+                      {l.label}
+                    </Link>
+                  ))}
+                </div>
+              </div>
+            );
+          })()}
         </SheetContent>
       </Sheet>
     </div>

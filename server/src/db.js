@@ -3,6 +3,57 @@ import crypto from 'node:crypto'
 import { mkdirSync } from 'node:fs'
 import { join } from 'node:path'
 
+/**
+ * Migraciones versionadas (patrón skill references/sqlite.md):
+ * una versión por entrada, en transacción, registrada en schema_version.
+ * NUNCA editar una ya aplicada — añadir una nueva al final.
+ */
+const MIGRATIONS = [
+  // 1: bathrooms en properties
+  `ALTER TABLE properties ADD COLUMN bathrooms INTEGER DEFAULT 1`,
+  // 2: is_demo en sessions
+  `ALTER TABLE sessions ADD COLUMN is_demo INTEGER DEFAULT 0`,
+  // 3: work_log/supplies/materials en cleanings
+  `ALTER TABLE cleanings ADD COLUMN work_log TEXT;
+   ALTER TABLE cleanings ADD COLUMN supplies TEXT;
+   ALTER TABLE cleanings ADD COLUMN materials REAL`,
+  // 4: amount/notes en reservations
+  `ALTER TABLE reservations ADD COLUMN amount REAL DEFAULT 0;
+   ALTER TABLE reservations ADD COLUMN notes TEXT DEFAULT ''`,
+]
+
+export function migrate(db) {
+  // Compat: BDs que ya tenían migraciones ad-hoc aplicadas (pre-versionado)
+  db.exec('CREATE TABLE IF NOT EXISTS schema_version (version INTEGER PRIMARY KEY, applied_at INTEGER)')
+  let current = db.prepare('SELECT MAX(version) v FROM schema_version').get().v ?? 0
+  if (current === 0) {
+    // Detectar qué migraciones ya estaban aplicadas por el sistema antiguo
+    const has = (table, col) =>
+      db.prepare('PRAGMA table_info(' + table + ')').all().some((c) => c.name === col)
+    if (has('properties', 'bathrooms')) current = Math.max(current, 1)
+    if (has('sessions', 'is_demo')) current = Math.max(current, 2)
+    if (has('cleanings', 'work_log')) current = Math.max(current, 3)
+    if (has('reservations', 'amount')) current = Math.max(current, 4)
+    if (current > 0) {
+      const tx = db.transaction(() => {
+        for (let v = 1; v <= current; v++) {
+          db.prepare('INSERT INTO schema_version (version, applied_at) VALUES (?, ?)').run(v, Date.now())
+        }
+      })
+      tx()
+      console.log(`[db] schema_version inicializada en v${current} (migraciones ad-hoc previas)`)
+    }
+  }
+  for (let i = current; i < MIGRATIONS.length; i++) {
+    const tx = db.transaction(() => {
+      db.exec(MIGRATIONS[i])
+      db.prepare('INSERT INTO schema_version (version, applied_at) VALUES (?, ?)').run(i + 1, Date.now())
+    })
+    tx()
+    console.log(`[db] migración ${i + 1} aplicada`)
+  }
+}
+
 export function openDb(dataDir, filename = 'keynest.db') {
   mkdirSync(dataDir, { recursive: true })
   const db = new Database(join(dataDir, filename))
@@ -112,30 +163,7 @@ export function openDb(dataDir, filename = 'keynest.db') {
     );
   `)
 
-  // Migraciones: columnas añadidas después del esquema inicial
-  const propCols = db.prepare('PRAGMA table_info(properties)').all().map((c) => c.name)
-  if (!propCols.includes('bathrooms')) {
-    db.exec('ALTER TABLE properties ADD COLUMN bathrooms INTEGER DEFAULT 1')
-    console.log('[db] migración: columna bathrooms añadida a properties')
-  }
-  const sessCols = db.prepare('PRAGMA table_info(sessions)').all().map((c) => c.name)
-  if (!sessCols.includes('is_demo')) {
-    db.exec('ALTER TABLE sessions ADD COLUMN is_demo INTEGER DEFAULT 0')
-    console.log('[db] migración: columna is_demo añadida a sessions')
-  }
-  const resCols = db.prepare('PRAGMA table_info(reservations)').all().map((c) => c.name)
-  if (!resCols.includes('amount')) {
-    db.exec('ALTER TABLE reservations ADD COLUMN amount REAL DEFAULT 0')
-    db.exec("ALTER TABLE reservations ADD COLUMN notes TEXT DEFAULT ''")
-    console.log('[db] migración: columnas amount/notes añadidas a reservations')
-  }
-  const cleanCols = db.prepare('PRAGMA table_info(cleanings)').all().map((c) => c.name)
-  if (!cleanCols.includes('work_log')) {
-    db.exec('ALTER TABLE cleanings ADD COLUMN work_log TEXT')
-    db.exec('ALTER TABLE cleanings ADD COLUMN supplies TEXT')
-    db.exec('ALTER TABLE cleanings ADD COLUMN materials REAL')
-    console.log('[db] migración: columnas work_log/supplies/materials añadidas a cleanings')
-  }
+  migrate(db)
 
   return db
 }
