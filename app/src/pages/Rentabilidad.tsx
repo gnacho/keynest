@@ -1,11 +1,13 @@
 import { useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { motion, useReducedMotion } from 'framer-motion';
+import { motion, useReducedMotion, AnimatePresence } from 'framer-motion';
 import type { Variants } from 'framer-motion';
 import {
   ArrowDownLeft,
   ArrowUpRight,
   BedDouble,
+  ChevronLeft,
+  ChevronRight,
   Euro,
   PieChart as PieChartIcon,
   Plus,
@@ -51,9 +53,10 @@ import {
 import { Switch } from '@/components/ui/switch';
 import { useTranslation } from 'react-i18next';
 import { useData } from '@/data/useData';
-import type { ExpenseType, Reservation } from '@/data/types';
+import type { Expense, ExpenseType, Reservation } from '@/data/types';
 import {
   addDays,
+  capitalize,
   fmtDateShort,
   fmtMoney,
   fmtMonth,
@@ -80,88 +83,139 @@ const rowV: Variants = {
   show: { transition: { staggerChildren: 0.05 } },
 };
 
-type Period = '6m' | '12m' | 'year';
+type Granularity = 'dia' | 'semana' | 'mes' | 'ano' | 'intervalo';
 
-const PERIOD_LABEL_KEY: Record<Period, string> = {
-  '6m': 'rent.ultimos6',
-  '12m': 'rent.ultimos12',
-  year: 'rent.anoActual',
-};
-
-interface MonthRef {
-  month: number;
-  year: number;
-  label: string;
+/** Rango inclusivo [start, end] a precisión de día. */
+interface Range {
+  start: Date;
+  end: Date;
 }
 
-function monthsFor(period: Period): MonthRef[] {
-  const now = new Date();
-  const out: MonthRef[] = [];
-  if (period === 'year') {
-    for (let m = 0; m <= now.getMonth(); m++) {
-      out.push({ month: m, year: now.getFullYear(), label: fmtMonth(new Date(now.getFullYear(), m, 1), true) });
+const DAY_MS = 86400000;
+
+function mondayOf(d: Date): Date {
+  const s = startOfDay(d);
+  return addDays(s, -((s.getDay() + 6) % 7));
+}
+
+function rangeFor(g: Granularity, anchor: Date, desde: string, hasta: string): Range {
+  if (g === 'intervalo') {
+    const s = desde ? new Date(`${desde}T00:00:00`) : mondayOf(anchor);
+    const e = hasta ? new Date(`${hasta}T00:00:00`) : addDays(s, 6);
+    return { start: startOfDay(s), end: startOfDay(e) };
+  }
+  if (g === 'dia') return { start: startOfDay(anchor), end: startOfDay(anchor) };
+  if (g === 'semana') {
+    const s = mondayOf(anchor);
+    return { start: s, end: addDays(s, 6) };
+  }
+  if (g === 'mes') {
+    return {
+      start: new Date(anchor.getFullYear(), anchor.getMonth(), 1),
+      end: new Date(anchor.getFullYear(), anchor.getMonth() + 1, 0),
+    };
+  }
+  return { start: new Date(anchor.getFullYear(), 0, 1), end: new Date(anchor.getFullYear(), 11, 31) };
+}
+
+function daysIn(r: Range): number {
+  return Math.round((r.end.getTime() - r.start.getTime()) / DAY_MS) + 1;
+}
+
+/** Rango inmediatamente anterior de igual longitud (comparativa). */
+function prevRangeOf(r: Range): Range {
+  const n = daysIn(r);
+  return { start: addDays(r.start, -n), end: addDays(r.end, -n) };
+}
+
+function shiftAnchor(anchor: Date, g: Granularity, dir: number): Date {
+  if (g === 'dia') return addDays(anchor, dir);
+  if (g === 'semana') return addDays(anchor, 7 * dir);
+  if (g === 'mes') return new Date(anchor.getFullYear(), anchor.getMonth() + dir, 1);
+  if (g === 'ano') return new Date(anchor.getFullYear() + dir, anchor.getMonth(), 1);
+  return anchor; // intervalo: sin navegación por chevrons
+}
+
+function rangeLabel(r: Range, g: Granularity): string {
+  if (g === 'dia') return fmtDateShort(r.start);
+  if (g === 'mes') return capitalize(fmtMonth(r.start));
+  if (g === 'ano') return String(r.start.getFullYear());
+  return `${fmtDateShort(r.start)} – ${fmtDateShort(r.end)}`;
+}
+
+/** Ingresos prorrateados por noche dentro del rango (design.md §8, generalizado). */
+function incomeInRange(reservations: Reservation[], pid: string | null, r: Range): number {
+  let total = 0;
+  const rEnd = addDays(r.end, 1).getTime();
+  for (const res of reservations) {
+    if (pid && res.propertyId !== pid) continue;
+    const ci = startOfDay(res.checkIn).getTime();
+    const co = startOfDay(res.checkOut).getTime();
+    const nights = Math.round((co - ci) / DAY_MS);
+    if (nights <= 0) continue;
+    const overlap = Math.round((Math.min(co, rEnd) - Math.max(ci, r.start.getTime())) / DAY_MS);
+    if (overlap > 0) total += (res.amount / nights) * overlap;
+  }
+  return total;
+}
+
+function occupiedNightsInRange(reservations: Reservation[], pid: string, r: Range): number {
+  let total = 0;
+  const rEnd = addDays(r.end, 1).getTime();
+  for (const res of reservations) {
+    if (res.propertyId !== pid) continue;
+    const ci = startOfDay(res.checkIn).getTime();
+    const co = startOfDay(res.checkOut).getTime();
+    const overlap = Math.round((Math.min(co, rEnd) - Math.max(ci, r.start.getTime())) / DAY_MS);
+    if (overlap > 0) total += overlap;
+  }
+  return total;
+}
+
+/** Gastos (mensuales) prorrateados por la fracción de su mes cubierta por el rango. */
+function expensesInRange(expenses: Expense[], pid: string | null, r: Range): number {
+  let total = 0;
+  const rEnd = addDays(r.end, 1).getTime();
+  for (const e of expenses) {
+    if (pid && e.propertyId !== pid) continue;
+    const mStart = new Date(e.year, e.month, 1).getTime();
+    const mEnd = new Date(e.year, e.month + 1, 1).getTime();
+    const overlap = Math.round((Math.min(mEnd, rEnd) - Math.max(mStart, r.start.getTime())) / DAY_MS);
+    if (overlap > 0) {
+      const monthDays = Math.round((mEnd - mStart) / DAY_MS);
+      total += (e.amount * overlap) / monthDays;
+    }
+  }
+  return total;
+}
+
+/** Solape en días entre el mes (m,y) y el rango. */
+function monthOverlapsRange(month: number, year: number, r: Range): boolean {
+  const mStart = new Date(year, month, 1).getTime();
+  const mEnd = new Date(year, month + 1, 1).getTime();
+  return mStart <= r.end.getTime() && mEnd > r.start.getTime();
+}
+
+/** Cubos para las barras: diarios (≤62 días) o mensuales. */
+interface Bucket {
+  label: string;
+  range: Range;
+}
+function bucketsFor(r: Range): Bucket[] {
+  const out: Bucket[] = [];
+  if (daysIn(r) <= 62) {
+    for (let d = new Date(r.start); d.getTime() <= r.end.getTime(); d = addDays(d, 1)) {
+      out.push({ label: fmtDateShort(d), range: { start: d, end: d } });
     }
     return out;
   }
-  const n = period === '12m' ? 12 : 6;
-  for (let i = n - 1; i >= 0; i--) {
-    const ref = new Date(now.getFullYear(), now.getMonth() - i, 1);
-    out.push({ month: ref.getMonth(), year: ref.getFullYear(), label: fmtMonth(ref, true) });
+  let cur = new Date(r.start.getFullYear(), r.start.getMonth(), 1);
+  while (cur.getTime() <= r.end.getTime()) {
+    const mEnd = new Date(cur.getFullYear(), cur.getMonth() + 1, 0);
+    out.push({ label: capitalize(fmtMonth(cur, true)), range: { start: cur, end: mEnd } });
+    cur = new Date(cur.getFullYear(), cur.getMonth() + 1, 1);
   }
   return out;
-}
-
-/** Los N meses inmediatamente anteriores al período (comparativa). */
-function prevMonthsFor(months: MonthRef[]): MonthRef[] {
-  const first = months[0];
-  const out: MonthRef[] = [];
-  for (let i = months.length; i >= 1; i--) {
-    const ref = new Date(first.year, first.month - i, 1);
-    out.push({ month: ref.getMonth(), year: ref.getFullYear(), label: fmtMonth(ref, true) });
-  }
-  return out;
-}
-
-/** Ingresos prorrateados por noche a partir de las reservas (design.md §8). */
-function proratedIncome(
-  reservations: Reservation[],
-  propertyId: string | null,
-  month: number,
-  year: number,
-): number {
-  let total = 0;
-  for (const r of reservations) {
-    if (propertyId && r.propertyId !== propertyId) continue;
-    const nights = Math.round(
-      (startOfDay(r.checkOut).getTime() - startOfDay(r.checkIn).getTime()) / 86400000,
-    );
-    if (nights <= 0) continue;
-    const perNight = r.amount / nights;
-    for (let n = 0; n < nights; n++) {
-      const d = addDays(startOfDay(r.checkIn), n);
-      if (d.getMonth() === month && d.getFullYear() === year) total += perNight;
-    }
-  }
-  return total;
-}
-
-function occupiedNights(reservations: Reservation[], propertyId: string, months: MonthRef[]): number {
-  let total = 0;
-  const inPeriod = (d: Date) => months.some((m) => m.month === d.getMonth() && m.year === d.getFullYear());
-  for (const r of reservations) {
-    if (r.propertyId !== propertyId) continue;
-    const nights = Math.round(
-      (startOfDay(r.checkOut).getTime() - startOfDay(r.checkIn).getTime()) / 86400000,
-    );
-    for (let n = 0; n < nights; n++) {
-      if (inPeriod(addDays(startOfDay(r.checkIn), n))) total++;
-    }
-  }
-  return total;
-}
-
-function daysInPeriod(months: MonthRef[]): number {
-  return months.reduce((acc, m) => acc + new Date(m.year, m.month + 1, 0).getDate(), 0);
 }
 
 function delta(cur: number, prev: number): number | undefined {
@@ -216,12 +270,15 @@ export default function Rentabilidad() {
   const [params, setParams] = useSearchParams();
 
   const inmueble = params.get('inmueble') ?? 'todos';
-  const periodo = (params.get('periodo') as Period) || '6m';
+  const g = (params.get('g') as Granularity) || 'mes';
+  const anclaParam = params.get('ancla');
+  const anchor = anclaParam ? new Date(`${anclaParam}T12:00:00`) : new Date();
+  const desde = params.get('desde') ?? '';
+  const hasta = params.get('hasta') ?? '';
 
   const properties = data.getProperties();
   const reservations = data.getReservations();
   const expenses = data.getExpenses();
-  const finance = data.getMonthlyFinance();
 
   const selectedProperty = inmueble === 'todos' ? null : data.getProperty(inmueble) ?? null;
   const propertyId = selectedProperty?.id ?? null;
@@ -239,8 +296,14 @@ export default function Rentabilidad() {
   const [fRecurrent, setFRecurrent] = useState(false);
   const [fNote, setFNote] = useState('');
 
-  const months = useMemo(() => monthsFor(periodo), [periodo]);
-  const prevMonths = useMemo(() => prevMonthsFor(months), [months]);
+  const range = useMemo(() => rangeFor(g, anchor, desde, hasta), [g, anclaParam, desde, hasta]); // eslint-disable-line react-hooks/exhaustive-deps
+  const prevRange = useMemo(() => prevRangeOf(range), [range]);
+  const buckets = useMemo(() => bucketsFor(range), [range]);
+  const label = rangeLabel(range, g);
+  const isEsteMes =
+    g === 'mes' &&
+    range.start.getMonth() === new Date().getMonth() &&
+    range.start.getFullYear() === new Date().getFullYear();
 
   const setParam = (key: string, value: string, isDefault: boolean) => {
     const next = new URLSearchParams(params);
@@ -248,73 +311,58 @@ export default function Rentabilidad() {
     else next.set(key, value);
     setParams(next, { replace: true });
   };
-
-  /* ---------------- Cómputo de ingresos/gastos por mes ---------------- */
-  const financeAvg = useMemo(
-    () => (finance.length ? finance.reduce((a, f) => a + f.income, 0) / finance.length : 0),
-    [finance],
-  );
-
-  // Cuota de cada inmueble sobre los ingresos prorrateados (para meses sin reservas)
-  const shares = useMemo(() => {
-    const totals = new Map<string, number>();
-    let global = 0;
-    for (const p of properties) {
-      let t = 0;
-      for (const r of reservations) {
-        if (r.propertyId !== p.id) continue;
-        t += r.amount;
-      }
-      totals.set(p.id, t);
-      global += t;
+  const setGranularity = (next: Granularity) => {
+    const p = new URLSearchParams(params);
+    if (next === 'mes') p.delete('g');
+    else p.set('g', next);
+    if (next !== 'intervalo') {
+      p.delete('desde');
+      p.delete('hasta');
     }
-    const map = new Map<string, number>();
-    for (const p of properties) {
-      map.set(p.id, global > 0 ? (totals.get(p.id) ?? 0) / global : 1 / properties.length);
-    }
-    return map;
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [data.version]);
-
-  const incomeFor = (pid: string | null, month: number, year: number): number => {
-    const fin = finance.find((f) => f.month === month && f.year === year);
-    const general = fin ? fin.income : proratedIncome(reservations, null, month, year) || financeAvg;
-    if (!pid) return general;
-    const pr = proratedIncome(reservations, pid, month, year);
-    if (pr > 0) return pr;
-    return general * (shares.get(pid) ?? 1 / properties.length);
+    setParams(p, { replace: true });
+  };
+  const navigate = (dir: number) => {
+    const next = shiftAnchor(anchor, g, dir);
+    setParam('ancla', next.toISOString().slice(0, 10), false);
+  };
+  const goEsteMes = () => {
+    const p = new URLSearchParams(params);
+    p.delete('g');
+    p.delete('ancla');
+    p.delete('desde');
+    p.delete('hasta');
+    setParams(p, { replace: true });
+  };
+  const setIntervalo = (key: 'desde' | 'hasta', value: string) => {
+    const p = new URLSearchParams(params);
+    p.set('g', 'intervalo');
+    if (value) p.set(key, value);
+    else p.delete(key);
+    setParams(p, { replace: true });
   };
 
-  const expensesFor = (pid: string | null, month: number, year: number): number =>
-    expenses
-      .filter((e) => e.month === month && e.year === year && (!pid || e.propertyId === pid))
-      .reduce((a, e) => a + e.amount, 0);
-
-  const sumMonths = (list: MonthRef[], fn: (m: MonthRef) => number) =>
-    list.reduce((a, m) => a + fn(m), 0);
-
-  /* ---------------- KPIs ---------------- */
-  const ingresos = sumMonths(months, (m) => incomeFor(propertyId, m.month, m.year));
-  const gastos = sumMonths(months, (m) => expensesFor(propertyId, m.month, m.year));
+  /* ---------------- Cómputo de ingresos/gastos en el rango ---------------- */
+  const ingresos = incomeInRange(reservations, propertyId, range);
+  const gastos = expensesInRange(expenses, propertyId, range);
   const neto = ingresos - gastos;
-  const ingresosPrev = sumMonths(prevMonths, (m) => incomeFor(propertyId, m.month, m.year));
-  const gastosPrev = sumMonths(prevMonths, (m) => expensesFor(propertyId, m.month, m.year));
+  const ingresosPrev = incomeInRange(reservations, propertyId, prevRange);
+  const gastosPrev = expensesInRange(expenses, propertyId, prevRange);
   const netoPrev = ingresosPrev - gastosPrev;
 
   const nights = propertyId
-    ? occupiedNights(reservations, propertyId, months)
-    : properties.reduce((a, p) => a + occupiedNights(reservations, p.id, months), 0);
+    ? occupiedNightsInRange(reservations, propertyId, range)
+    : properties.reduce((a, p) => a + occupiedNightsInRange(reservations, p.id, range), 0);
   const perNight = nights > 0 ? ingresos / nights : 0;
   const nightsPrev = propertyId
-    ? occupiedNights(reservations, propertyId, prevMonths)
-    : properties.reduce((a, p) => a + occupiedNights(reservations, p.id, prevMonths), 0);
+    ? occupiedNightsInRange(reservations, propertyId, prevRange)
+    : properties.reduce((a, p) => a + occupiedNightsInRange(reservations, p.id, prevRange), 0);
   const perNightPrev = nightsPrev > 0 ? ingresosPrev / nightsPrev : 0;
 
-  /* ---------------- Barras ---------------- */
-  const bars = months.map((m) => ({
-    label: m.label,
-    ingresos: Math.round(incomeFor(propertyId, m.month, m.year)),
-    gastos: Math.round(expensesFor(propertyId, m.month, m.year) * 100) / 100,
+  /* ---------------- Barras (cubos diarios o mensuales) ---------------- */
+  const bars = buckets.map((b) => ({
+    label: b.label,
+    ingresos: Math.round(incomeInRange(reservations, propertyId, b.range)),
+    gastos: Math.round(expensesInRange(expenses, propertyId, b.range) * 100) / 100,
   }));
 
   /* ---------------- Quesito ---------------- */
@@ -328,21 +376,27 @@ export default function Rentabilidad() {
         (e) =>
           e.type === etype &&
           (!propertyId || e.propertyId === propertyId) &&
-          months.some((m) => m.month === e.month && m.year === e.year),
+          monthOverlapsRange(e.month, e.year, range),
       )
-      .reduce((a, e) => a + e.amount, 0),
+      .reduce((a, e) => {
+        const mStart = new Date(e.year, e.month, 1).getTime();
+        const mEnd = new Date(e.year, e.month + 1, 1).getTime();
+        const overlap = Math.round((Math.min(mEnd, addDays(range.end, 1).getTime()) - Math.max(mStart, range.start.getTime())) / DAY_MS);
+        const monthDays = Math.round((mEnd - mStart) / DAY_MS);
+        return a + (e.amount * overlap) / monthDays;
+      }, 0),
   }))
     .filter((x) => x.value > 0)
     .sort((a, b) => b.value - a.value);
   const totalByType = byType.reduce((a, x) => a + x.value, 0);
 
   /* ---------------- Desglose por inmueble ---------------- */
-  const periodDays = daysInPeriod(months);
+  const periodDays = daysIn(range);
   const breakdown = properties.map((p) => {
-    const inc = sumMonths(months, (m) => incomeFor(p.id, m.month, m.year));
-    const exp = sumMonths(months, (m) => expensesFor(p.id, m.month, m.year));
-    const n = occupiedNights(reservations, p.id, months);
-    const last6 = months.slice(-6).map((m) => incomeFor(p.id, m.month, m.year));
+    const inc = incomeInRange(reservations, p.id, range);
+    const exp = expensesInRange(expenses, p.id, range);
+    const n = occupiedNightsInRange(reservations, p.id, range);
+    const spark = buckets.slice(-6).map((b) => incomeInRange(reservations, p.id, b.range));
     return {
       property: p,
       occupancy: (n / periodDays) * 100,
@@ -350,7 +404,7 @@ export default function Rentabilidad() {
       expenses: exp,
       net: inc - exp,
       perNight: n > 0 ? inc / n : 0,
-      spark: last6,
+      spark,
     };
   });
 
@@ -366,10 +420,13 @@ export default function Rentabilidad() {
   }
   const movements = useMemo(() => {
     const out: Movement[] = [];
-    const inPeriod = (d: Date) => months.some((m) => m.month === d.getMonth() && m.year === d.getFullYear());
+    const inRange = (d: Date) => {
+      const t = startOfDay(d).getTime();
+      return t >= range.start.getTime() && t <= range.end.getTime();
+    };
     for (const r of reservations) {
       if (propertyId && r.propertyId !== propertyId) continue;
-      if (!inPeriod(r.checkIn)) continue;
+      if (!inRange(r.checkIn)) continue;
       const p = properties.find((pp) => pp.id === r.propertyId)!;
       out.push({
         id: `mov-res-${r.id}`,
@@ -382,7 +439,7 @@ export default function Rentabilidad() {
     }
     for (const e of expenses) {
       if (propertyId && e.propertyId !== propertyId) continue;
-      if (!months.some((m) => m.month === e.month && m.year === e.year)) continue;
+      if (!monthOverlapsRange(e.month, e.year, range)) continue;
       const p = properties.find((pp) => pp.id === e.propertyId)!;
       const now = new Date();
       const date =
@@ -401,7 +458,7 @@ export default function Rentabilidad() {
     }
     return out.sort((a, b) => b.date.getTime() - a.date.getTime()).slice(0, 10);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [data.version, propertyId, periodo]);
+  }, [data.version, propertyId, range]); // eslint-disable-line react-hooks/exhaustive-deps
 
   /* ---------------- Acciones ---------------- */
   const sync = () => {
@@ -463,7 +520,7 @@ export default function Rentabilidad() {
         <div>
           <h1 className="font-display text-2xl font-semibold tracking-[-0.02em] lg:text-[28px]">{t('rent.titulo')}</h1>
           <p className="mt-0.5 text-[13px]" style={{ color: 'var(--text-muted)' }}>
-            {t(PERIOD_LABEL_KEY[periodo])} · {selectedProperty ? selectedProperty.name : t('rent.todosInmuebles')}
+            {label} · {selectedProperty ? selectedProperty.name : t('rent.todosInmuebles')}
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -502,21 +559,112 @@ export default function Rentabilidad() {
             ))}
           </SelectContent>
         </Select>
-        <Select value={periodo} onValueChange={(v) => setParam('periodo', v, v === '6m')}>
-          <SelectTrigger className="h-9 w-auto min-w-[160px] gap-2 rounded-xl border-[var(--border)] bg-[var(--surface)] text-sm font-medium shadow-none">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent className="rounded-xl border-[var(--border)] bg-[var(--surface)]">
-            <SelectItem value="6m">{t('rent.ultimos6')}</SelectItem>
-            <SelectItem value="12m">{t('rent.ultimos12')}</SelectItem>
-            <SelectItem value="year">{t('rent.anoActual')}</SelectItem>
-          </SelectContent>
-        </Select>
+        {/* Selector de periodo estilo Helios: granularidad + navegación + Este mes */}
+        <div
+          role="tablist"
+          aria-label={t('rent.periodAria')}
+          className="flex h-9 items-center rounded-full border p-0.5"
+          style={{ borderColor: 'var(--border)', backgroundColor: 'var(--surface)' }}
+        >
+          {(['dia', 'semana', 'mes', 'ano', 'intervalo'] as Granularity[]).map((p) => {
+            const active = p === g;
+            return (
+              <button
+                key={p}
+                role="tab"
+                aria-selected={active}
+                onClick={() => setGranularity(p)}
+                className={cn(
+                  'relative flex h-8 items-center rounded-full px-3 text-[13px] font-medium transition-colors',
+                  active ? 'text-white' : 'text-[var(--text-muted)] hover:text-[var(--text)]',
+                )}
+                style={active ? { backgroundImage: 'linear-gradient(135deg,#6366F1,#8B5CF6)' } : undefined}
+              >
+                {t(`rent.${p}`)}
+              </button>
+            );
+          })}
+        </div>
+
+        {g === 'intervalo' ? (
+          <div className="flex items-center gap-1.5">
+            <input
+              type="date"
+              value={desde}
+              onChange={(e) => setIntervalo('desde', e.target.value)}
+              aria-label={t('rent.desde')}
+              className="h-9 rounded-xl border bg-[var(--surface)] px-2 text-[13px] outline-none focus:ring-2 focus:ring-[#6366F1]/40"
+              style={{ borderColor: 'var(--border)' }}
+            />
+            <span className="text-xs" style={{ color: 'var(--text-faint)' }}>
+              →
+            </span>
+            <input
+              type="date"
+              value={hasta}
+              onChange={(e) => setIntervalo('hasta', e.target.value)}
+              aria-label={t('rent.hasta')}
+              className="h-9 rounded-xl border bg-[var(--surface)] px-2 text-[13px] outline-none focus:ring-2 focus:ring-[#6366F1]/40"
+              style={{ borderColor: 'var(--border)' }}
+            />
+          </div>
+        ) : (
+          <div
+            className="flex h-9 items-center gap-0.5 rounded-full border p-0.5"
+            style={{ borderColor: 'var(--border)', backgroundColor: 'var(--surface)' }}
+          >
+            <button
+              type="button"
+              onClick={() => navigate(-1)}
+              aria-label={t('rent.prevAria')}
+              className="flex h-8 w-8 items-center justify-center rounded-full transition-colors hover:bg-[var(--surface-2)]"
+              style={{ color: 'var(--text-muted)' }}
+            >
+              <ChevronLeft size={16} />
+            </button>
+            <div className="flex h-8 min-w-[110px] items-center justify-center px-1">
+              <AnimatePresence mode="wait" initial={false}>
+                <motion.span
+                  key={label}
+                  initial={reduce ? { opacity: 0 } : { y: 12, opacity: 0 }}
+                  animate={reduce ? { opacity: 1 } : { y: 0, opacity: 1 }}
+                  exit={reduce ? { opacity: 0 } : { y: -12, opacity: 0 }}
+                  transition={{ duration: 0.2, ease: 'easeOut' }}
+                  className="tnum text-[13px] font-semibold"
+                >
+                  {label}
+                </motion.span>
+              </AnimatePresence>
+            </div>
+            <button
+              type="button"
+              onClick={() => navigate(1)}
+              aria-label={t('rent.nextAria')}
+              className="flex h-8 w-8 items-center justify-center rounded-full transition-colors hover:bg-[var(--surface-2)]"
+              style={{ color: 'var(--text-muted)' }}
+            >
+              <ChevronRight size={16} />
+            </button>
+          </div>
+        )}
+
+        <button
+          type="button"
+          onClick={goEsteMes}
+          disabled={isEsteMes}
+          className={cn(
+            'h-9 rounded-full border px-3.5 text-[13px] font-semibold transition-all',
+            isEsteMes ? 'cursor-not-allowed opacity-50' : 'hover:bg-[var(--surface-2)] active:scale-95',
+          )}
+          style={{ borderColor: 'var(--border)', color: '#6366F1' }}
+        >
+          {t('rent.esteMes')}
+        </button>
       </div>
 
       {/* ============================== KPIs */}
       <motion.section
-        key={`kpi-${inmueble}-${periodo}`}
+        key={`kpi-${inmueble}-${label}`}
         variants={containerV}
         initial="hidden"
         animate="show"
@@ -583,7 +731,7 @@ export default function Rentabilidad() {
       >
         <div className="h-[220px] lg:h-[300px]">
           <ResponsiveContainer width="100%" height="100%">
-            <BarChart key={`${inmueble}-${periodo}`} data={bars} margin={{ top: 8, right: 4, bottom: 0, left: -8 }} barCategoryGap="30%">
+            <BarChart key={`${inmueble}-${label}`} data={bars} margin={{ top: 8, right: 4, bottom: 0, left: -8 }} barCategoryGap="30%">
               <CartesianGrid vertical={false} strokeDasharray="4 4" stroke="var(--border)" />
               <XAxis
                 dataKey="label"
@@ -815,7 +963,7 @@ export default function Rentabilidad() {
                 <td className="py-2.5 pr-3">
                   <span className="tnum text-xs font-semibold" style={{ color: '#3B82F6' }}>
                     {fmtPct(
-                      (properties.reduce((a, p) => a + occupiedNights(reservations, p.id, months), 0) /
+                      (properties.reduce((a, p) => a + occupiedNightsInRange(reservations, p.id, range), 0) /
                         (periodDays * properties.length)) *
                         100,
                       0,

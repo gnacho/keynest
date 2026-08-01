@@ -371,9 +371,6 @@
   },
   "rent": {
     "titulo": "Rentabilidad",
-    "ultimos6": "Últimos 6 meses",
-    "ultimos12": "Últimos 12 meses",
-    "anoActual": "Año actual",
     "todosInmuebles": "todos los inmuebles",
     "general": "General",
     "sincronizar": "Sincronizar Airbnb",
@@ -416,7 +413,18 @@
     "guardarGasto": "Guardar gasto",
     "revisaCampos": "Revisa inmueble, importe y fecha",
     "gastoAnadido": "Gasto añadido · {{amount}}",
-    "seleccionaInmueble": "Selecciona inmueble"
+    "seleccionaInmueble": "Selecciona inmueble",
+    "dia": "Día",
+    "semana": "Semana",
+    "mes": "Mes",
+    "ano": "Año",
+    "intervalo": "Intervalo",
+    "esteMes": "Este mes",
+    "desde": "Desde",
+    "hasta": "Hasta",
+    "periodAria": "Granularidad del periodo",
+    "prevAria": "Periodo anterior",
+    "nextAria": "Periodo siguiente"
   },
   "gastoTipo": {
     "agua": "Agua",

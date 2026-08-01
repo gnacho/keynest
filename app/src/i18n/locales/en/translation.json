@@ -371,9 +371,6 @@
   },
   "rent": {
     "titulo": "Profitability",
-    "ultimos6": "Last 6 months",
-    "ultimos12": "Last 12 months",
-    "anoActual": "Current year",
     "todosInmuebles": "all properties",
     "general": "All",
     "sincronizar": "Sync Airbnb",
@@ -416,7 +413,18 @@
     "guardarGasto": "Save expense",
     "revisaCampos": "Check property, amount and date",
     "gastoAnadido": "Expense added · {{amount}}",
-    "seleccionaInmueble": "Select property"
+    "seleccionaInmueble": "Select property",
+    "dia": "Day",
+    "semana": "Week",
+    "mes": "Month",
+    "ano": "Year",
+    "intervalo": "Range",
+    "esteMes": "This month",
+    "desde": "From",
+    "hasta": "To",
+    "periodAria": "Period granularity",
+    "prevAria": "Previous period",
+    "nextAria": "Next period"
   },
   "gastoTipo": {
     "agua": "Water",
