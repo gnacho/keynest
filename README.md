@@ -38,9 +38,24 @@ cd server && npm test
 cd app && npm run lint
 ```
 
+## Install (one-liner, any Linux server with systemd)
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/gnacho/keynest/main/install.sh | sh
+```
+
+Installs the versioned Node 22 runtime + the latest stable release (frontend
+pre-built, production `node_modules` per-arch — no compiler needed on the
+server) as a sandboxed systemd service under `/opt/keynest` (capistrano-style
+`releases/` + `current` symlink). Data lives in `/var/lib/keynest`, config in
+`/etc/keynest/env` (0600) with a random admin password shown once. If the
+default port (8081) is busy, the next free one is picked automatically.
+Re-run the script to update; `--uninstall` removes it cleanly (data kept,
+`--purge` wipes). Every download is verified against `checksums.txt` (sha256).
+
 ## Deploy
 
-Production layout: `/opt/keynest/{server,public,data}` with a hardened systemd unit (`ProtectSystem=full`, `ReadWritePaths` only for `data/`). See `.github/workflows/deploy.yml` for the automated pipeline (push to `main` → tests → build → SSH deploy).
+Production layout: `/opt/keynest/{server,public,data}` with a hardened systemd unit (`ProtectSystem=full`, `ReadWritePaths` only for `data/`). See `.github/workflows/deploy.yml` for the automated pipeline (push to `main` → tests → build → SSH deploy). Stable per-arch tarballs are built by `.github/workflows/release.yml` on tags `v*`.
 
 ## License
 

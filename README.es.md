@@ -26,6 +26,22 @@ cd server && npm test      # tests
 cd app && npm run lint     # lint
 ```
 
+## Instalación (one-liner, cualquier Linux con systemd)
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/gnacho/keynest/main/install.sh | sh
+```
+
+Instala el runtime Node 22 versionado + la última release estable (frontend
+pre-compilado, `node_modules` de producción por arquitectura — el servidor no
+necesita compilador) como servicio systemd sandboxed en `/opt/keynest`
+(estilo capistrano: `releases/` + symlink `current`). Datos en
+`/var/lib/keynest`, config en `/etc/keynest/env` (0600) con contraseña de
+admin aleatoria que se muestra una sola vez. Si el puerto por defecto (8081)
+está ocupado, se usa el siguiente libre automáticamente. Re-ejecuta el script
+para actualizar; `--uninstall` desinstala limpio (conserva datos, `--purge`
+los borra). Cada descarga se verifica contra `checksums.txt` (sha256).
+
 ## Licencia
 
 [AGPL-3.0](LICENSE)
