@@ -22,7 +22,7 @@ import { useTranslation } from 'react-i18next';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import PersonAvatar from '@/components/PersonAvatar';
-import { useTheme } from '@/theme/theme-context';
+import { useTheme } from '@/theme/ThemeProvider';
 import { useData } from '@/data/useData';
 import { cachedUser } from '@/lib/auth';
 import { cn } from '@/lib/utils';
@@ -61,20 +61,20 @@ const TITLE_KEYS: Record<string, string> = {
 const COLLAPSE_KEY = 'keynest-sidebar-collapsed';
 
 function ThemeToggle({ className }: { className?: string }) {
-  const { theme, toggleTheme } = useTheme();
+  const { resolved, toggle } = useTheme();
   const { t } = useTranslation();
   return (
     <button
       type="button"
-      onClick={toggleTheme}
-      aria-label={theme === 'dark' ? t('nav.temaClaro') : t('nav.temaOscuro')}
+      onClick={toggle}
+      aria-label={resolved === 'dark' ? t('nav.temaClaro') : t('nav.temaOscuro')}
       className={cn(
         'flex h-9 w-9 items-center justify-center rounded-xl border transition-colors duration-150 hover:bg-[var(--surface-2)]',
         className,
       )}
       style={{ borderColor: 'var(--border)', color: 'var(--text-muted)' }}
     >
-      {theme === 'dark' ? <Sun className="h-[18px] w-[18px]" /> : <Moon className="h-[18px] w-[18px]" />}
+      {resolved === 'dark' ? <Sun className="h-[18px] w-[18px]" /> : <Moon className="h-[18px] w-[18px]" />}
     </button>
   );
 }

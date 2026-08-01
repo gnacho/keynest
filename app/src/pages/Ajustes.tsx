@@ -59,7 +59,7 @@ import { Slider } from '@/components/ui/slider';
 import { useTranslation } from 'react-i18next';
 import { EXPENSE_META, EXPENSE_TYPES, TYPE_SWATCHES } from '@/components/fin/expenseMeta';
 import { useData } from '@/data/useData';
-import { useTheme } from '@/theme/theme-context';
+import { useTheme } from '@/theme/ThemeProvider';
 import { logout, saveLanguage, cachedUser, demoStatus, setDemoMode } from '@/lib/auth';
 import { api } from '@/lib/api';
 import { applyLanguage, cachedLanguagePref } from '@/i18n';
@@ -131,7 +131,7 @@ export default function Ajustes() {
   const data = useData();
   const navigate = useNavigate();
   const reduce = useReducedMotion();
-  const { theme, setTheme } = useTheme();
+  const { mode: themeModeRaw, setMode } = useTheme();
 
   const [tab, setTab] = useState<TabId>('inmuebles');
 
@@ -213,7 +213,7 @@ export default function Ajustes() {
   const [newTypeRecurrent, setNewTypeRecurrent] = useState(false);
 
   /* ---- Preferencias ---- */
-  const [themeMode, setThemeMode] = useState<'claro' | 'oscuro' | 'auto'>(theme === 'dark' ? 'oscuro' : 'claro');
+  const themeMode: 'claro' | 'oscuro' | 'auto' = themeModeRaw === 'system' ? 'auto' : themeModeRaw === 'dark' ? 'oscuro' : 'claro';
   const [lang, setLang] = useState<AppLanguage>(() => cachedUser()?.language ?? cachedLanguagePref());
   const [demoOn, setDemoOn] = useState(true);
   const [updateInfo, setUpdateInfo] = useState<{ current: string; latest: string | null; available: boolean } | null>(null);
@@ -599,13 +599,7 @@ export default function Ajustes() {
 
   /* ----------------------------------------------------------- handlers tema */
   const applyThemeMode = (mode: 'claro' | 'oscuro' | 'auto') => {
-    setThemeMode(mode);
-    if (mode === 'claro') setTheme('light');
-    else if (mode === 'oscuro') setTheme('dark');
-    else {
-      const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-      setTheme(prefersDark ? 'dark' : 'light');
-    }
+    setMode(mode === 'claro' ? 'light' : mode === 'oscuro' ? 'dark' : 'system');
   };
 
   const editProperty = editProp ? properties.find((p) => p.id === editProp) : undefined;

@@ -3,8 +3,28 @@
 @tailwind utilities;
 
 @layer base {
+  /* .light permite forzar el tema claro en previews dentro de páginas oscuras */
   :root,
-  [data-theme='light'] {
+  .light {
+    /* ── Tokens canónicos webapp-shell (tripletas RGB, claro) ──
+       Sufijo -rgb: los nombres sin sufijo están ocupados por los
+       legacy hex que usa toda la app (var(--bg), var(--surface-2)…). */
+    --canvas-rgb: 244 246 250;
+    --surface-rgb: 255 255 255;
+    --elevated-rgb: 238 241 246;
+    --hover-rgb: 226 232 240;
+    --border-rgb: 227 232 240;
+    --border-strong-rgb: 203 213 225;
+    --text-primary-rgb: 12 20 37;
+    --text-secondary-rgb: 91 107 132;
+    --text-muted-rgb: 148 163 184;
+    --accent-rgb: 99 102 241; /* índigo marca Keynest */
+    --ok-rgb: 16 185 129;
+    --warn-rgb: 217 119 6;
+    --danger-rgb: 244 63 94;
+    --info-rgb: 59 130 246;
+
+    /* ── Legacy hex (en uso en toda la app) ── */
     --bg: #f4f6fa;
     --surface: #ffffff;
     --surface-2: #eef1f6;
@@ -33,7 +53,24 @@
     color-scheme: light;
   }
 
-  [data-theme='dark'] {
+  .dark {
+    /* ── Tokens canónicos webapp-shell (tripletas RGB, oscuro) ── */
+    --canvas-rgb: 8 13 26;
+    --surface-rgb: 16 24 40;
+    --elevated-rgb: 24 35 56;
+    --hover-rgb: 30 43 66;
+    --border-rgb: 30 43 66;
+    --border-strong-rgb: 42 58 82;
+    --text-primary-rgb: 233 238 247;
+    --text-secondary-rgb: 147 161 184;
+    --text-muted-rgb: 92 107 133;
+    --accent-rgb: 129 140 248; /* indigo-400: contraste AA en oscuro */
+    --ok-rgb: 52 211 153;
+    --warn-rgb: 251 191 36;
+    --danger-rgb: 251 113 133;
+    --info-rgb: 96 165 250;
+
+    /* ── Legacy hex ── */
     --bg: #080d1a;
     --surface: #101828;
     --surface-2: #182338;
@@ -62,6 +99,7 @@
   }
 
   html {
+    font-size: 16px; /* densidad cómoda; compacta = 13.5px vía JS */
     -webkit-tap-highlight-color: transparent;
     overscroll-behavior-y: none;
   }
@@ -70,9 +108,10 @@
     background-color: var(--bg);
     color: var(--text);
     font-family: 'Inter', system-ui, sans-serif;
-    font-size: 14px;
+    font-size: 0.875rem;
     line-height: 1.45;
     -webkit-font-smoothing: antialiased;
+    transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease;
   }
 
   button,
@@ -85,6 +124,13 @@
   ::selection {
     background: rgb(99 102 241 / 0.25);
   }
+
+  /* Focus visible consistente (tokens canónicos) */
+  :focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 2px rgb(var(--canvas-rgb)), 0 0 0 4px rgb(var(--accent-rgb) / 0.7);
+    border-radius: var(--radius);
+  }
 }
 
 @layer components {
@@ -93,9 +139,22 @@
     font-feature-settings: 'tnum';
   }
 
+  .font-mono {
+    font-family: 'JetBrains Mono', monospace;
+    font-feature-settings: 'tnum';
+  }
+
   .tnum {
     font-feature-settings: 'tnum';
   }
+
+  /* Escala tipográfica canónica (rem: escala con la densidad) */
+  .text-display { font-size: 2rem; line-height: 1.1; font-weight: 600; }
+  .text-h1 { font-size: 1.5rem; line-height: 1.2; font-weight: 600; }
+  .text-h2 { font-size: 1.125rem; line-height: 1.3; font-weight: 600; }
+  .text-body { font-size: 0.875rem; line-height: 1.5; }
+  .text-label { font-size: 0.75rem; line-height: 1.4; font-weight: 500; }
+  .text-caption { font-size: 0.6875rem; line-height: 1.4; }
 
   .card {
     background-color: var(--surface);
@@ -137,6 +196,23 @@
   .no-scrollbar::-webkit-scrollbar {
     display: none;
   }
+
+  /* Punto de estado "vivo" reutilizable */
+  @keyframes ping-soft {
+    0% { transform: scale(1); opacity: 0.6; }
+    80%, 100% { transform: scale(2.2); opacity: 0; }
+  }
+  .animate-ping-soft { animation: ping-soft 1.6s cubic-bezier(0, 0, 0.2, 1) infinite; }
+}
+
+/* Reducir animaciones: clase del switch de Apariencia + respeto del SO */
+html.reduce-motion *,
+html.reduce-motion *::before,
+html.reduce-motion *::after {
+  animation-duration: 0.01ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.01ms !important;
+  scroll-behavior: auto !important;
 }
 
 @media (prefers-reduced-motion: reduce) {

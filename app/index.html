@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="es" data-theme="light">
+<html lang="es">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
@@ -21,16 +21,25 @@
       rel="stylesheet"
     />
     <script>
-      // Anti-FOUC: aplica el tema guardado antes del primer pintado
+      // Anti-FOUC: aplica el tema guardado antes del primer pintado.
+      // Modo system (defecto) resuelve por prefers-color-scheme; migra la clave antigua bi-estado.
       (function () {
         try {
-          var t = localStorage.getItem('keynest-theme');
-          if (t !== 'dark' && t !== 'light') {
-            t = 'light'; // default: claro
+          var m = localStorage.getItem('keynest-theme-mode') || localStorage.getItem('keynest-theme');
+          if (m !== 'dark' && m !== 'light' && m !== 'system') m = 'system';
+          var t = m;
+          if (t === 'system') {
+            t = window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
           }
-          document.documentElement.setAttribute('data-theme', t);
-          var m = document.getElementById('theme-color-meta');
-          if (m) m.setAttribute('content', t === 'dark' ? '#080D1A' : '#F4F6FA');
+          document.documentElement.classList.add(t);
+          var meta = document.getElementById('theme-color-meta');
+          if (meta) meta.setAttribute('content', t === 'dark' ? '#080D1A' : '#F4F6FA');
+          if (localStorage.getItem('keynest-density') === 'compact') {
+            document.documentElement.style.fontSize = '13.5px';
+          }
+          if (localStorage.getItem('keynest-reduce-motion') === '1') {
+            document.documentElement.classList.add('reduce-motion');
+          }
         } catch (e) {}
       })();
     </script>

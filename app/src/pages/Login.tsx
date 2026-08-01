@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { motion, useReducedMotion } from 'framer-motion';
 import { Eye, EyeOff, Lock, Moon, Sparkles, Sun, User } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { useTheme } from '@/theme/theme-context';
+import { useTheme } from '@/theme/ThemeProvider';
 import { demoLogin, demoStatus, login } from '@/lib/auth';
 
 const EASE_OUT_QUART: [number, number, number, number] = [0.25, 1, 0.5, 1];
@@ -168,12 +168,12 @@ function LoginForm() {
 }
 
 function ThemeFab() {
-  const { theme, toggleTheme } = useTheme();
+  const { resolved, toggle } = useTheme();
   const { t } = useTranslation();
   return (
     <button
       type="button"
-      onClick={toggleTheme}
+      onClick={toggle}
       aria-label={t('nav.temaClaro')}
       className="fixed right-4 top-4 z-50 flex h-10 w-10 items-center justify-center rounded-full border shadow-card backdrop-blur-md transition-colors hover:brightness-105"
       style={{
@@ -182,7 +182,7 @@ function ThemeFab() {
         color: 'var(--text-muted)',
       }}
     >
-      {theme === 'dark' ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
+      {resolved === 'dark' ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
     </button>
   );
 }

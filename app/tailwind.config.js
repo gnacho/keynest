@@ -1,11 +1,26 @@
 /** @type {import('tailwindcss').Config} */
 module.exports = {
-  darkMode: ['class', '[data-theme="dark"]'],
+  darkMode: 'class',
   content: ['./index.html', './src/**/*.{js,ts,jsx,tsx}'],
   theme: {
     extend: {
       colors: {
-        // Tokens de tema (design.md §3.1)
+        // Tokens canónicos webapp-shell (RGB triplets con alfa)
+        canvas: 'rgb(var(--canvas-rgb) / <alpha-value>)',
+        elevated: 'rgb(var(--elevated-rgb) / <alpha-value>)',
+        hover: 'rgb(var(--hover-rgb) / <alpha-value>)',
+        'border-strong': 'rgb(var(--border-strong-rgb) / <alpha-value>)',
+        'text-primary': 'rgb(var(--text-primary-rgb) / <alpha-value>)',
+        'text-secondary': 'rgb(var(--text-secondary-rgb) / <alpha-value>)',
+        brand: {
+          DEFAULT: 'rgb(var(--accent-rgb) / <alpha-value>)',
+          soft: 'rgb(var(--accent-rgb) / 0.12)',
+        },
+        ok: 'rgb(var(--ok-rgb) / <alpha-value>)',
+        warn: 'rgb(var(--warn-rgb) / <alpha-value>)',
+        danger: 'rgb(var(--danger-rgb) / <alpha-value>)',
+        info: 'rgb(var(--info-rgb) / <alpha-value>)',
+        // Tokens de tema legacy (design.md §3.1)
         bg: 'var(--bg)',
         surface: 'var(--surface)',
         'surface-2': 'var(--surface-2)',
@@ -13,8 +28,7 @@ module.exports = {
         text: 'var(--text)',
         'text-muted': 'var(--text-muted)',
         'text-faint': 'var(--text-faint)',
-        // Marca (design.md §3.2)
-        brand: '#6366F1',
+        // Marca (design.md §3.2) — `brand` canónico arriba; gradiente legacy abajo
         'brand-2': '#8B5CF6',
         // Alias para componentes shadcn/ui sobre los tokens
         background: 'var(--bg)',
