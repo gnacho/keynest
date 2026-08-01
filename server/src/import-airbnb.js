@@ -5,7 +5,10 @@ import crypto from 'node:crypto'
  *
  * - Parser propio (sin dependencias): BOM utf-8-sig, campos con comillas.
  * - Cabeceras en el idioma de la cuenta (chino verificado; inglés aceptado).
- * - Filtra filas tipo reserva (预订 / Reservation), deduplica por código (última gana).
+ * - Filtra filas tipo reserva (预订 / Reservation), deduplica por código SUMANDO
+ *   importes: Airbnb paga las estancias largas en plazos mensuales y cada plazo
+ *   es una fila 预订 con el MISMO código y las MISMAS fechas (verificado en los
+ *   CSV reales del usuario: 100% de los códigos duplicados comparten fechas).
  * - El mapa listing→propertyId NO vive en el código (repo público):
  *   llega por petición (la UI lo pide cuando hay listings sin mapear).
  */
@@ -55,7 +58,7 @@ function toNum(s) {
   return Number.isFinite(n) ? n : 0
 }
 
-/** Parsea el CSV y devuelve reservas únicas por código. */
+/** Parsea el CSV y devuelve reservas únicas por código (pagos parciales sumados). */
 export function parseAirbnbCsv(text) {
   const rows = parseCsv(text.replace(/^﻿/, ''))
   if (rows.length < 2) return { reservations: [], dupes: 0, skipped: 0, error: 'vacío' }
@@ -74,14 +77,21 @@ export function parseAirbnbCsv(text) {
     if (!RESERVATION_TYPES.has((r[idx.type] || '').trim())) { skipped++; continue }
     const code = (r[idx.code] || '').trim()
     if (!code) { skipped++; continue }
-    if (byCode.has(code)) dupes++
+    const amount = toNum(r[idx.amount])
+    if (byCode.has(code)) {
+      // Plazo adicional de la misma reserva (mismas fechas): el importe se suma.
+      dupes++
+      const prev = byCode.get(code)
+      prev.amount = Math.round((prev.amount + amount) * 100) / 100
+      continue
+    }
     byCode.set(code, {
       code,
       checkin: toIso(r[idx.start] || ''),
       checkout: toIso(r[idx.end] || ''),
       guest: (r[idx.guest] || '').trim(),
       listing: (r[idx.listing] || '').trim(),
-      amount: toNum(r[idx.amount]),
+      amount,
     })
   }
   const reservations = [...byCode.values()].filter((r) => r.checkin && r.checkout)

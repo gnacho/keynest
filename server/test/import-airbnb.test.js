@@ -33,14 +33,14 @@ afterAll(() => {
 });
 
 describe('parseAirbnbCsv', () => {
-  it('parsea cabeceras chinas, filtra no-reservas y deduplica (última gana)', () => {
+  it('parsea cabeceras chinas, filtra no-reservas y deduplica sumando plazos', () => {
     const { reservations, dupes, skipped, error } = parseAirbnbCsv(CSV);
     expect(error).toBeNull();
     expect(reservations).toHaveLength(2); // HMTEST0001 dedup + HMTEST0002; payout y 调解款结算 fuera
     expect(dupes).toBe(1);
     expect(skipped).toBe(2);
     const r1 = reservations.find((r) => r.code === 'HMTEST0001');
-    expect(r1.amount).toBe(1510.0); // última gana
+    expect(r1.amount).toBe(3010.0); // pagos parciales sumados: 1500 + 1510
     expect(r1.checkin).toBe('2026-07-27');
     expect(r1.checkout).toBe('2026-08-03');
     const r2 = reservations.find((r) => r.code === 'HMTEST0002');
@@ -73,7 +73,7 @@ describe('importAirbnb', () => {
     expect(out.inserted).toBe(1);
     const r1 = db.prepare('SELECT * FROM reservations WHERE confirmation_code = ?').get('HMTEST0001');
     expect(r1.guest_name).toBe('John Smith');
-    expect(r1.amount).toBe(1510.0);
+    expect(r1.amount).toBe(3010.0);
     expect(r1.uid).toBe('abc@airbnb.com'); // uid iCal conservado
     const r2 = db.prepare('SELECT * FROM reservations WHERE confirmation_code = ?').get('HMTEST0002');
     expect(r2.uid).toBe('csv-HMTEST0002');

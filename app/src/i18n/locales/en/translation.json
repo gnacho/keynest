@@ -132,7 +132,9 @@
     "verReserva": "View full reservation",
     "tiposDia": "Day types",
     "ent": "IN",
-    "sal": "OUT"
+    "sal": "OUT",
+    "libre": "Free",
+    "todoOcupado": "All properties booked this day"
   },
   "estado": {
     "pendiente": "Pending",

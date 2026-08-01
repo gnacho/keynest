@@ -132,7 +132,9 @@
     "verReserva": "Ver reserva completa",
     "tiposDia": "Tipos de día",
     "ent": "ENT",
-    "sal": "SAL"
+    "sal": "SAL",
+    "libre": "Libre",
+    "todoOcupado": "Todo ocupado este día"
   },
   "estado": {
     "pendiente": "Pendiente",

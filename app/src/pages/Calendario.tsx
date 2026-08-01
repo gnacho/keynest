@@ -75,6 +75,7 @@ const NAME_CHIP_STYLE: Record<string, { backgroundColor?: string; backgroundImag
       'linear-gradient(90deg, var(--or-chip-bg) 0 50%, var(--em-chip-bg) 50% 100%)',
     color: 'var(--or-chip-text)',
   },
+  libre: { backgroundColor: 'var(--sl-chip-bg)', color: 'var(--sl-chip-text)' },
 };
 
 export default function Calendario() {
@@ -105,6 +106,9 @@ export default function Calendario() {
 
   const inmueble = params.get('inmueble') ?? 'todos';
   const typeFilters = parseTipoParam(params.get('tipo'));
+  // Modo "solo desocupado": el único filtro activo — los inmuebles LIBRES generan entradas.
+  const onlyDesocupado =
+    typeFilters.desocupado && !typeFilters.entrada && !typeFilters.salida && !typeFilters.estancia;
   const allProps = data.getProperties();
   const scopedProps =
     inmueble === 'todos' ? allProps : allProps.filter((p) => p.slug === inmueble);
@@ -159,7 +163,21 @@ export default function Calendario() {
 
   /** Marcador de la vista filtrada: barra gruesa + huésped (desktop), pill ENT/SAL (móvil) */
   const singleMarker = (info: DayInfo) => {
-    if (info.kind === 'libre') return null;
+    if (info.kind === 'libre') {
+      // Modo "solo desocupado": el inmueble libre SÍ genera marcador
+      if (!onlyDesocupado) return null;
+      return (
+        <div className="flex flex-col gap-[3px]">
+          <div
+            className="hidden h-[18px] items-center truncate rounded-md px-1.5 text-[11px] font-semibold lg:flex"
+            style={{ backgroundColor: 'var(--sl-chip-bg)', color: 'var(--sl-chip-text)' }}
+          >
+            {t('cal.libre')}
+          </div>
+          <div className="h-[6px] rounded-full lg:hidden" style={{ backgroundColor: '#64748B' }} />
+        </div>
+      );
+    }
     const dim = !kindVisible(info.kind, typeFilters);
     if (info.kind === 'rotacion') {
       const guest = info.checkIn?.guest.name ?? '';
@@ -318,6 +336,9 @@ export default function Calendario() {
               info: dayInfoFor(reservations, p.id, day),
             }));
             const activeInfos = infos.filter((x) => x.info.kind !== 'libre');
+            // Modo "solo desocupado": los inmuebles libres son las entradas
+            const freeInfos = infos.filter((x) => x.info.kind === 'libre');
+            const chipInfos = onlyDesocupado ? freeInfos : activeInfos;
             const singleInfo = single ? infos[0]?.info : undefined;
             const rotTitle =
               single && singleInfo?.kind === 'rotacion'
@@ -368,9 +389,13 @@ export default function Calendario() {
                         color: inMonth ? 'var(--text)' : 'var(--text-faint)',
                         opacity: !inMonth
                           ? 0.5
-                          : activeInfos.length === 0 && !typeFilters.desocupado
-                            ? 0.25
-                            : 1,
+                          : onlyDesocupado
+                            ? freeInfos.length === 0
+                              ? 0.25
+                              : 1
+                            : activeInfos.length === 0 && !typeFilters.desocupado
+                              ? 0.25
+                              : 1,
                       }}
                     >
                       {day.getDate()}
@@ -399,10 +424,10 @@ export default function Calendario() {
                 <span className={cn('mt-auto flex flex-col gap-[3px] pt-1', !inMonth && 'opacity-45')}>
                   {single && singleInfo
                     ? singleMarker(singleInfo)
-                    : activeInfos.slice(0, 4).map(({ p, info }) => (
+                    : chipInfos.slice(0, 4).map(({ p, info }) => (
                         <span
                           key={p.id}
-                          className={cn(!kindVisible(info.kind, typeFilters) && 'opacity-25')}
+                          className={cn(!kindVisible(info.kind, typeFilters) && !onlyDesocupado && 'opacity-25')}
                         >
                           {/* Móvil: chip con nombre corto del inmueble */}
                           <span
@@ -422,12 +447,12 @@ export default function Calendario() {
                           </span>
                         </span>
                       ))}
-                  {!single && activeInfos.length > 4 && (
+                  {!single && chipInfos.length > 4 && (
                     <span
                       className="text-[9px] font-semibold leading-3"
                       style={{ color: 'var(--text-faint)' }}
                     >
-                      +{activeInfos.length - 4}
+                      +{chipInfos.length - 4}
                     </span>
                   )}
                 </span>
@@ -442,6 +467,7 @@ export default function Calendario() {
         open={sheetOpen}
         onOpenChange={setSheetOpen}
         properties={scopedProps}
+        onlyDesocupado={onlyDesocupado}
       />
     </div>
   );

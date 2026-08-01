@@ -48,6 +48,8 @@ interface CalDayDetailProps {
   onOpenChange: (open: boolean) => void;
   /** Inmuebles visibles según el filtro actual */
   properties: Property[];
+  /** Modo "solo desocupado": los inmuebles libres se listan en el detalle */
+  onlyDesocupado?: boolean;
 }
 
 /**
@@ -55,7 +57,7 @@ interface CalDayDetailProps {
  * reserva, huésped, edades, peticiones especiales y limpieza asociada.
  * Sheet slide-up en móvil / Dialog centrado en desktop.
  */
-export default function CalDayDetail({ date, open, onOpenChange, properties }: CalDayDetailProps) {
+export default function CalDayDetail({ date, open, onOpenChange, properties, onlyDesocupado = false }: CalDayDetailProps) {
   const { t } = useTranslation();
   const desktop = useIsDesktop();
   const navigate = useNavigate();
@@ -68,13 +70,16 @@ export default function CalDayDetail({ date, open, onOpenChange, properties }: C
 
   // Reservas del día dentro del ámbito filtrado (con su semántica)
   const dayReservations: { r: Reservation; p: Property; kind: DayKind }[] = [];
+  const freeProperties: Property[] = [];
   for (const p of properties) {
     const info = dayInfoFor(reservations, p.id, date);
     const res = info.checkIn ?? info.stay ?? info.checkOut;
     if (info.kind !== 'libre' && res) dayReservations.push({ r: res, p, kind: info.kind });
+    if (info.kind === 'libre') freeProperties.push(p);
   }
 
   const next = nextReservationAfter(reservations, properties, date);
+  const nextFor = (p: Property) => nextReservationAfter(reservations, [p], date);
 
   const statusPills = dayReservations.map(({ r, p, kind }) => (
     <StatusBadge
@@ -89,11 +94,36 @@ export default function CalDayDetail({ date, open, onOpenChange, properties }: C
     <div className="flex flex-col gap-4">
       {statusPills.length > 0 && <div className="flex flex-wrap gap-1.5">{statusPills}</div>}
 
-      {dayReservations.length === 0 && (
+      {/* Modo "solo desocupado": lista de inmuebles libres ese día */}
+      {onlyDesocupado && freeProperties.length > 0 && (
+        <div className="flex flex-col gap-2">
+          {freeProperties.map((p) => {
+            const nextP = nextFor(p);
+            return (
+              <section
+                key={p.id}
+                className="flex items-center gap-3 rounded-2xl border p-3"
+                style={{ borderColor: 'var(--border)', backgroundColor: 'var(--surface)' }}
+              >
+                <PropertyAvatar property={p} size={40} />
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-semibold">{p.name}</p>
+                  <p className="truncate text-xs" style={{ color: 'var(--text-muted)' }}>
+                    {nextP ? t('cal.proximaReserva', { date: fmtDateShort(nextP.checkIn), name: '' }) : t('cal.sinProximas')}
+                  </p>
+                </div>
+                <StatusBadge label={t('cal.libre')} tone="slate" dot />
+              </section>
+            );
+          })}
+        </div>
+      )}
+
+      {dayReservations.length === 0 && !(onlyDesocupado && freeProperties.length > 0) && (
         <div>
           <EmptyState
             icon={MoonStar}
-            title={t('cal.diaLibre')}
+            title={onlyDesocupado ? t('cal.todoOcupado') : t('cal.diaLibre')}
             text={
               next
                 ? t('cal.proximaReserva', { date: fmtDateShort(next.checkIn), name: data.getProperty(next.propertyId)?.name ?? '' })
