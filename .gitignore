@@ -8,8 +8,9 @@ node_modules/
 # Build output
 app/dist/
 
-# Data / DBs
-data/
+# Data / DBs (solo carpetas de datos del servidor, no src/data)
+server/data/
+data/*.db
 *.db
 *.db-shm
 *.db-wal
