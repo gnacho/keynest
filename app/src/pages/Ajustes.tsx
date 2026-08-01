@@ -1103,7 +1103,7 @@ export default function Ajustes() {
                     <input
                       value={tedeeUrl}
                       onChange={(e) => setTedeeUrl(e.target.value)}
-                      placeholder="http://192.168.1.111"
+                      placeholder={tr('aj.tedeeUrlPlaceholder')}
                       aria-label={tr('aj.tedeeUrl')}
                       className={cn(inputCls, 'w-full')}
                       style={inputStyle}

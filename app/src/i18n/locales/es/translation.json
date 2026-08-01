@@ -620,9 +620,9 @@
     "fotoOk": "Foto actualizada",
     "fotoError": "No se pudo subir la foto (jpg/png/webp, máx 10 MB)",
     "tedeeApi": "API de Tedee",
-    "tedeeApiDesc": "Puente (bridge) local y token de la API para las cerraduras",
-    "tedeeUrl": "URL del bridge",
-    "tedeeToken": "Token de la API",
+    "tedeeApiDesc": "Bridge local (http://192.168.1.111 + token del bridge) o cloud pública (https://api.tedee.com + PAK de portal.tedee.com).",
+    "tedeeUrl": "URL",
+    "tedeeToken": "Token del bridge o PersonalKey (PAK)",
     "tedeeGuardar": "Guardar y probar",
     "tedeeGuardado": "Configuración de Tedee guardada",
     "tedeeOk": "Conexión correcta · {{count}} cerradura(s): {{names}}",
@@ -720,7 +720,8 @@
     "importarError": "No se pudo importar el CSV",
     "proveedores": "Proveedores",
     "proveedor": "Proveedor",
-    "equipoProveedores": "Equipo de proveedores"
+    "equipoProveedores": "Equipo de proveedores",
+    "tedeeUrlPlaceholder": "http://192.168.1.111 o https://api.tedee.com"
   },
   "common2": {
     "confirmar": "Confirmar",
