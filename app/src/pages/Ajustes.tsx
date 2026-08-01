@@ -508,9 +508,9 @@ export default function Ajustes() {
 
       {/* ============================== Topbar */}
       <div>
-        <h1 className="font-display text-2xl font-semibold tracking-[-0.02em] lg:text-[28px]">Ajustes</h1>
+        <h1 className="font-display text-2xl font-semibold tracking-[-0.02em] lg:text-[28px]">{tr('nav.ajustes')}</h1>
         <p className="mt-0.5 text-[13px]" style={{ color: 'var(--text-muted)' }}>
-          Maestros de la aplicación
+          {tr('aj.maestrosDesc')}
         </p>
       </div>
 

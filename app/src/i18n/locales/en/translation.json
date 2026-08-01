@@ -682,7 +682,8 @@
     "tu": "you",
     "confirmar": "Confirm",
     "cancelar": "Cancel",
-    "noUltimoAdmin": "At least one administrator must remain"
+    "noUltimoAdmin": "At least one administrator must remain",
+    "maestrosDesc": "Application masters"
   },
   "common2": {
     "confirmar": "Confirm",

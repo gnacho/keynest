@@ -28,13 +28,14 @@ export const LANGUAGES: { code: Exclude<AppLanguage, 'auto'>; flag: string; nati
   { code: 'en', flag: '🇬🇧', nativeName: 'English' },
 ];
 
-/* ---------- Tarjeta base ---------- */
+/* ---------- Tarjeta base ----------
+   animate (no whileInView): en páginas largas las tarjetas bajo el fold
+   deben existir visualmente aunque el usuario aún no haya hecho scroll. */
 export function Card({ title, desc, children, className }: { title: string; desc?: string; children: ReactNode; className?: string }) {
   return (
     <motion.section
       initial={{ opacity: 0, y: 24 }}
-      whileInView={{ opacity: 1, y: 0 }}
-      viewport={{ once: true }}
+      animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5, ease: [0.25, 1, 0.5, 1] }}
       className={cn('card p-4 md:p-6', className)}
     >
