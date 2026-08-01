@@ -138,7 +138,7 @@ function shiftAnchor(anchor: Date, g: Granularity, dir: number): Date {
 
 function rangeLabel(r: Range, g: Granularity): string {
   if (g === 'dia') return fmtDateShort(r.start);
-  if (g === 'mes') return capitalize(fmtMonth(r.start));
+  if (g === 'mes') return `${capitalize(fmtMonth(r.start))} ${r.start.getFullYear()}`;
   if (g === 'ano') return String(r.start.getFullYear());
   return `${fmtDateShort(r.start)} – ${fmtDateShort(r.end)}`;
 }
@@ -323,7 +323,9 @@ export default function Rentabilidad() {
   };
   const navigate = (dir: number) => {
     const next = shiftAnchor(anchor, g, dir);
-    setParam('ancla', next.toISOString().slice(0, 10), false);
+    // ymd LOCAL (no toISOString: la conversión a UTC desplaza el día)
+    const ymd = `${next.getFullYear()}-${String(next.getMonth() + 1).padStart(2, '0')}-${String(next.getDate()).padStart(2, '0')}`;
+    setParam('ancla', ymd, false);
   };
   const goEsteMes = () => {
     const p = new URLSearchParams(params);
