@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 import type { Variants } from 'framer-motion';
 import {
@@ -15,19 +15,14 @@ import {
   Info,
   KeyRound,
   Link2,
-  LogOut,
   MapPin,
-  MonitorSmartphone,
-  Moon,
   Pencil,
   Phone,
   Plus,
   RefreshCw,
   Ruler,
   Settings2,
-  ShieldCheck,
   Sparkles,
-  Sun,
   Trash2,
   TrendingUp,
   UserRoundPlus,
@@ -59,15 +54,14 @@ import { Slider } from '@/components/ui/slider';
 import { useTranslation } from 'react-i18next';
 import { EXPENSE_META, EXPENSE_TYPES, TYPE_SWATCHES } from '@/components/fin/expenseMeta';
 import { useData } from '@/data/useData';
-import { useTheme } from '@/theme/ThemeProvider';
-import { logout, saveLanguage, cachedUser, demoStatus, setDemoMode } from '@/lib/auth';
+import { cachedUser, demoStatus, setDemoMode } from '@/lib/auth';
 import { api } from '@/lib/api';
-import { applyLanguage, cachedLanguagePref } from '@/i18n';
 import { copyText } from '@/lib/clipboard';
 import { catIcon, CAT_ICONS } from '@/lib/cat-icons';
+import { AppearanceCard, AboutCard, Card, SessionCard } from '@/components/settings/settings-cards';
+import UsersManager from '@/components/settings/UsersManager';
 import type { MaintCategory } from '@/data/types';
-import type { AppLanguage } from '@/i18n';
-import type { AppUser, ExpenseType, Person, PersonRole } from '@/data/types';
+import type { ExpenseType, Person, PersonRole } from '@/data/types';
 import { fmtDateShort, fmtMoney, fmtRelative } from '@/lib/format';
 import { cn } from '@/lib/utils';
 
@@ -129,9 +123,7 @@ const inputStyle = { borderColor: 'var(--border)' };
 export default function Ajustes() {
   const { t: tr } = useTranslation();
   const data = useData();
-  const navigate = useNavigate();
   const reduce = useReducedMotion();
-  const { mode: themeModeRaw, setMode } = useTheme();
 
   const [tab, setTab] = useState<TabId>('inmuebles');
 
@@ -169,10 +161,6 @@ export default function Ajustes() {
   const [addPersonOpen, setAddPersonOpen] = useState(false);
   const [newPersonRole, setNewPersonRole] = useState<PersonRole>('limpieza');
 
-  /* ---- Usuarios (provider): copia de enlaces + alta ---- */
-  const [copiedId, setCopiedId] = useState<string | null>(null);
-  const [newUserOpen, setNewUserOpen] = useState(false);
-  const [userForm, setUserForm] = useState({ name: '', phone: '' });
   const [checklistText, setChecklistText] = useState('');
   const [instructionsText, setInstructionsText] = useState('');
 
@@ -213,12 +201,12 @@ export default function Ajustes() {
   const [newTypeRecurrent, setNewTypeRecurrent] = useState(false);
 
   /* ---- Preferencias ---- */
-  const themeMode: 'claro' | 'oscuro' | 'auto' = themeModeRaw === 'system' ? 'auto' : themeModeRaw === 'dark' ? 'oscuro' : 'claro';
-  const [lang, setLang] = useState<AppLanguage>(() => cachedUser()?.language ?? cachedLanguagePref());
   const [demoOn, setDemoOn] = useState(true);
   const [updateInfo, setUpdateInfo] = useState<{ current: string; latest: string | null; available: boolean } | null>(null);
   const [applying, setApplying] = useState(false);
   const isAdmin = cachedUser()?.role === 'admin';
+  const isDemoUser = Boolean(cachedUser()?.is_demo);
+  const visibleTabs = TABS.filter((t) => t.id !== 'usuarios' || isAdmin);
 
   const checkUpdate = async () => {
     try {
@@ -243,16 +231,11 @@ export default function Ajustes() {
   const [tedeeUrl, setTedeeUrl] = useState('');
   const [tedeeToken, setTedeeToken] = useState('');
   const [tedeeState, setTedeeState] = useState<{ state: 'idle' | 'checking' | 'ok' | 'error'; text?: string }>({ state: 'idle' });
-  interface ApiUser { id: string; username: string; email: string | null; phone: string | null; language: string; role: string }
-  const [realUsers, setRealUsers] = useState<ApiUser[]>([]);
   useEffect(() => {
     void demoStatus().then(setDemoOn);
     void checkUpdate();
     void api<{ url: string }>('/api/config/tedee')
       .then((d) => { if (d?.url) setTedeeUrl(d.url); })
-      .catch(() => undefined);
-    void api<{ users: ApiUser[] }>('/api/users')
-      .then((d) => { if (d?.users) setRealUsers(d.users); })
       .catch(() => undefined);
   }, []);
 
@@ -282,11 +265,6 @@ export default function Ajustes() {
     setDemoOn(v);
     void setDemoMode(v).catch(() => setDemoOn(!v));
   };
-  const changeLang = (v: AppLanguage) => {
-    setLang(v);
-    applyLanguage(v);
-    void saveLanguage(v).catch(() => undefined);
-  };
   const [checkInTime, setCheckInTime] = useState(() => data.getSettings().checkInTime);
   const [checkOutTime, setCheckOutTime] = useState(() => data.getSettings().checkOutTime);
   const [autoCleaning, setAutoCleaning] = useState(() => data.getSettings().autoCleaning);
@@ -295,7 +273,6 @@ export default function Ajustes() {
   const savePref = (patch: Parameters<typeof data.saveSettings>[0]) => {
     void data.saveSettings(patch).catch(() => toast.error(tr('aj.errorGuardar')));
   };
-  const [logoutOpen, setLogoutOpen] = useState(false);
   const [marginDays, setMarginDays] = useState(() => data.getCleaningMarginDays());
   useEffect(() => {
     setMarginDays(data.getCleaningMarginDays());
@@ -305,60 +282,6 @@ export default function Ajustes() {
     await data.saveCleaningMarginDays(marginDays);
     toast.success(tr('aj.guardar'));
   };
-  const [passOpen, setPassOpen] = useState(false);
-  const [passForm, setPassForm] = useState({ current: '', next: '', repeat: '' });
-  const [passError, setPassError] = useState('');
-  const [passBusy, setPassBusy] = useState(false);
-
-  const changePassword = async () => {
-    setPassError('');
-    if (passForm.next.length < 6) { setPassError(tr('aj.passErrCorta')); return; }
-    if (passForm.next !== passForm.repeat) { setPassError(tr('aj.passErrCoincide')); return; }
-    setPassBusy(true);
-    try {
-      try {
-        await api('/api/auth/password', {
-          method: 'PUT',
-          body: JSON.stringify({ current: passForm.current, next: passForm.next }),
-        });
-      } catch (err) {
-        if (err instanceof Error && err.message.includes('403')) { setPassError(tr('aj.passErrActual')); return; }
-        throw err;
-      }
-      setPassOpen(false);
-      setPassForm({ current: '', next: '', repeat: '' });
-      toast.success(tr('aj.passCambiada'));
-    } catch {
-      setPassError(tr('aj.passErrGeneral'));
-    } finally {
-      setPassBusy(false);
-    }
-  };
-
-  const [newUserPass, setNewUserPass] = useState('');
-  const [newUserError, setNewUserError] = useState('');
-  const createGestionUser = async () => {
-    setNewUserError('');
-    if (!userForm.name.trim()) return;
-    if (newUserPass.length < 6) { setNewUserError(tr('aj.passwordReq')); return; }
-    let d: { user: ApiUser };
-    try {
-      d = await api<{ user: ApiUser }>('/api/users', {
-        method: 'POST',
-        body: JSON.stringify({ username: userForm.name.trim(), password: newUserPass, phone: userForm.phone }),
-      });
-    } catch (err) {
-      if (err instanceof Error && err.message.includes('existe')) { setNewUserError(tr('aj.usuarioExiste')); return; }
-      setNewUserError(tr('aj.passErrGeneral'));
-      return;
-    }
-    setRealUsers((prev) => [...prev, d.user]);
-    setNewUserOpen(false);
-    setNewUserPass('');
-    setUserForm({ name: '', phone: '' });
-    toast.success(tr('aj.usuarioCreadoOk'));
-  };
-
   const expenses = data.getExpenses();
 
   const expenseCountByType = useMemo(() => {
@@ -550,26 +473,6 @@ export default function Ajustes() {
     toast.success(tr('aj.enlaceRevocado'));
   };
 
-  /* -------------------------------------------------------- handlers usuarios */
-  const userLink = (u: AppUser) => `https://keynest.app/t/${u.token}`;
-
-  const copyUserLink = (u: AppUser) => {
-    if (!u.token) return;
-    const link = userLink(u);
-    void navigator.clipboard?.writeText(link).catch(() => undefined);
-    setCopiedId(u.id);
-    setTimeout(() => setCopiedId((id) => (id === u.id ? null : id)), 1500);
-  };
-
-  const closeNewUser = (o: boolean) => {
-    setNewUserOpen(o);
-    if (!o) {
-      setUserForm({ name: '', phone: '' });
-      setNewUserPass('');
-      setNewUserError('');
-    }
-  };
-
   /* ----------------------------------------------------- handlers tipos gasto */
   const updateTypeConfig = (key: string, patch: Partial<ExpenseTypeConfig>) => {
     setTypeConfigs((prev) => prev.map((c) => (c.key === key ? { ...c, ...patch } : c)));
@@ -597,11 +500,6 @@ export default function Ajustes() {
     toast.success('Tipo de gasto creado');
   };
 
-  /* ----------------------------------------------------------- handlers tema */
-  const applyThemeMode = (mode: 'claro' | 'oscuro' | 'auto') => {
-    setMode(mode === 'claro' ? 'light' : mode === 'oscuro' ? 'dark' : 'system');
-  };
-
   const editProperty = editProp ? properties.find((p) => p.id === editProp) : undefined;
 
   return (
@@ -622,7 +520,7 @@ export default function Ajustes() {
           className="inline-flex items-center gap-1 rounded-xl border p-1"
           style={{ borderColor: 'var(--border)', backgroundColor: 'var(--surface)' }}
         >
-          {TABS.map((t) => {
+          {visibleTabs.map((t) => {
             const active = tab === t.id;
             return (
               <button
@@ -953,174 +851,7 @@ export default function Ajustes() {
           )}
 
           {/* ===================================================== TAB USUARIOS */}
-          {tab === 'usuarios' && (
-            <div className="flex flex-col gap-6">
-              {(['gestion'] as AppUser['role'][]).map((role) => {
-                const group = role === 'gestion'
-                  ? realUsers.map((u) => ({ id: u.id, name: u.username, phone: u.phone ?? undefined, role: 'gestion' as const, token: undefined, personId: undefined }))
-                  : data.getUsers().filter((u) => u.role === role);
-                return (
-                  <section key={role}>
-                    <p
-                      className="mb-2 text-[11px] font-semibold uppercase tracking-[0.08em]"
-                      style={{ color: role === 'gestion' ? '#6366F1' : '#8B5CF6' }}
-                    >
-                      {role === 'gestion' ? tr('aj.gestion') : tr('aj.limpieza')}
-                    </p>
-
-                    {role === 'gestion' && (
-                      <p className="mb-3 text-[13px]" style={{ color: 'var(--text-muted)' }}>
-                        {tr('aj.gestionDesc')}
-                      </p>
-                    )}
-                    {role === 'limpieza' && (
-                      <div
-                        className="mb-3 flex items-start gap-2.5 rounded-2xl border px-4 py-3"
-                        style={{ backgroundColor: 'var(--vi-chip-bg)', borderColor: 'rgb(139 92 246 / 0.3)' }}
-                      >
-                        <Info className="mt-0.5 h-4 w-4 shrink-0 text-violet-500" />
-                        <p className="text-sm" style={{ color: 'var(--vi-chip-text)' }}>
-                          {tr('aj.limpiezaInfo')}
-                        </p>
-                      </div>
-                    )}
-
-                    <motion.div variants={containerV} initial="hidden" animate="show" className="grid gap-3 sm:grid-cols-2">
-                      {group.map((u) => {
-                        const linked = u.personId ? data.getPerson(u.personId) : undefined;
-                        return (
-                          <motion.div key={u.id} variants={itemV} className="card flex flex-col gap-3 p-4">
-                            <div className="flex items-start gap-3">
-                              <PersonAvatar
-                                name={u.name}
-                                initials={u.name.split(' ').map((w) => w[0]).slice(0, 2).join('').toUpperCase()}
-                                size={44}
-                              />
-                              <div className="min-w-0 flex-1">
-                                <p className="truncate text-[15px] font-semibold">{u.name}</p>
-                                <p className="truncate text-[13px]" style={{ color: 'var(--text-muted)' }}>
-                                  {role === 'gestion'
-                                    ? tr('aj.propietariaAcceso')
-                                    : linked
-                                      ? `${linked.specialty} · ${linked.hourlyRate} €/h`
-                                      : tr('aj.equipoLimpieza')}
-                                </p>
-                                {u.phone && (
-                                  <a
-                                    href={`tel:${u.phone.replace(/\s/g, '')}`}
-                                    className="mt-0.5 inline-flex items-center gap-1 text-xs"
-                                    style={{ color: 'var(--text-muted)' }}
-                                  >
-                                    <Phone className="h-3 w-3" />
-                                    {u.phone}
-                                  </a>
-                                )}
-                              </div>
-                              <span
-                                className="inline-flex shrink-0 items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold"
-                                style={role === 'gestion'
-                                  ? { backgroundColor: 'rgb(99 102 241 / 0.12)', color: '#6366F1' }
-                                  : { backgroundColor: 'var(--vi-chip-bg)', color: 'var(--vi-chip-text)' }}
-                              >
-                                {role === 'gestion' ? <ShieldCheck className="h-3 w-3" /> : <Sparkles className="h-3 w-3" />}
-                                {role === 'gestion' ? tr('aj.gestion') : tr('aj.limpieza')}
-                              </span>
-                            </div>
-
-                            {role === 'limpieza' && (
-                              <>
-                                {u.token ? (
-                                    <div
-                                      className="flex items-center gap-2 rounded-xl border px-3 py-2"
-                                      style={{ borderColor: 'var(--border)', backgroundColor: 'var(--surface-2)' }}
-                                    >
-                                      <Link2 className="h-3.5 w-3.5 shrink-0 text-violet-500" />
-                                      <span className="tnum min-w-0 flex-1 truncate text-xs font-medium" style={{ color: 'var(--text-muted)' }}>
-                                        {userLink(u)}
-                                      </span>
-                                    </div>
-                                ) : (
-                                  <div
-                                    className="flex items-center gap-2 rounded-xl border px-3 py-2"
-                                    style={{ borderColor: 'var(--border)', backgroundColor: 'var(--surface-2)' }}
-                                  >
-                                    <Ban className="h-3.5 w-3.5 shrink-0" style={{ color: 'var(--text-faint)' }} />
-                                    <span className="text-xs font-medium" style={{ color: 'var(--text-faint)' }}>
-                                      {tr('aj.accesoRevocado')}
-                                    </span>
-                                  </div>
-                                )}
-                                <div className="flex flex-wrap gap-2">
-                                  <button
-                                    type="button"
-                                    disabled={!u.token}
-                                    onClick={() => copyUserLink(u)}
-                                    className="flex h-9 flex-1 items-center justify-center gap-1.5 rounded-xl bg-violet-500 px-3 text-[13px] font-semibold text-white transition-all duration-150 hover:brightness-110 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-40"
-                                  >
-                                    {copiedId === u.id ? (
-                                      <>
-                                        <Check className="h-4 w-4" />
-                                        {tr('aj.copiado')}
-                                      </>
-                                    ) : (
-                                      <>
-                                        <Copy className="h-4 w-4" />
-                                        {tr('aj.copiarEnlace')}
-                                      </>
-                                    )}
-                                  </button>
-                                  <button
-                                    type="button"
-                                    onClick={() => {
-                                      data.regenerateUserToken(u.id);
-                                      toast.success(tr('aj.enlaceGenerado', { name: u.name }));
-                                    }}
-                                    className="flex h-9 items-center gap-1.5 rounded-xl border px-3 text-[13px] font-semibold transition-colors duration-150 hover:bg-[var(--surface-2)]"
-                                    style={{ borderColor: 'var(--border)', color: 'var(--text-muted)' }}
-                                  >
-                                    <RefreshCw className="h-3.5 w-3.5" />
-                                    {tr('aj.regenerar')}
-                                  </button>
-                                  <button
-                                    type="button"
-                                    disabled={!u.token}
-                                    onClick={() => {
-                                      data.revokeUserToken(u.id);
-                                      toast.success(tr('aj.accesoRevocadoToast', { name: u.name }));
-                                    }}
-                                    className="flex h-9 items-center gap-1.5 rounded-xl border px-3 text-[13px] font-semibold transition-colors duration-150 hover:bg-[var(--ro-chip-bg)] disabled:cursor-not-allowed disabled:opacity-40"
-                                    style={{ borderColor: 'var(--border)', color: '#F43F5E' }}
-                                  >
-                                    <Ban className="h-3.5 w-3.5" />
-                                    {tr('aj.revocar')}
-                                  </button>
-                                </div>
-                              </>
-                            )}
-                          </motion.div>
-                        );
-                      })}
-
-                      {/* Tarjeta fantasma añadir usuario */}
-                      <motion.button
-                        variants={itemV}
-                        type="button"
-                        onClick={() => {
-                          setUserForm({ name: '', phone: '' });
-                                              setNewUserOpen(true);
-                        }}
-                        className="flex min-h-[104px] flex-col items-center justify-center gap-1.5 rounded-2xl border-2 border-dashed p-4 transition-colors duration-150 hover:bg-[var(--surface-2)]"
-                        style={{ borderColor: 'var(--border)', color: 'var(--text-faint)' }}
-                      >
-                        <UserRoundPlus className="h-6 w-6" strokeWidth={1.8} />
-                        <span className="text-sm font-semibold">{tr('aj.nuevoUsuario')}</span>
-                      </motion.button>
-                    </motion.div>
-                  </section>
-                );
-              })}
-            </div>
-          )}
+          {tab === 'usuarios' && isAdmin && <UsersManager />}
 
           {/* ================================================= TAB TIPOS DE GASTO */}
           {tab === 'gasto' && (
@@ -1298,329 +1029,236 @@ export default function Ajustes() {
 
           {/* ================================================= TAB PREFERENCIAS */}
           {tab === 'preferencias' && (
-            <motion.div variants={containerV} initial="hidden" animate="show" className="card divide-y" style={{ borderColor: 'var(--border)' }}>
-              {/* Tema */}
-              <motion.div variants={itemV} className="flex min-h-14 flex-wrap items-center justify-between gap-3 px-4 py-3" style={{ borderColor: 'var(--border)' }}>
-                <div>
-                  <p className="text-sm font-semibold">{tr('aj.tema')}</p>
-                  <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
-                    {tr('aj.temaDesc')}
-                  </p>
-                </div>
-                <div className="flex items-center gap-1 rounded-xl border p-1" style={{ borderColor: 'var(--border)', backgroundColor: 'var(--surface-2)' }}>
-                  {(
-                    [
-                      { id: 'claro', icon: Sun, labelKey: 'aj.claro' },
-                      { id: 'oscuro', icon: Moon, labelKey: 'aj.oscuro' },
-                      { id: 'auto', icon: MonitorSmartphone, labelKey: 'aj.auto' },
-                    ] as const
-                  ).map((m) => {
-                    const active = themeMode === m.id;
-                    return (
-                      <button
-                        key={m.id}
-                        type="button"
-                        onClick={() => applyThemeMode(m.id)}
-                        className={cn(
-                          'flex h-8 items-center gap-1.5 rounded-lg px-3 text-xs font-semibold transition-colors duration-200',
-                          active ? 'text-white' : 'text-[var(--text-muted)] hover:text-[var(--text)]',
-                        )}
-                        style={active ? { backgroundImage: 'linear-gradient(135deg,#6366F1,#8B5CF6)' } : undefined}
-                      >
-                        <m.icon className="h-3.5 w-3.5" />
-                        {tr(m.labelKey)}
-                      </button>
-                    );
-                  })}
-                </div>
-              </motion.div>
+            <div className="flex flex-col gap-4">
+              <AppearanceCard />
 
-              {/* Idioma */}
-              <motion.div variants={itemV} className="flex min-h-14 flex-wrap items-center justify-between gap-3 px-4 py-3" style={{ borderColor: 'var(--border)' }}>
-                <div>
-                  <p className="text-sm font-semibold">{tr('aj.idioma')}</p>
-                  <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
-                    {tr('aj.idiomaDesc')}
-                  </p>
-                </div>
-                <div className="flex items-center gap-1 rounded-xl border p-1" style={{ borderColor: 'var(--border)', backgroundColor: 'var(--surface-2)' }}>
-                  {(
-                    [
-                      { id: 'auto', label: 'Auto' },
-                      { id: 'es', label: 'ES' },
-                      { id: 'en', label: 'EN' },
-                    ] as const
-                  ).map((m) => {
-                    const active = lang === m.id;
-                    return (
-                      <button
-                        key={m.id}
-                        type="button"
-                        onClick={() => changeLang(m.id)}
-                        className={cn(
-                          'flex h-8 items-center gap-1.5 rounded-lg px-3 text-xs font-semibold transition-colors duration-200',
-                          active ? 'text-white' : 'text-[var(--text-muted)] hover:text-[var(--text)]',
-                        )}
-                        style={active ? { backgroundImage: 'linear-gradient(135deg,#6366F1,#8B5CF6)' } : undefined}
-                      >
-                        {m.label}
-                      </button>
-                    );
-                  })}
-                </div>
-              </motion.div>
-
-              {/* API Tedee */}
-              <motion.div variants={itemV} className="flex flex-col gap-3 px-4 py-3" style={{ borderColor: 'var(--border)' }}>
-                <div>
-                  <p className="text-sm font-semibold">{tr('aj.tedeeApi')}</p>
-                  <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
-                    {tr('aj.tedeeApiDesc')}
-                  </p>
-                </div>
-                <div className="grid gap-2 sm:grid-cols-[1fr_1fr_auto]">
-                  <input
-                    value={tedeeUrl}
-                    onChange={(e) => setTedeeUrl(e.target.value)}
-                    placeholder="http://192.168.1.111"
-                    aria-label={tr('aj.tedeeUrl')}
-                    className={cn(inputCls, 'w-full')}
-                    style={inputStyle}
-                  />
-                  <input
-                    type="password"
-                    value={tedeeToken}
-                    onChange={(e) => setTedeeToken(e.target.value)}
-                    placeholder={tr('aj.tedeeToken')}
-                    aria-label={tr('aj.tedeeToken')}
-                    className={cn(inputCls, 'w-full')}
-                    style={inputStyle}
-                  />
-                  <button
-                    type="button"
-                    disabled={!tedeeUrl.trim() || tedeeState.state === 'checking'}
-                    onClick={() => void saveTedee()}
-                    className="brand-gradient flex h-10 items-center justify-center rounded-xl px-4 text-xs font-semibold text-white disabled:opacity-50"
-                  >
-                    {tedeeState.state === 'checking' ? tr('aj.probando') : tr('aj.tedeeGuardar')}
-                  </button>
-                </div>
-                {tedeeState.state === 'ok' && (
-                  <p className="flex items-center gap-1.5 text-xs font-medium text-emerald-500">
-                    <Check className="h-3.5 w-3.5" />
-                    {tedeeState.text}
-                  </p>
-                )}
-                {tedeeState.state === 'error' && (
-                  <p className="flex items-center gap-1.5 text-xs font-medium text-rose-500">
-                    <Ban className="h-3.5 w-3.5" />
-                    {tedeeState.text}
-                  </p>
-                )}
-              </motion.div>
-
-              {/* Modo demo */}
-              <motion.div variants={itemV} className="flex min-h-14 items-center justify-between gap-3 px-4 py-3" style={{ borderColor: 'var(--border)' }}>
-                <div>
-                  <p className="text-sm font-semibold">{tr('aj.modoDemo')}</p>
-                  <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
-                    {tr('aj.modoDemoDesc')}
-                  </p>
-                </div>
-                <Switch checked={demoOn} onCheckedChange={toggleDemo} />
-              </motion.div>
-
-              {/* Actualizaciones (solo admin) */}
-              {isAdmin && (
-                <motion.div variants={itemV} className="flex min-h-14 flex-wrap items-center justify-between gap-3 px-4 py-3" style={{ borderColor: 'var(--border)' }}>
-                  <div>
-                    <p className="text-sm font-semibold">{tr('aj.actualizaciones')}</p>
-                    <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
-                      {tr('aj.actualizacionesDesc')}
-                    </p>
+              {/* Operativa: preferencias de dominio (persistidas en BD) */}
+              <Card title={tr('aj.operativa')} desc={tr('aj.operativaDesc')}>
+                <div className="flex flex-col divide-y" style={{ borderColor: 'var(--border)' }}>
+                  {/* Horarios */}
+                  <div className="flex min-h-14 flex-wrap items-center justify-between gap-3 py-3" style={{ borderColor: 'var(--border)' }}>
+                    <div>
+                      <p className="text-sm font-semibold">{tr('aj.horarios')}</p>
+                      <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
+                        {tr('aj.horariosDesc')}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="time"
+                        value={checkInTime}
+                        onChange={(e) => { setCheckInTime(e.target.value); savePref({ checkInTime: e.target.value }); }}
+                        className={cn(inputCls, 'h-9 w-[104px]')}
+                        style={inputStyle}
+                        aria-label={tr('aj.horaEntrada')}
+                      />
+                      <span className="text-xs" style={{ color: 'var(--text-faint)' }}>
+                        /
+                      </span>
+                      <input
+                        type="time"
+                        value={checkOutTime}
+                        onChange={(e) => { setCheckOutTime(e.target.value); savePref({ checkOutTime: e.target.value }); }}
+                        className={cn(inputCls, 'h-9 w-[104px]')}
+                        style={inputStyle}
+                        aria-label={tr('aj.horaSalida')}
+                      />
+                    </div>
                   </div>
-                  {updateInfo === null ? (
-                    <span className="text-xs" style={{ color: 'var(--text-faint)' }}>…</span>
-                  ) : updateInfo.available ? (
+
+                  {/* Limpieza automática */}
+                  <div className="flex min-h-14 items-center justify-between gap-3 py-3" style={{ borderColor: 'var(--border)' }}>
+                    <div>
+                      <p className="text-sm font-semibold">{tr('aj.limpiezaAuto')}</p>
+                      <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
+                        {tr('aj.limpiezaAutoDesc')}
+                      </p>
+                    </div>
+                    <Switch
+                      checked={autoCleaning}
+                      onCheckedChange={(v) => { setAutoCleaning(v); savePref({ autoCleaning: v }); }}
+                      className="data-[state=checked]:bg-[#8B5CF6]"
+                    />
+                  </div>
+
+                  {/* Margen limpiezas */}
+                  <div className="flex min-h-14 flex-wrap items-center justify-between gap-3 py-3" style={{ borderColor: 'var(--border)' }}>
+                    <div>
+                      <p className="text-sm font-semibold">{tr('aj.margenLimpiezas')}</p>
+                      <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
+                        {tr('aj.margenLimpiezasDesc')}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="number"
+                        min={0}
+                        max={60}
+                        value={marginDays}
+                        onChange={(e) => {
+                          const v = Number(e.target.value);
+                          if (Number.isFinite(v) && v >= 0 && v <= 60) setMarginDays(v);
+                        }}
+                        className={cn(inputCls, 'h-9 w-20 text-center')}
+                        style={inputStyle}
+                        aria-label={tr('aj.margenLimpiezas')}
+                      />
+                      <span className="text-xs" style={{ color: 'var(--text-faint)' }}>
+                        {tr('aj.dias')}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={saveMargin}
+                        className="flex h-9 items-center rounded-xl border px-3 text-xs font-semibold transition-colors hover:bg-[var(--surface-2)]"
+                        style={{ borderColor: 'var(--border)', color: 'var(--text-muted)' }}
+                      >
+                        {tr('aj.guardar')}
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Días de aviso en el panel */}
+                  <div className="flex min-h-14 flex-wrap items-center justify-between gap-3 py-3" style={{ borderColor: 'var(--border)' }}>
+                    <div>
+                      <p className="text-sm font-semibold">{tr('aj.diasAviso')}</p>
+                      <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
+                        {tr('aj.diasAvisoDesc')}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="number"
+                        min={1}
+                        max={30}
+                        value={lookaheadDays}
+                        onChange={(e) => {
+                          const v = Number(e.target.value);
+                          if (Number.isFinite(v) && v >= 1 && v <= 30) { setLookaheadDays(v); savePref({ lookaheadDays: v }); }
+                        }}
+                        className={cn(inputCls, 'h-9 w-20 text-center')}
+                        style={inputStyle}
+                        aria-label={tr('aj.diasAviso')}
+                      />
+                      <span className="text-xs" style={{ color: 'var(--text-faint)' }}>
+                        {tr('aj.dias')}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Umbral batería */}
+                  <div className="flex min-h-14 flex-wrap items-center justify-between gap-3 py-3" style={{ borderColor: 'var(--border)' }}>
+                    <div>
+                      <p className="text-sm font-semibold">{tr('aj.umbralBateria')}</p>
+                      <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
+                        {tr('aj.umbralBateriaDesc')}
+                      </p>
+                    </div>
+                    <div className="flex w-48 items-center gap-3">
+                      <Slider
+                        value={batteryThreshold}
+                        onValueChange={(v) => { setBatteryThreshold(v); savePref({ batteryThreshold: v[0] }); }}
+                        min={10}
+                        max={50}
+                        step={5}
+                        className="flex-1"
+                      />
+                      <span className="font-display tnum w-12 text-right text-[15px] font-semibold">
+                        {batteryThreshold[0]} %
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </Card>
+
+              {/* Conexión Tedee (solo admin) */}
+              {isAdmin && (
+                <Card title={tr('aj.tedeeApi')} desc={tr('aj.tedeeApiDesc')}>
+                  <div className="grid gap-2 sm:grid-cols-[1fr_1fr_auto]">
+                    <input
+                      value={tedeeUrl}
+                      onChange={(e) => setTedeeUrl(e.target.value)}
+                      placeholder="http://192.168.1.111"
+                      aria-label={tr('aj.tedeeUrl')}
+                      className={cn(inputCls, 'w-full')}
+                      style={inputStyle}
+                    />
+                    <input
+                      type="password"
+                      value={tedeeToken}
+                      onChange={(e) => setTedeeToken(e.target.value)}
+                      placeholder={tr('aj.tedeeToken')}
+                      aria-label={tr('aj.tedeeToken')}
+                      className={cn(inputCls, 'w-full')}
+                      style={inputStyle}
+                    />
                     <button
                       type="button"
-                      disabled={applying}
-                      onClick={() => void applyUpdate()}
-                      className="brand-gradient flex h-9 items-center gap-1.5 rounded-xl px-4 text-xs font-semibold text-white disabled:opacity-50"
+                      disabled={!tedeeUrl.trim() || tedeeState.state === 'checking'}
+                      onClick={() => void saveTedee()}
+                      className="brand-gradient flex h-10 items-center justify-center rounded-xl px-4 text-xs font-semibold text-white disabled:opacity-50"
                     >
-                      <RefreshCw className={cn('h-3.5 w-3.5', applying && 'animate-spin')} />
-                      {applying ? tr('aj.actualizando') : tr('aj.actualizarAhora')}
+                      {tedeeState.state === 'checking' ? tr('aj.probando') : tr('aj.tedeeGuardar')}
                     </button>
-                  ) : (
-                    <span className="flex items-center gap-1.5 text-xs font-medium text-emerald-500">
+                  </div>
+                  {tedeeState.state === 'ok' && (
+                    <p className="flex items-center gap-1.5 text-xs font-medium text-emerald-500">
                       <Check className="h-3.5 w-3.5" />
-                      {tr('aj.appActualizada')}
-                    </span>
+                      {tedeeState.text}
+                    </p>
                   )}
-                </motion.div>
+                  {tedeeState.state === 'error' && (
+                    <p className="flex items-center gap-1.5 text-xs font-medium text-rose-500">
+                      <Ban className="h-3.5 w-3.5" />
+                      {tedeeState.text}
+                    </p>
+                  )}
+                </Card>
               )}
 
-              {/* Horarios */}
-              <motion.div variants={itemV} className="flex min-h-14 flex-wrap items-center justify-between gap-3 px-4 py-3" style={{ borderColor: 'var(--border)' }}>
-                <div>
-                  <p className="text-sm font-semibold">{tr('aj.horarios')}</p>
-                  <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
-                    {tr('aj.horariosDesc')}
-                  </p>
-                </div>
-                <div className="flex items-center gap-2">
-                  <input
-                    type="time"
-                    value={checkInTime}
-                    onChange={(e) => { setCheckInTime(e.target.value); savePref({ checkInTime: e.target.value }); }}
-                    className={cn(inputCls, 'h-9 w-[104px]')}
-                    style={inputStyle}
-                    aria-label={tr('aj.horaEntrada')}
-                  />
-                  <span className="text-xs" style={{ color: 'var(--text-faint)' }}>
-                    /
-                  </span>
-                  <input
-                    type="time"
-                    value={checkOutTime}
-                    onChange={(e) => { setCheckOutTime(e.target.value); savePref({ checkOutTime: e.target.value }); }}
-                    className={cn(inputCls, 'h-9 w-[104px]')}
-                    style={inputStyle}
-                    aria-label={tr('aj.horaSalida')}
-                  />
-                </div>
-              </motion.div>
+              {/* Administración (solo admin): actualizaciones + modo demo */}
+              {isAdmin && (
+                <Card title={tr('aj.administracion')}>
+                  <div className="flex min-h-10 flex-wrap items-center justify-between gap-3">
+                    <div>
+                      <p className="text-sm font-semibold">{tr('aj.actualizaciones')}</p>
+                      <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
+                        {tr('aj.actualizacionesDesc')}
+                      </p>
+                    </div>
+                    {updateInfo === null ? (
+                      <span className="text-xs" style={{ color: 'var(--text-faint)' }}>…</span>
+                    ) : updateInfo.available ? (
+                      <button
+                        type="button"
+                        disabled={applying}
+                        onClick={() => void applyUpdate()}
+                        className="brand-gradient flex h-9 items-center gap-1.5 rounded-xl px-4 text-xs font-semibold text-white disabled:opacity-50"
+                      >
+                        <RefreshCw className={cn('h-3.5 w-3.5', applying && 'animate-spin')} />
+                        {applying ? tr('aj.actualizando') : tr('aj.actualizarAhora')}
+                      </button>
+                    ) : (
+                      <span className="flex items-center gap-1.5 text-xs font-medium text-emerald-500">
+                        <Check className="h-3.5 w-3.5" />
+                        {tr('aj.appActualizada')}
+                      </span>
+                    )}
+                  </div>
+                  <div className="flex min-h-10 items-center justify-between gap-3 border-t pt-4" style={{ borderColor: 'var(--border)' }}>
+                    <div>
+                      <p className="text-sm font-semibold">{tr('aj.modoDemo')}</p>
+                      <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
+                        {tr('aj.modoDemoDesc')}
+                      </p>
+                    </div>
+                    <Switch checked={demoOn} onCheckedChange={toggleDemo} />
+                  </div>
+                </Card>
+              )}
 
-              {/* Limpieza automática */}
-              <motion.div variants={itemV} className="flex min-h-14 items-center justify-between gap-3 px-4 py-3" style={{ borderColor: 'var(--border)' }}>
-                <div>
-                  <p className="text-sm font-semibold">{tr('aj.limpiezaAuto')}</p>
-                  <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
-                    {tr('aj.limpiezaAutoDesc')}
-                  </p>
-                </div>
-                <Switch
-                  checked={autoCleaning}
-                  onCheckedChange={(v) => { setAutoCleaning(v); savePref({ autoCleaning: v }); }}
-                  className="data-[state=checked]:bg-[#8B5CF6]"
-                />
-              </motion.div>
-
-              {/* Margen limpiezas */}
-              <motion.div variants={itemV} className="flex min-h-14 flex-wrap items-center justify-between gap-3 px-4 py-3" style={{ borderColor: 'var(--border)' }}>
-                <div>
-                  <p className="text-sm font-semibold">{tr('aj.margenLimpiezas')}</p>
-                  <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
-                    {tr('aj.margenLimpiezasDesc')}
-                  </p>
-                </div>
-                <div className="flex items-center gap-2">
-                  <input
-                    type="number"
-                    min={0}
-                    max={60}
-                    value={marginDays}
-                    onChange={(e) => {
-                      const v = Number(e.target.value);
-                      if (Number.isFinite(v) && v >= 0 && v <= 60) setMarginDays(v);
-                    }}
-                    className={cn(inputCls, 'h-9 w-20 text-center')}
-                    style={inputStyle}
-                    aria-label={tr('aj.margenLimpiezas')}
-                  />
-                  <span className="text-xs" style={{ color: 'var(--text-faint)' }}>
-                    {tr('aj.dias')}
-                  </span>
-                  <button
-                    type="button"
-                    onClick={saveMargin}
-                    className="flex h-9 items-center rounded-xl border px-3 text-xs font-semibold transition-colors hover:bg-[var(--surface-2)]"
-                    style={{ borderColor: 'var(--border)', color: 'var(--text-muted)' }}
-                  >
-                    {tr('aj.guardar')}
-                  </button>
-                </div>
-              </motion.div>
-
-              {/* Días de aviso en el panel */}
-              <motion.div variants={itemV} className="flex min-h-14 flex-wrap items-center justify-between gap-3 px-4 py-3" style={{ borderColor: 'var(--border)' }}>
-                <div>
-                  <p className="text-sm font-semibold">{tr('aj.diasAviso')}</p>
-                  <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
-                    {tr('aj.diasAvisoDesc')}
-                  </p>
-                </div>
-                <div className="flex items-center gap-2">
-                  <input
-                    type="number"
-                    min={1}
-                    max={30}
-                    value={lookaheadDays}
-                    onChange={(e) => {
-                      const v = Number(e.target.value);
-                      if (Number.isFinite(v) && v >= 1 && v <= 30) { setLookaheadDays(v); savePref({ lookaheadDays: v }); }
-                    }}
-                    className={cn(inputCls, 'h-9 w-20 text-center')}
-                    style={inputStyle}
-                    aria-label={tr('aj.diasAviso')}
-                  />
-                  <span className="text-xs" style={{ color: 'var(--text-faint)' }}>
-                    {tr('aj.dias')}
-                  </span>
-                </div>
-              </motion.div>
-
-              {/* Umbral batería */}
-              <motion.div variants={itemV} className="flex min-h-14 flex-wrap items-center justify-between gap-3 px-4 py-3" style={{ borderColor: 'var(--border)' }}>
-                <div>
-                  <p className="text-sm font-semibold">{tr('aj.umbralBateria')}</p>
-                  <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
-                    {tr('aj.umbralBateriaDesc')}
-                  </p>
-                </div>
-                <div className="flex w-48 items-center gap-3">
-                  <Slider
-                    value={batteryThreshold}
-                    onValueChange={(v) => { setBatteryThreshold(v); savePref({ batteryThreshold: v[0] }); }}
-                    min={10}
-                    max={50}
-                    step={5}
-                    className="flex-1"
-                  />
-                  <span className="font-display tnum w-12 text-right text-[15px] font-semibold">
-                    {batteryThreshold[0]} %
-                  </span>
-                </div>
-              </motion.div>
-
-              {/* Cambiar contraseña */}
-              <motion.button
-                variants={itemV}
-                type="button"
-                onClick={() => { setPassForm({ current: '', next: '', repeat: '' }); setPassError(''); setPassOpen(true); }}
-                className="flex min-h-14 w-full items-center justify-between gap-3 px-4 py-3 text-left transition-colors duration-150 hover:bg-[var(--surface-2)]"
-              >
-                <span>
-                  <span className="block text-sm font-semibold">{tr('aj.cambiarPassword')}</span>
-                  <span className="block text-xs" style={{ color: 'var(--text-muted)' }}>
-                    {tr('aj.cambiarPasswordDesc')}
-                  </span>
-                </span>
-                <KeyRound className="h-4 w-4" style={{ color: 'var(--text-faint)' }} />
-              </motion.button>
-
-              {/* Cerrar sesión */}
-              <motion.button
-                variants={itemV}
-                type="button"
-                onClick={() => setLogoutOpen(true)}
-                className="flex min-h-14 w-full items-center gap-3 px-4 py-3 text-left transition-colors duration-150 hover:bg-[var(--ro-chip-bg)]"
-                style={{ color: '#F43F5E' }}
-              >
-                <LogOut className="h-4 w-4" />
-                <span className="text-sm font-semibold">{tr('aj.cerrarSesion')}</span>
-              </motion.button>
-            </motion.div>
+              <SessionCard isDemo={isDemoUser} />
+              <AboutCard />
+            </div>
           )}
         </motion.div>
       </AnimatePresence>
@@ -1936,71 +1574,6 @@ export default function Ajustes() {
         </DialogContent>
       </Dialog>
 
-      {/* ============================== Dialog nuevo usuario (gestión) */}
-      <Dialog open={newUserOpen} onOpenChange={closeNewUser}>
-        <DialogContent className="rounded-2xl border-[var(--border)] bg-[var(--surface)] shadow-overlay sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle className="font-display text-lg font-semibold">{tr('aj.nuevoUsuario')}</DialogTitle>
-            <DialogDescription style={{ color: 'var(--text-muted)' }}>
-              {tr('aj.nuevoUsuarioDesc')}
-            </DialogDescription>
-          </DialogHeader>
-          <div className="flex flex-col gap-3">
-            <label className="flex flex-col gap-1.5">
-              <span className="text-xs font-semibold" style={{ color: 'var(--text-muted)' }}>
-                {tr('aj.usuario')} *
-              </span>
-              <input
-                value={userForm.name}
-                onChange={(e) => setUserForm((f) => ({ ...f, name: e.target.value }))}
-                className={inputCls}
-                style={inputStyle}
-                autoComplete="off"
-              />
-            </label>
-            <label className="flex flex-col gap-1.5">
-              <span className="text-xs font-semibold" style={{ color: 'var(--text-muted)' }}>
-                {tr('aj.password')}
-              </span>
-              <input
-                type="password"
-                value={newUserPass}
-                onChange={(e) => setNewUserPass(e.target.value)}
-                className={inputCls}
-                style={inputStyle}
-                autoComplete="new-password"
-              />
-            </label>
-            <label className="flex flex-col gap-1.5">
-              <span className="text-xs font-semibold" style={{ color: 'var(--text-muted)' }}>
-                {tr('aj.telefono')}
-              </span>
-              <input
-                type="tel"
-                value={userForm.phone}
-                onChange={(e) => setUserForm((f) => ({ ...f, phone: e.target.value }))}
-                className={inputCls}
-                style={inputStyle}
-                placeholder="612 345 678"
-              />
-            </label>
-            {newUserError && (
-              <p className="rounded-xl border border-rose-300 bg-rose-50 px-3 py-2 text-[13px] font-medium text-rose-600 dark:border-rose-500/40 dark:bg-rose-500/10 dark:text-rose-400">
-                {newUserError}
-              </p>
-            )}
-            <button
-              type="button"
-              disabled={!userForm.name.trim() || !newUserPass}
-              onClick={() => void createGestionUser()}
-              className="brand-gradient mt-1 flex h-11 items-center justify-center rounded-xl text-sm font-semibold text-white transition-all duration-150 hover:brightness-110 active:scale-[0.98] disabled:opacity-50"
-            >
-              {tr('aj.crearUsuario')}
-            </button>
-          </div>
-        </DialogContent>
-      </Dialog>
-
       {/* ============================== Dialog nuevo tipo de gasto */}
       <Dialog open={newTypeOpen} onOpenChange={setNewTypeOpen}>
         <DialogContent className="rounded-2xl border-[var(--border)] bg-[var(--surface)] shadow-overlay sm:max-w-md">
@@ -2051,42 +1624,6 @@ export default function Ajustes() {
         </DialogContent>
       </Dialog>
 
-      {/* ============================== Dialog cambiar contraseña */}
-      <Dialog open={passOpen} onOpenChange={setPassOpen}>
-        <DialogContent className="rounded-2xl border-[var(--border)] bg-[var(--surface)] shadow-overlay sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle className="font-display text-lg font-semibold">{tr('aj.cambiarPassword')}</DialogTitle>
-          </DialogHeader>
-          <div className="flex flex-col gap-3">
-            <label className="flex flex-col gap-1.5">
-              <span className="text-xs font-semibold" style={{ color: 'var(--text-muted)' }}>{tr('aj.passActual')}</span>
-              <input type="password" value={passForm.current} onChange={(e) => setPassForm((f) => ({ ...f, current: e.target.value }))} autoComplete="current-password" className={inputCls} style={inputStyle} />
-            </label>
-            <label className="flex flex-col gap-1.5">
-              <span className="text-xs font-semibold" style={{ color: 'var(--text-muted)' }}>{tr('aj.passNueva')}</span>
-              <input type="password" value={passForm.next} onChange={(e) => setPassForm((f) => ({ ...f, next: e.target.value }))} autoComplete="new-password" className={inputCls} style={inputStyle} />
-            </label>
-            <label className="flex flex-col gap-1.5">
-              <span className="text-xs font-semibold" style={{ color: 'var(--text-muted)' }}>{tr('aj.passRepetir')}</span>
-              <input type="password" value={passForm.repeat} onChange={(e) => setPassForm((f) => ({ ...f, repeat: e.target.value }))} autoComplete="new-password" className={inputCls} style={inputStyle} />
-            </label>
-            {passError && (
-              <p className="rounded-xl border border-rose-300 bg-rose-50 px-3 py-2 text-[13px] font-medium text-rose-600 dark:border-rose-500/40 dark:bg-rose-500/10 dark:text-rose-400">
-                {passError}
-              </p>
-            )}
-            <button
-              type="button"
-              disabled={passBusy || !passForm.current || !passForm.next || !passForm.repeat}
-              onClick={() => void changePassword()}
-              className="brand-gradient mt-1 flex h-11 items-center justify-center rounded-xl text-sm font-semibold text-white transition-all duration-150 hover:brightness-110 active:scale-[0.98] disabled:opacity-50"
-            >
-              {tr('aj.guardar')}
-            </button>
-          </div>
-        </DialogContent>
-      </Dialog>
-
       {/* ============================== Confirms */}
       <ConfirmDialog
         open={!!deletePerson}
@@ -2104,18 +1641,6 @@ export default function Ajustes() {
         }}
       />
 
-      <ConfirmDialog
-        open={logoutOpen}
-        onOpenChange={setLogoutOpen}
-        title={tr('aj.cerrarSesionQ')}
-        description={tr('aj.cerrarSesionDesc')}
-        confirmLabel={tr('aj.cerrarSesion')}
-        tone="danger"
-        onConfirm={() => {
-          logout();
-          navigate('/login', { replace: true });
-        }}
-      />
     </div>
   );
 }

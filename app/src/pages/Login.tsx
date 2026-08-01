@@ -9,6 +9,20 @@ import { demoLogin, demoStatus, login } from '@/lib/auth';
 
 const EASE_OUT_QUART: [number, number, number, number] = [0.25, 1, 0.5, 1];
 
+/** Credential Management API: fuerza el prompt de guardado del gestor de
+ *  contraseñas incluso en SPA (el submit no recarga). Antes de navegar. */
+async function storeCredentials(username: string, password: string) {
+  try {
+    const nav = navigator as Navigator & { credentials?: CredentialsContainer };
+    const PC = (window as unknown as { PasswordCredential?: new (d: { id: string; password: string; name?: string }) => Credential }).PasswordCredential;
+    if (nav.credentials && PC) {
+      await nav.credentials.store(new PC({ id: username, password, name: username }));
+    }
+  } catch {
+    /* el usuario rechazó o el navegador no lo soporta: ignorar */
+  }
+}
+
 function LoginForm() {
   const { t } = useTranslation();
   const [username, setUsername] = useState('');
@@ -45,6 +59,7 @@ function LoginForm() {
     setError('');
     try {
       await login(username.trim(), password, remember);
+      await storeCredentials(username.trim(), password); // ANTES de navegar
       window.dispatchEvent(new Event('keynest-authed'));
       navigate('/');
     } catch (err) {
