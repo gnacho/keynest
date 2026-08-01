@@ -274,15 +274,6 @@ export default function Ajustes() {
   const savePref = (patch: Parameters<typeof data.saveSettings>[0]) => {
     void data.saveSettings(patch).catch(() => toast.error(tr('aj.errorGuardar')));
   };
-  const [marginDays, setMarginDays] = useState(() => data.getCleaningMarginDays());
-  useEffect(() => {
-    setMarginDays(data.getCleaningMarginDays());
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [data.version]);
-  const saveMargin = async () => {
-    await data.saveCleaningMarginDays(marginDays);
-    toast.success(tr('aj.guardar'));
-  };
   const expenses = data.getExpenses();
 
   const expenseCountByType = useMemo(() => {
@@ -1080,42 +1071,6 @@ export default function Ajustes() {
                       onCheckedChange={(v) => { setAutoCleaning(v); savePref({ autoCleaning: v }); }}
                       className="data-[state=checked]:bg-[#8B5CF6]"
                     />
-                  </div>
-
-                  {/* Margen limpiezas */}
-                  <div className="flex min-h-14 flex-wrap items-center justify-between gap-3 py-3" style={{ borderColor: 'var(--border)' }}>
-                    <div>
-                      <p className="text-sm font-semibold">{tr('aj.margenLimpiezas')}</p>
-                      <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
-                        {tr('aj.margenLimpiezasDesc')}
-                      </p>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <input
-                        type="number"
-                        min={0}
-                        max={60}
-                        value={marginDays}
-                        onChange={(e) => {
-                          const v = Number(e.target.value);
-                          if (Number.isFinite(v) && v >= 0 && v <= 60) setMarginDays(v);
-                        }}
-                        className={cn(inputCls, 'h-9 w-20 text-center')}
-                        style={inputStyle}
-                        aria-label={tr('aj.margenLimpiezas')}
-                      />
-                      <span className="text-xs" style={{ color: 'var(--text-faint)' }}>
-                        {tr('aj.dias')}
-                      </span>
-                      <button
-                        type="button"
-                        onClick={saveMargin}
-                        className="flex h-9 items-center rounded-xl border px-3 text-xs font-semibold transition-colors hover:bg-[var(--surface-2)]"
-                        style={{ borderColor: 'var(--border)', color: 'var(--text-muted)' }}
-                      >
-                        {tr('aj.guardar')}
-                      </button>
-                    </div>
                   </div>
 
                   {/* Días de aviso en el panel */}

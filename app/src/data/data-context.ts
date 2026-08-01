@@ -76,7 +76,7 @@ export interface DataApi {
   /** Lanza sincronización iCal en el backend. */
   syncNow: () => Promise<SyncResult[]>;
   /** Crea una limpieza (backend valida: NO en fechas ocupadas). 'occupied' si la fecha choca con una estancia. */
-  createCleaning: (propertyId: string, date: Date, reservationId?: string) => Promise<Cleaning | 'occupied' | 'margin' | undefined>;
+  createCleaning: (propertyId: string, date: Date, reservationId?: string, force?: boolean) => Promise<Cleaning | 'occupied' | undefined>;
   /** Edita horas/productos de una limpieza ya confirmada (mantiene estado archivada). */
   updateCleaning: (id: string, workLog: CleaningWorkEntry[], supplies: CleaningSupply[]) => Promise<void>;
   /** Sube una foto a la limpieza; devuelve la lista actualizada. */
@@ -101,8 +101,6 @@ export interface DataApi {
   /** Estado de la última sync por inmueble (del bootstrap). */
   getSyncStatus: () => Record<string, { ok: boolean; at: number; count?: number; error?: string }>;
   /** Config global: margen en días para agendar limpiezas. */
-  getCleaningMarginDays: () => number;
-  saveCleaningMarginDays: (days: number) => Promise<void>;
   /** Preferencias persistidas en BD (horarios, umbral batería, limpieza automática). */
   getSettings: () => AppSettings;
   saveSettings: (s: Partial<AppSettings>) => Promise<void>;

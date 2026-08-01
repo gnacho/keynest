@@ -177,8 +177,7 @@ export default function ReservationDetail({ reservation: r }: { reservation: Res
             <p className="flex-1 text-[13px]" style={{ color: 'var(--text-muted)' }}>
               {t('res.sinLimpieza')}
             </p>
-            {r.checkOut.getTime() >= startOfDay(new Date()).getTime() &&
-              r.checkOut.getTime() <= startOfDay(addDays(new Date(), data.getCleaningMarginDays())).getTime() && (
+            {r.checkOut.getTime() >= startOfDay(new Date()).getTime() && (
               <button
                 type="button"
                 disabled={creating}

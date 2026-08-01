@@ -291,7 +291,6 @@ guarded.get('/bootstrap', (c) => {
     .map((p) => ({ ...p, has_token: Boolean(p.token_hash), token_hash: undefined }))
   let categories = kvGet(db, 'maint_categories')
   if (!categories) categories = JSON.stringify(DEFAULT_CATEGORIES)
-  const cleaningMarginDays = Number(kvGet(db, 'cleaning_margin_days') || 7)
   const settings = {
     checkInTime: kvGet(db, 'set_checkin') || '15:00',
     checkOutTime: kvGet(db, 'set_checkout') || '11:00',
@@ -299,7 +298,7 @@ guarded.get('/bootstrap', (c) => {
     autoCleaning: kvGet(db, 'set_autoclean') !== '0',
     lookaheadDays: Number(kvGet(db, 'set_lookahead') || 7),
   }
-  return c.json({ properties, reservations, cleanings, maintenance, people, categories: JSON.parse(categories), config: { cleaningMarginDays, ...settings }, sync: syncStatus(db), demo: c.get('user').is_demo, demoEnabled: auth.demoEnabled(prodDb) })
+  return c.json({ properties, reservations, cleanings, maintenance, people, categories: JSON.parse(categories), config: { ...settings }, sync: syncStatus(db), demo: c.get('user').is_demo, demoEnabled: auth.demoEnabled(prodDb) })
 })
 
 const propertySchema = z.object({
@@ -375,12 +374,13 @@ guarded.post('/ical/validate', async (c) => {
   }
 })
 
-/* Crear limpieza. REGLA (31-Jul-2026): solo en días de entrada, de salida o sin
-   ocupación — NUNCA en mitad de una estancia (checkin < D < checkout). */
+/* Crear limpieza. Sin límite de antelación (el margen solo rige los avisos del
+   panel). Fecha ocupada = aviso NO bloqueante: 409 'occupied' salvo force=true. */
 const cleaningSchema = z.object({
   propertyId: z.string().min(1),
   date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
   reservationId: z.string().optional(),
+  force: z.boolean().optional(),
 })
 guarded.post('/cleanings', async (c) => {
   const db = c.get('db')
@@ -395,18 +395,14 @@ guarded.post('/cleanings', async (c) => {
     const dup = db.prepare('SELECT * FROM cleanings WHERE reservation_id = ?').get(d.reservationId)
     if (dup) return c.json({ ok: true, cleaning: dup, existing: true })
   }
-  // Margen de agenda: no se pueden crear limpiezas más allá de N días (defecto 7)
-  const margin = Number(kvGet(db, 'cleaning_margin_days') || 7)
-  const today = new Date()
-  const ymd = (x) => `${x.getFullYear()}-${String(x.getMonth() + 1).padStart(2, '0')}-${String(x.getDate()).padStart(2, '0')}`
-  const limit = ymd(new Date(today.getFullYear(), today.getMonth(), today.getDate() + margin))
-  if (d.date > limit) return c.json({ error: 'fuera de margen', code: 'margin', limit }, 409)
-
+  // Sin límite de antelación: el margen de días solo aplica a avisos del panel.
+  // Fecha ocupada = aviso NO bloqueante: 409 'occupied' salvo que venga force=true
+  // (la UI muestra el doble aviso y reintenta con force).
   // Ocupación estricta: entrada y salida SÍ están permitidas (por eso < y > estrictos)
   const occupied = db.prepare(
     "SELECT uid FROM reservations WHERE property_id = ? AND checkin < ? AND checkout > ? LIMIT 1",
   ).get(d.propertyId, d.date, d.date)
-  if (occupied) return c.json({ error: 'fecha ocupada', code: 'occupied' }, 409)
+  if (occupied && !d.force) return c.json({ error: 'fecha ocupada', code: 'occupied' }, 409)
 
   const checklist = JSON.parse(property.checklist || '[]')
   const checks = checklist.map((label, i) => ({ id: `chk-${i}`, label, done: false }))
@@ -640,17 +636,6 @@ guarded.put('/config/settings', async (c) => {
   if (d.autoCleaning !== undefined) kvSet(db, 'set_autoclean', d.autoCleaning ? '1' : '0')
   if (d.lookaheadDays !== undefined) kvSet(db, 'set_lookahead', String(d.lookaheadDays))
   return c.json({ ok: true })
-})
-
-/* Margen en días para agendar limpiezas (defecto 7) */
-const marginSchema = z.object({ days: z.coerce.number().int().min(0).max(60) })
-guarded.put('/config/cleaning-margin', async (c) => {
-  if (c.get('user').role !== 'admin') return c.json({ error: 'solo admin' }, 403)
-  const body = await c.req.json().catch(() => null)
-  const parsed = marginSchema.safeParse(body)
-  if (!parsed.success) return c.json({ error: 'formato inválido' }, 400)
-  kvSet(c.get('db'), 'cleaning_margin_days', String(parsed.data.days))
-  return c.json({ ok: true, days: parsed.data.days })
 })
 
 /* Maestro de categorías de mantenimiento */

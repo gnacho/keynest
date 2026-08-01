@@ -161,7 +161,7 @@ interface BootstrapData {
   maintenance: ApiMaintenance[];
   people: ApiPerson[];
   categories: MaintCategory[];
-  config?: { cleaningMarginDays?: number; checkInTime?: string; checkOutTime?: string; batteryThreshold?: number; autoCleaning?: boolean; lookaheadDays?: number };
+  config?: { checkInTime?: string; checkOutTime?: string; batteryThreshold?: number; autoCleaning?: boolean; lookaheadDays?: number };
   sync: Record<string, { ok: boolean; at: number; count?: number; error?: string }>;
 }
 
@@ -207,7 +207,6 @@ export default function DataProvider({ children }: { children: ReactNode }) {
   const people = useRef<Person[]>([]);
   const users = useRef<AppUser[]>([]);
   const categories = useRef<MaintCategory[]>([]);
-  const marginDays = useRef(7);
   const settings = useRef<AppSettings>({ checkInTime: '15:00', checkOutTime: '11:00', batteryThreshold: 30, autoCleaning: true, lookaheadDays: 7 });
   const locks = useRef<Lock[]>([]);
   const accesses = useRef<TedeeAccess[]>([]);
@@ -230,7 +229,6 @@ export default function DataProvider({ children }: { children: ReactNode }) {
       people.current = (data.people ?? []).map(mapPerson);
       maintenance.current = (data.maintenance ?? []).map(mapMaintenance);
       categories.current = data.categories ?? [];
-      marginDays.current = data.config?.cleaningMarginDays ?? 7;
       settings.current = {
         checkInTime: data.config?.checkInTime ?? '15:00',
         checkOutTime: data.config?.checkOutTime ?? '11:00',
@@ -397,12 +395,6 @@ export default function DataProvider({ children }: { children: ReactNode }) {
         if (idx >= 0) people.current[idx] = { ...people.current[idx], hasToken: false };
         bump();
       },
-      getCleaningMarginDays: () => marginDays.current,
-      saveCleaningMarginDays: async (days) => {
-        await api('/api/config/cleaning-margin', { method: 'PUT', body: JSON.stringify({ days }) });
-        marginDays.current = days;
-        bump();
-      },
       getSettings: () => settings.current,
       saveSettings: async (patch) => {
         await api('/api/config/settings', { method: 'PUT', body: JSON.stringify(patch) });
@@ -437,17 +429,17 @@ export default function DataProvider({ children }: { children: ReactNode }) {
       updateCleaningPhotos: async (id, photos) => {
         await putCleaning(id, { photos });
       },
-      createCleaning: async (propertyId, date, reservationId) => {
+      createCleaning: async (propertyId, date, reservationId, force = false) => {
         const ymd = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
         const res = await fetch('/api/cleanings', {
           method: 'POST',
           credentials: 'same-origin',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ propertyId, date: ymd, reservationId }),
+          body: JSON.stringify({ propertyId, date: ymd, reservationId, force }),
         });
         if (res.status === 409) {
           const body = (await res.json().catch(() => ({}))) as { code?: string };
-          return body.code === 'margin' ? 'margin' : 'occupied';
+          return body.code === 'occupied' ? 'occupied' : undefined;
         }
         if (!res.ok) return undefined;
         await refresh();

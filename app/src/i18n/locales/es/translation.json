@@ -282,7 +282,9 @@
     "archivadasF": "Archivadas",
     "creada": "Limpieza programada",
     "errorOcupada": "No se puede agendar: la fecha está ocupada",
-    "errorMargen": "Fuera de margen: máximo {{days}} días de antelación"
+    "avisoOcupada": "El inmueble está ocupado ese día. ¿Crear la limpieza igualmente?",
+    "crearIgualmente": "Crear igualmente",
+    "errorCrear": "No se pudo crear la limpieza"
   },
   "mant": {
     "titulo": "Mantenimiento",
@@ -640,8 +642,6 @@
     "usuarioExiste": "Ese nombre de usuario ya existe",
     "usuarioCreadoOk": "Usuario creado",
     "passwordReq": "La contraseña debe tener al menos 6 caracteres",
-    "margenLimpiezas": "Margen para agendar limpiezas",
-    "margenLimpiezasDesc": "Días de antelación máxima para crear limpiezas (por defecto 7)",
     "dias": "días",
     "fueraMargen": "Fuera de margen: máximo {{days}} días de antelación",
     "actualizaciones": "Actualizaciones",
@@ -693,7 +693,7 @@
     "impTotal": "{{count}} reservas únicas en el CSV",
     "impCasan": "{{count}} casan con reservas actuales (se actualizan nombre e importe)",
     "impNuevas": "{{count}} nuevas a crear ({{amount}})",
-    "impIgnoradas": "{{dupes}} duplicadas y {{skipped}} filas no-reserva ignoradas",
+    "impIgnoradas": "{{dupes}} pagos parciales sumados a su reserva y {{skipped}} filas no-reserva ignoradas",
     "impMapear": "Asigna un inmueble a cada alojamiento del CSV:",
     "impInmueble": "Inmueble",
     "impElegir": "Elegir…",

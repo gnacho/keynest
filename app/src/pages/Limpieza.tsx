@@ -230,21 +230,23 @@ function NewCleaningDialog({
   const [fecha, setFecha] = useState('');
   const [notas, setNotas] = useState('');
   const [busy, setBusy] = useState(false);
+  const [occupiedWarn, setOccupiedWarn] = useState(false);
 
   const valid = Boolean(slug && fecha);
 
-  const crear = async () => {
+  const crear = async (force = false) => {
     const prop = data.getProperties().find((p) => p.slug === slug);
     if (!prop || !fecha || busy) return;
     setBusy(true);
-    const res = await data.createCleaning(prop.id, new Date(`${fecha}T12:00:00`));
+    const res = await data.createCleaning(prop.id, new Date(`${fecha}T12:00:00`), undefined, force);
     setBusy(false);
     if (res === 'occupied') {
-      onCreated(t('limp.errorOcupada'), false);
+      // Aviso NO bloqueante: el usuario confirma y se reintenta con force
+      setOccupiedWarn(true);
       return;
     }
-    if (res === 'margin' || !res) {
-      onCreated(t('limp.errorMargen', { days: data.getCleaningMarginDays() }), false);
+    if (!res) {
+      onCreated(t('limp.errorCrear'), false);
       return;
     }
     onCreated(t('limp.creada'), true);
@@ -252,6 +254,7 @@ function NewCleaningDialog({
     setSlug(undefined);
     setFecha('');
     setNotas('');
+    setOccupiedWarn(false);
   };
 
   return (
@@ -268,7 +271,7 @@ function NewCleaningDialog({
             <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-[0.08em]" style={{ color: 'var(--text-faint)' }}>
               {t('limp.inmueble')}
             </p>
-            <Select value={slug} onValueChange={setSlug}>
+            <Select value={slug} onValueChange={(v) => { setSlug(v); setOccupiedWarn(false); }}>
               <SelectTrigger className="h-10 w-full rounded-xl border-[var(--border)] bg-[var(--surface)] text-sm shadow-none">
                 <SelectValue placeholder={t('limp.seleccionaInmueble')} />
               </SelectTrigger>
@@ -288,7 +291,7 @@ function NewCleaningDialog({
             <input
               type="date"
               value={fecha}
-              onChange={(e) => setFecha(e.target.value)}
+              onChange={(e) => { setFecha(e.target.value); setOccupiedWarn(false); }}
               className="h-10 w-full rounded-xl border bg-[var(--surface)] px-3 text-sm outline-none focus:ring-2 focus:ring-[#6366F1]"
               style={{ borderColor: 'var(--border)' }}
             />
@@ -306,14 +309,36 @@ function NewCleaningDialog({
               style={{ borderColor: 'var(--border)' }}
             />
           </div>
-          <button
-            type="button"
-            disabled={!valid || busy}
-            onClick={() => void crear()}
-            className="flex h-11 w-full items-center justify-center rounded-xl bg-violet-500 text-sm font-semibold text-white transition-all duration-150 hover:brightness-110 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            {busy ? t('res.creando') : t('limp.crearLimpieza')}
-          </button>
+          {occupiedWarn && (
+            <div
+              className="flex flex-col gap-2 rounded-xl border px-3 py-2.5"
+              style={{ borderColor: 'rgb(245 158 11 / 0.4)', backgroundColor: 'rgb(245 158 11 / 0.08)' }}
+              role="alert"
+            >
+              <p className="text-[13px] font-semibold" style={{ color: '#B45309' }}>
+                {t('limp.avisoOcupada')}
+              </p>
+              <button
+                type="button"
+                disabled={busy}
+                onClick={() => void crear(true)}
+                className="flex h-9 items-center justify-center rounded-xl border px-3 text-xs font-semibold transition-colors hover:bg-[var(--surface-2)] disabled:opacity-50"
+                style={{ borderColor: 'rgb(245 158 11 / 0.4)', color: '#B45309' }}
+              >
+                {busy ? t('res.creando') : t('limp.crearIgualmente')}
+              </button>
+            </div>
+          )}
+          {!occupiedWarn && (
+            <button
+              type="button"
+              disabled={!valid || busy}
+              onClick={() => void crear()}
+              className="flex h-11 w-full items-center justify-center rounded-xl bg-violet-500 text-sm font-semibold text-white transition-all duration-150 hover:brightness-110 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {busy ? t('res.creando') : t('limp.crearLimpieza')}
+            </button>
+          )}
         </div>
       </DialogContent>
     </Dialog>

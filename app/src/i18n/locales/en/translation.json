@@ -282,7 +282,9 @@
     "archivadasF": "Archived",
     "creada": "Cleaning scheduled",
     "errorOcupada": "Cannot schedule: the date is occupied",
-    "errorMargen": "Out of margin: max {{days}} days ahead"
+    "avisoOcupada": "The property is booked on that day. Create the cleaning anyway?",
+    "crearIgualmente": "Create anyway",
+    "errorCrear": "Could not create the cleaning"
   },
   "mant": {
     "titulo": "Maintenance",
@@ -640,8 +642,6 @@
     "usuarioExiste": "That username already exists",
     "usuarioCreadoOk": "User created",
     "passwordReq": "Password must be at least 6 characters",
-    "margenLimpiezas": "Cleaning scheduling margin",
-    "margenLimpiezasDesc": "Maximum days ahead to create cleanings (default 7)",
     "dias": "days",
     "fueraMargen": "Out of margin: max {{days}} days ahead",
     "actualizaciones": "Updates",
@@ -693,7 +693,7 @@
     "impTotal": "{{count}} unique reservations in the CSV",
     "impCasan": "{{count}} match existing reservations (guest name and amount updated)",
     "impNuevas": "{{count}} new to create ({{amount}})",
-    "impIgnoradas": "{{dupes}} duplicates and {{skipped}} non-reservation rows ignored",
+    "impIgnoradas": "{{dupes}} partial payouts merged into their reservation and {{skipped}} non-reservation rows ignored",
     "impMapear": "Assign a property to each listing in the CSV:",
     "impInmueble": "Property",
     "impElegir": "Choose…",
