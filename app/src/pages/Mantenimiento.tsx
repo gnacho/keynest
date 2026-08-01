@@ -495,7 +495,7 @@ function NewTaskDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="rounded-2xl border-[var(--border)] bg-[var(--surface)] shadow-overlay sm:max-w-md">
+      <DialogContent className="rounded-2xl border-[var(--border)] bg-[var(--surface)] shadow-overlay sm:max-w-xl">
         <DialogHeader>
           <DialogTitle className="font-display text-lg font-semibold">
             {task ? tr('mant.editarTitulo') : tr('mant.nuevaTarea')}
@@ -504,7 +504,7 @@ function NewTaskDialog({
             {task ? tr('mant.editarDesc') : tr('mant.nuevaDesc')}
           </DialogDescription>
         </DialogHeader>
-        <div className="flex max-h-[60vh] flex-col gap-3 overflow-y-auto pr-1">
+        <div className="grid max-h-[85vh] grid-cols-1 gap-3 overflow-y-auto pr-1 sm:grid-cols-2">
           <div>
             {label(tr('mant.inmueble'))}
             <Select value={slug} onValueChange={setSlug} disabled={Boolean(task)}>
@@ -521,16 +521,6 @@ function NewTaskDialog({
             </Select>
           </div>
           <div>
-            {label(tr('mant.tituloCampo'))}
-            <input
-              value={titulo}
-              onChange={(e) => setTitulo(e.target.value)}
-              placeholder={tr('mant.tituloPlaceholder')}
-              className="h-10 w-full rounded-xl border bg-[var(--surface)] px-3 text-sm outline-none focus:ring-2 focus:ring-[#6366F1]"
-              style={{ borderColor: 'var(--border)' }}
-            />
-          </div>
-          <div>
             {label(tr('mant.categoria'))}
             <Select value={categoria} onValueChange={(v) => setCategoria(v as MaintenanceCategory)}>
               <SelectTrigger className="h-10 w-full rounded-xl border-[var(--border)] bg-[var(--surface)] text-sm shadow-none">
@@ -545,6 +535,16 @@ function NewTaskDialog({
               </SelectContent>
             </Select>
           </div>
+          <div className="sm:col-span-2">
+            {label(tr('mant.tituloCampo'))}
+            <input
+              value={titulo}
+              onChange={(e) => setTitulo(e.target.value)}
+              placeholder={tr('mant.tituloPlaceholder')}
+              className="h-10 w-full rounded-xl border bg-[var(--surface)] px-3 text-sm outline-none focus:ring-2 focus:ring-[#6366F1]"
+              style={{ borderColor: 'var(--border)' }}
+            />
+          </div>
           <div>
             {label(tr('mant.etiquetaGasto'))}
             <input
@@ -555,27 +555,27 @@ function NewTaskDialog({
               style={{ borderColor: 'var(--border)' }}
             />
           </div>
-          <div className="flex items-center justify-between rounded-xl border px-3 py-2.5" style={{ borderColor: 'var(--border)' }}>
+          <div className="flex items-center justify-between self-end rounded-xl border px-3 py-2.5" style={{ borderColor: 'var(--border)' }}>
             <span className="text-sm font-semibold text-rose-500">{tr('mant.urgente')}</span>
             <Switch checked={urgente} onCheckedChange={setUrgente} />
           </div>
-          <div>
+          <div className="sm:col-span-2">
             {label(tr('mant.notas'))}
             <textarea
               value={notas}
               onChange={(e) => setNotas(e.target.value)}
-              rows={3}
+              rows={2}
               placeholder={tr('mant.notasPlaceholder')}
               className="w-full resize-none rounded-xl border bg-[var(--surface)] px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-[#6366F1]"
               style={{ borderColor: 'var(--border)' }}
             />
           </div>
-          <div>
+          <div className="sm:col-span-2">
             {label(tr('mant.checks'))}
             <textarea
               value={checksText}
               onChange={(e) => setChecksText(e.target.value)}
-              rows={4}
+              rows={3}
               placeholder={tr('mant.checksPlaceholder')}
               className="w-full resize-none rounded-xl border bg-[var(--surface)] px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-[#6366F1]"
               style={{ borderColor: 'var(--border)' }}
@@ -588,7 +588,7 @@ function NewTaskDialog({
             type="button"
             disabled={!valid || busy}
             onClick={() => void crear()}
-            className="flex h-11 w-full items-center justify-center rounded-xl bg-rose-500 text-sm font-semibold text-white transition-all duration-150 hover:brightness-110 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
+            className="flex h-11 w-full items-center justify-center rounded-xl bg-rose-500 text-sm font-semibold text-white transition-all duration-150 hover:brightness-110 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50 sm:col-span-2"
           >
             {busy ? tr('res.creando') : task ? tr('mant.guardar') : tr('mant.crearTarea')}
           </button>
