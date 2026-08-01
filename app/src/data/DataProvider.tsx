@@ -397,7 +397,14 @@ export default function DataProvider({ children }: { children: ReactNode }) {
       },
       getSettings: () => settings.current,
       saveSettings: async (patch) => {
-        await api('/api/config/settings', { method: 'PUT', body: JSON.stringify(patch) });
+        // lookaheadDays es preferencia POR USUARIO (perfil); el resto es global admin
+        const { lookaheadDays, ...globalPatch } = patch;
+        if (lookaheadDays !== undefined) {
+          await api('/api/auth/profile', { method: 'PUT', body: JSON.stringify({ lookaheadDays }) });
+        }
+        if (Object.keys(globalPatch).length > 0) {
+          await api('/api/config/settings', { method: 'PUT', body: JSON.stringify(globalPatch) });
+        }
         settings.current = { ...settings.current, ...patch };
         bump();
       },

@@ -270,7 +270,6 @@ export default function Ajustes() {
   const [checkOutTime, setCheckOutTime] = useState(() => data.getSettings().checkOutTime);
   const [autoCleaning, setAutoCleaning] = useState(() => data.getSettings().autoCleaning);
   const [batteryThreshold, setBatteryThreshold] = useState(() => [data.getSettings().batteryThreshold]);
-  const [lookaheadDays, setLookaheadDays] = useState(() => data.getSettings().lookaheadDays);
   const savePref = (patch: Parameters<typeof data.saveSettings>[0]) => {
     void data.saveSettings(patch).catch(() => toast.error(tr('aj.errorGuardar')));
   };
@@ -1024,7 +1023,8 @@ export default function Ajustes() {
             <div className="flex flex-col gap-4">
               <AppearanceCard />
 
-              {/* Operativa: preferencias de dominio (persistidas en BD) */}
+              {/* Operativa: preferencias de dominio (solo admin, globales) */}
+              {isAdmin && (
               <Card title={tr('aj.operativa')} desc={tr('aj.operativaDesc')}>
                 <div className="flex flex-col divide-y" style={{ borderColor: 'var(--border)' }}>
                   {/* Horarios */}
@@ -1073,34 +1073,6 @@ export default function Ajustes() {
                     />
                   </div>
 
-                  {/* Días de aviso en el panel */}
-                  <div className="flex min-h-14 flex-wrap items-center justify-between gap-3 py-3" style={{ borderColor: 'var(--border)' }}>
-                    <div>
-                      <p className="text-sm font-semibold">{tr('aj.diasAviso')}</p>
-                      <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
-                        {tr('aj.diasAvisoDesc')}
-                      </p>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <input
-                        type="number"
-                        min={1}
-                        max={30}
-                        value={lookaheadDays}
-                        onChange={(e) => {
-                          const v = Number(e.target.value);
-                          if (Number.isFinite(v) && v >= 1 && v <= 30) { setLookaheadDays(v); savePref({ lookaheadDays: v }); }
-                        }}
-                        className={cn(inputCls, 'h-9 w-20 text-center')}
-                        style={inputStyle}
-                        aria-label={tr('aj.diasAviso')}
-                      />
-                      <span className="text-xs" style={{ color: 'var(--text-faint)' }}>
-                        {tr('aj.dias')}
-                      </span>
-                    </div>
-                  </div>
-
                   {/* Umbral batería */}
                   <div className="flex min-h-14 flex-wrap items-center justify-between gap-3 py-3" style={{ borderColor: 'var(--border)' }}>
                     <div>
@@ -1125,6 +1097,7 @@ export default function Ajustes() {
                   </div>
                 </div>
               </Card>
+              )}
 
               {/* Conexión Tedee (solo admin) */}
               {isAdmin && (

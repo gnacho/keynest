@@ -22,6 +22,8 @@ const MIGRATIONS = [
    ALTER TABLE reservations ADD COLUMN notes TEXT DEFAULT ''`,
   // 5: guest_name en reservations (importador CSV Airbnb)
   `ALTER TABLE reservations ADD COLUMN guest_name TEXT DEFAULT ''`,
+  // 6: días de aviso del panel POR USUARIO (0 = usar el defecto global)
+  `ALTER TABLE users ADD COLUMN lookahead_days INTEGER DEFAULT 0`,
 ]
 
 export function migrate(db) {

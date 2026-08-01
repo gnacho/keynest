@@ -97,12 +97,18 @@ app.get('/api/auth/me', (c) => {
   return c.json({ authenticated: true, user })
 })
 
-const profileSchema = z.object({ language: z.enum(['auto', 'es', 'en']) })
+const profileSchema = z.object({
+  language: z.enum(['auto', 'es', 'en']).optional(),
+  lookaheadDays: z.coerce.number().int().min(1).max(30).optional(),
+})
 app.put('/api/auth/profile', auth.requireAuth(prodDb, demoDb), async (c) => {
   const body = await c.req.json().catch(() => null)
   const parsed = profileSchema.safeParse(body)
   if (!parsed.success) return c.json({ error: 'formato inválido' }, 400)
-  const user = auth.updateLanguage(c.get('db'), c.get('user').id, parsed.data.language)
+  const db = c.get('db')
+  let user = c.get('user')
+  if (parsed.data.language) user = auth.updateLanguage(db, user.id, parsed.data.language)
+  if (parsed.data.lookaheadDays) user = auth.updateLookaheadDays(db, user.id, parsed.data.lookaheadDays)
   return c.json({ ok: true, user })
 })
 
@@ -154,7 +160,7 @@ app.get('/api/audit', auth.requireAdmin(prodDb, demoDb), (c) => {
 
 /* Lista de usuarios (solo admin) */
 app.get('/api/users', auth.requireAdmin(prodDb, demoDb), (c) => {
-  const users = prodDb.prepare('SELECT id, username, email, phone, language, role, created_at FROM users ORDER BY created_at').all()
+  const users = prodDb.prepare('SELECT id, username, email, phone, language, role, lookahead_days, created_at FROM users ORDER BY created_at').all()
   return c.json({ users })
 })
 
@@ -296,7 +302,8 @@ guarded.get('/bootstrap', (c) => {
     checkOutTime: kvGet(db, 'set_checkout') || '11:00',
     batteryThreshold: Number(kvGet(db, 'set_battery') || 30),
     autoCleaning: kvGet(db, 'set_autoclean') !== '0',
-    lookaheadDays: Number(kvGet(db, 'set_lookahead') || 7),
+    // Días de aviso del panel: preferencia POR USUARIO (0 = defecto global)
+    lookaheadDays: c.get('user').lookahead_days || Number(kvGet(db, 'set_lookahead') || 7),
   }
   return c.json({ properties, reservations, cleanings, maintenance, people, categories: JSON.parse(categories), config: { ...settings }, sync: syncStatus(db), demo: c.get('user').is_demo, demoEnabled: auth.demoEnabled(prodDb) })
 })

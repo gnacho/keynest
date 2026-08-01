@@ -16,6 +16,7 @@ import { api } from '@/lib/api';
 import { cachedUser, logout } from '@/lib/auth';
 import { applyLanguage, cachedLanguagePref } from '@/i18n';
 import type { AppLanguage } from '@/i18n';
+import { useData } from '@/data/useData';
 import { cn } from '@/lib/utils';
 import pkg from '../../../package.json';
 
@@ -236,7 +237,48 @@ export function AppearanceCard() {
           />
         </button>
       </div>
+
+      {/* Días de aviso en el panel (preferencia por usuario) */}
+      <LookaheadRow />
     </Card>
+  );
+}
+
+/* ---------- Fila "Días de aviso en el panel" (por usuario) ---------- */
+function LookaheadRow() {
+  const { t: tr } = useTranslation();
+  const { getSettings, saveSettings } = useData();
+  const [days, setDays] = useState(() => getSettings().lookaheadDays);
+  return (
+    <div className="flex flex-wrap items-center justify-between gap-3">
+      <div>
+        <p className="text-sm font-semibold">{tr('aj.diasAviso')}</p>
+        <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
+          {tr('aj.diasAvisoDesc')}
+        </p>
+      </div>
+      <div className="flex items-center gap-2">
+        <input
+          type="number"
+          min={1}
+          max={30}
+          value={days}
+          onChange={(e) => {
+            const v = Number(e.target.value);
+            if (Number.isFinite(v) && v >= 1 && v <= 30) {
+              setDays(v);
+              void saveSettings({ lookaheadDays: v });
+            }
+          }}
+          aria-label={tr('aj.diasAviso')}
+          className="h-9 w-20 rounded-xl border bg-[var(--surface)] px-3 text-center text-sm outline-none focus:ring-2 focus:ring-[#6366F1]/40"
+          style={{ borderColor: 'var(--border)' }}
+        />
+        <span className="text-xs" style={{ color: 'var(--text-faint)' }}>
+          {tr('aj.dias')}
+        </span>
+      </div>
+    </div>
   );
 }
 
