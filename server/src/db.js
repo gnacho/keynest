@@ -20,6 +20,8 @@ const MIGRATIONS = [
   // 4: amount/notes en reservations
   `ALTER TABLE reservations ADD COLUMN amount REAL DEFAULT 0;
    ALTER TABLE reservations ADD COLUMN notes TEXT DEFAULT ''`,
+  // 5: guest_name en reservations (importador CSV Airbnb)
+  `ALTER TABLE reservations ADD COLUMN guest_name TEXT DEFAULT ''`,
 ]
 
 export function migrate(db) {

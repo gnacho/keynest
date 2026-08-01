@@ -683,7 +683,21 @@
     "confirmar": "Confirm",
     "cancelar": "Cancel",
     "noUltimoAdmin": "At least one administrator must remain",
-    "maestrosDesc": "Application masters"
+    "maestrosDesc": "Application masters",
+    "importarCsv": "Import from Airbnb",
+    "importarCsvDesc": "Transaction history CSV (Earnings → Download CSV). Fills in guest name and amount and creates the history.",
+    "seleccionarCsv": "Select CSV",
+    "vistaPrevia": "Preview (nothing applied yet)",
+    "impTotal": "{{count}} unique reservations in the CSV",
+    "impCasan": "{{count}} match existing reservations (guest name and amount updated)",
+    "impNuevas": "{{count}} new to create ({{amount}})",
+    "impIgnoradas": "{{dupes}} duplicates and {{skipped}} non-reservation rows ignored",
+    "impMapear": "Assign a property to each listing in the CSV:",
+    "impInmueble": "Property",
+    "impElegir": "Choose…",
+    "aplicarImportacion": "Apply import",
+    "importarOk": "Import applied: {{updated}} updated, {{inserted}} new",
+    "importarError": "Could not import the CSV"
   },
   "common2": {
     "confirmar": "Confirm",

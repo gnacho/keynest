@@ -34,7 +34,9 @@ export async function syncAll(db) {
         for (const i of items) {
           upsert.run(crypto.randomUUID(), p.id, i.uid, i.checkin, i.checkout, i.summary, i.confirmation_code, i.phone_last4, now)
         }
-        const existing = db.prepare('SELECT uid FROM reservations WHERE property_id = ?').all(p.id)
+        // Solo borra uds ORIGEN iCal (@airbnb.com): las reservas importadas
+        // del CSV (uid csv-…) deben sobrevivir a cada sincronización.
+        const existing = db.prepare("SELECT uid FROM reservations WHERE property_id = ? AND uid LIKE '%@airbnb.com'").all(p.id)
         const del = db.prepare('DELETE FROM reservations WHERE uid = ?')
         for (const row of existing) {
           if (!seen.has(row.uid)) del.run(row.uid)

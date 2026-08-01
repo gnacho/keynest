@@ -683,7 +683,21 @@
     "confirmar": "Confirmar",
     "cancelar": "Cancelar",
     "noUltimoAdmin": "Debe quedar al menos un administrador",
-    "maestrosDesc": "Maestros de la aplicación"
+    "maestrosDesc": "Maestros de la aplicación",
+    "importarCsv": "Importar de Airbnb",
+    "importarCsvDesc": "CSV del Historial de transacciones (Ingresos → Descargar CSV). Rellena huésped e importe y crea el histórico.",
+    "seleccionarCsv": "Seleccionar CSV",
+    "vistaPrevia": "Vista previa (no se ha aplicado nada)",
+    "impTotal": "{{count}} reservas únicas en el CSV",
+    "impCasan": "{{count}} casan con reservas actuales (se actualizan nombre e importe)",
+    "impNuevas": "{{count}} nuevas a crear ({{amount}})",
+    "impIgnoradas": "{{dupes}} duplicadas y {{skipped}} filas no-reserva ignoradas",
+    "impMapear": "Asigna un inmueble a cada alojamiento del CSV:",
+    "impInmueble": "Inmueble",
+    "impElegir": "Elegir…",
+    "aplicarImportacion": "Aplicar importación",
+    "importarOk": "Importación aplicada: {{updated}} actualizadas, {{inserted}} nuevas",
+    "importarError": "No se pudo importar el CSV"
   },
   "common2": {
     "confirmar": "Confirmar",

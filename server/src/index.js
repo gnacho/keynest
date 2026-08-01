@@ -12,6 +12,7 @@ import { fetchIcs, icsToReservations, parseIcs } from './ical.js'
 import { seedDemo } from './seed-demo.js'
 import { saveTedeeConfig, tedeeConfig, tedeeLocks } from './tedee.js'
 import { applyUpdate, updateStatus } from './update.js'
+import { importAirbnb, parseAirbnbCsv } from './import-airbnb.js'
 
 const DEFAULT_CATEGORIES = [
   { key: 'cerradura/pilas', label: 'Cerradura/pilas', icon: 'lock' },
@@ -210,6 +211,25 @@ app.delete('/api/users/:id', auth.requireAdmin(prodDb, demoDb), (c) => {
   auth.deleteUser(prodDb, targetId)
   aud(c, 'delete', 'user', targetId, target.username)
   return c.json({ ok: true })
+})
+
+/* Importar CSV "Historial de transacciones" de Airbnb (solo admin).
+ * dry=true (defecto) = vista previa; dry=false = aplica (idempotente).
+ * map: { nombreListing: propertyId } — vive en la petición, no en el repo. */
+const importSchema = z.object({
+  csv: z.string().min(1).max(5 * 1024 * 1024),
+  dry: z.boolean().default(true),
+  map: z.record(z.string(), z.string()).default({}),
+})
+app.post('/api/import/airbnb', auth.requireAdmin(prodDb, demoDb), async (c) => {
+  const body = await c.req.json().catch(() => null)
+  const parsed = importSchema.safeParse(body)
+  if (!parsed.success) return c.json({ error: 'formato inválido', code: 'format' }, 400)
+  const { reservations, dupes, skipped, error } = parseAirbnbCsv(parsed.data.csv)
+  if (error) return c.json({ error, code: 'csv' }, 400)
+  const result = importAirbnb(prodDb, reservations, parsed.data.map, parsed.data.dry)
+  if (!parsed.data.dry) aud(c, 'import', 'reservation', '', `airbnb csv: ${result.updated} act, ${result.inserted} nuevas`)
+  return c.json({ ...result, dupes, skipped, total: reservations.length, dry: parsed.data.dry })
 })
 
 /* Config Tedee (solo admin): bridge local + token */

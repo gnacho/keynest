@@ -31,7 +31,7 @@ interface ApiProperty {
 interface ApiReservation {
   id: string; property_id: string; uid: string; checkin: string; checkout: string;
   summary: string; confirmation_code: string; phone_last4: string;
-  amount?: number; notes?: string;
+  amount?: number; notes?: string; guest_name?: string;
 }
 
 function mapProperty(row: ApiProperty): Property {
@@ -56,13 +56,18 @@ function mapReservation(row: ApiReservation): Reservation {
   const checkIn = new Date(y1, m1 - 1, d1, 15, 0);
   const checkOut = new Date(y2, m2 - 1, d2, 11, 0);
   const code = row.confirmation_code || '';
+  const realName = (row.guest_name || '').trim();
+  const name = realName || (code ? `Airbnb · ${code}` : 'Airbnb');
+  const initials = realName
+    ? realName.split(/\s+/).map((w) => w[0]).slice(0, 2).join('').toUpperCase()
+    : (code || 'AB').slice(0, 2);
   return {
     id: row.id,
     propertyId: row.property_id,
     guest: {
-      name: code ? `Airbnb · ${code}` : 'Airbnb',
+      name,
       country: '',
-      initials: (code || 'AB').slice(0, 2),
+      initials,
     },
     checkIn,
     checkOut,
