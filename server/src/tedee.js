@@ -1,17 +1,23 @@
 import crypto from 'node:crypto'
-import { kvGet, kvSet } from './db.js'
+import { decryptSecret, encryptSecret, kvGet, kvSet } from './db.js'
 
 /** Config Tedee guardada en kv de la BD de producción. */
 export function tedeeConfig(db) {
+  const stored = kvGet(db, 'tedee_token') || ''
+  let token = decryptSecret(db, stored)
+  // Migración de token en claro → cifrado transparente
+  if (stored && !stored.startsWith('gcm:')) {
+    kvSet(db, 'tedee_token', encryptSecret(db, token))
+  }
   return {
     url: kvGet(db, 'tedee_url') || '',
-    token: kvGet(db, 'tedee_token') || '',
+    token,
   }
 }
 
 export function saveTedeeConfig(db, url, token) {
   kvSet(db, 'tedee_url', url.replace(/\/+$/, ''))
-  if (token) kvSet(db, 'tedee_token', token)
+  if (token) kvSet(db, 'tedee_token', encryptSecret(db, token))
 }
 
 /** Header api_token: hex(sha256(token+ts)) + ts — verificado contra bridge real 31-Jul-2026. */

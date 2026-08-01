@@ -61,6 +61,7 @@ import { EXPENSE_META, EXPENSE_TYPES, TYPE_SWATCHES } from '@/components/fin/exp
 import { useData } from '@/data/useData';
 import { useTheme } from '@/theme/theme-context';
 import { logout, saveLanguage, cachedUser, demoStatus, setDemoMode } from '@/lib/auth';
+import { api } from '@/lib/api';
 import { applyLanguage, cachedLanguagePref } from '@/i18n';
 import { copyText } from '@/lib/clipboard';
 import { catIcon, CAT_ICONS } from '@/lib/cat-icons';
@@ -221,8 +222,7 @@ export default function Ajustes() {
 
   const checkUpdate = async () => {
     try {
-      const r = await fetch('/api/update/status', { credentials: 'same-origin' });
-      if (r.ok) setUpdateInfo(await r.json());
+      setUpdateInfo(await api('/api/update/status'));
     } catch { /* noop */ }
   };
 
@@ -230,13 +230,9 @@ export default function Ajustes() {
     if (applying) return;
     setApplying(true);
     try {
-      const r = await fetch('/api/update/apply', { method: 'POST', credentials: 'same-origin' });
-      if (r.ok) {
-        toast.success(tr('aj.actualizadoOk'));
-        setUpdateInfo(null);
-      } else {
-        toast.error(tr('aj.errorActualizar'));
-      }
+      await api('/api/update/apply', { method: 'POST' });
+      toast.success(tr('aj.actualizadoOk'));
+      setUpdateInfo(null);
     } catch {
       toast.error(tr('aj.errorActualizar'));
     } finally {
@@ -252,12 +248,10 @@ export default function Ajustes() {
   useEffect(() => {
     void demoStatus().then(setDemoOn);
     void checkUpdate();
-    void fetch('/api/config/tedee', { credentials: 'same-origin' })
-      .then((r) => (r.ok ? r.json() : null))
+    void api<{ url: string }>('/api/config/tedee')
       .then((d) => { if (d?.url) setTedeeUrl(d.url); })
       .catch(() => undefined);
-    void fetch('/api/users', { credentials: 'same-origin' })
-      .then((r) => (r.ok ? r.json() : null))
+    void api<{ users: ApiUser[] }>('/api/users')
       .then((d) => { if (d?.users) setRealUsers(d.users); })
       .catch(() => undefined);
   }, []);
@@ -265,16 +259,13 @@ export default function Ajustes() {
   const saveTedee = async () => {
     setTedeeState({ state: 'checking' });
     try {
-      const put = await fetch('/api/config/tedee', {
+        await api('/api/config/tedee', {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'same-origin',
         body: JSON.stringify({ url: tedeeUrl.trim(), token: tedeeToken.trim() }),
       });
-      if (!put.ok) throw new Error('http');
-      const test = await fetch('/api/tedee/test', { credentials: 'same-origin' }).then((r) => r.json());
+      const test = await api<{ ok: boolean; locks?: { name: string }[]; code?: string }>('/api/tedee/test');
       if (test.ok) {
-        setTedeeState({ state: 'ok', text: tr('aj.tedeeOk', { count: test.locks.length, names: test.locks.map((l: { name: string }) => l.name).join(', ') }) });
+        setTedeeState({ state: 'ok', text: tr('aj.tedeeOk', { count: (test.locks ?? []).length, names: (test.locks ?? []).map((l: { name: string }) => l.name).join(', ') }) });
         toast.success(tr('aj.tedeeGuardado'));
       } else if (test.code === 'not-configured') {
         setTedeeState({ state: 'error', text: tr('aj.tedeeErrConfig') });
@@ -296,10 +287,13 @@ export default function Ajustes() {
     applyLanguage(v);
     void saveLanguage(v).catch(() => undefined);
   };
-  const [checkInTime, setCheckInTime] = useState('15:00');
-  const [checkOutTime, setCheckOutTime] = useState('11:00');
-  const [autoCleaning, setAutoCleaning] = useState(true);
-  const [batteryThreshold, setBatteryThreshold] = useState([30]);
+  const [checkInTime, setCheckInTime] = useState(() => data.getSettings().checkInTime);
+  const [checkOutTime, setCheckOutTime] = useState(() => data.getSettings().checkOutTime);
+  const [autoCleaning, setAutoCleaning] = useState(() => data.getSettings().autoCleaning);
+  const [batteryThreshold, setBatteryThreshold] = useState(() => [data.getSettings().batteryThreshold]);
+  const savePref = (patch: Parameters<typeof data.saveSettings>[0]) => {
+    void data.saveSettings(patch).catch(() => toast.error(tr('aj.errorGuardar')));
+  };
   const [logoutOpen, setLogoutOpen] = useState(false);
   const [marginDays, setMarginDays] = useState(() => data.getCleaningMarginDays());
   useEffect(() => {
@@ -321,14 +315,15 @@ export default function Ajustes() {
     if (passForm.next !== passForm.repeat) { setPassError(tr('aj.passErrCoincide')); return; }
     setPassBusy(true);
     try {
-      const res = await fetch('/api/auth/password', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'same-origin',
-        body: JSON.stringify({ current: passForm.current, next: passForm.next }),
-      });
-      if (res.status === 403) { setPassError(tr('aj.passErrActual')); return; }
-      if (!res.ok) throw new Error();
+      try {
+        await api('/api/auth/password', {
+          method: 'PUT',
+          body: JSON.stringify({ current: passForm.current, next: passForm.next }),
+        });
+      } catch (err) {
+        if (err instanceof Error && err.message.includes('403')) { setPassError(tr('aj.passErrActual')); return; }
+        throw err;
+      }
       setPassOpen(false);
       setPassForm({ current: '', next: '', repeat: '' });
       toast.success(tr('aj.passCambiada'));
@@ -345,15 +340,17 @@ export default function Ajustes() {
     setNewUserError('');
     if (!userForm.name.trim()) return;
     if (newUserPass.length < 6) { setNewUserError(tr('aj.passwordReq')); return; }
-    const res = await fetch('/api/users', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      credentials: 'same-origin',
-      body: JSON.stringify({ username: userForm.name.trim(), password: newUserPass, phone: userForm.phone }),
-    });
-    if (res.status === 409) { setNewUserError(tr('aj.usuarioExiste')); return; }
-    if (!res.ok) { setNewUserError(tr('aj.passErrGeneral')); return; }
-    const d = await res.json();
+    let d: { user: ApiUser };
+    try {
+      d = await api<{ user: ApiUser }>('/api/users', {
+        method: 'POST',
+        body: JSON.stringify({ username: userForm.name.trim(), password: newUserPass, phone: userForm.phone }),
+      });
+    } catch (err) {
+      if (err instanceof Error && err.message.includes('existe')) { setNewUserError(tr('aj.usuarioExiste')); return; }
+      setNewUserError(tr('aj.passErrGeneral'));
+      return;
+    }
     setRealUsers((prev) => [...prev, d.user]);
     setNewUserOpen(false);
     setNewUserPass('');
@@ -1480,7 +1477,7 @@ export default function Ajustes() {
                   <input
                     type="time"
                     value={checkInTime}
-                    onChange={(e) => setCheckInTime(e.target.value)}
+                    onChange={(e) => { setCheckInTime(e.target.value); savePref({ checkInTime: e.target.value }); }}
                     className={cn(inputCls, 'h-9 w-[104px]')}
                     style={inputStyle}
                     aria-label={tr('aj.horaEntrada')}
@@ -1491,7 +1488,7 @@ export default function Ajustes() {
                   <input
                     type="time"
                     value={checkOutTime}
-                    onChange={(e) => setCheckOutTime(e.target.value)}
+                    onChange={(e) => { setCheckOutTime(e.target.value); savePref({ checkOutTime: e.target.value }); }}
                     className={cn(inputCls, 'h-9 w-[104px]')}
                     style={inputStyle}
                     aria-label={tr('aj.horaSalida')}
@@ -1509,7 +1506,7 @@ export default function Ajustes() {
                 </div>
                 <Switch
                   checked={autoCleaning}
-                  onCheckedChange={setAutoCleaning}
+                  onCheckedChange={(v) => { setAutoCleaning(v); savePref({ autoCleaning: v }); }}
                   className="data-[state=checked]:bg-[#8B5CF6]"
                 />
               </motion.div>
@@ -1561,7 +1558,7 @@ export default function Ajustes() {
                 <div className="flex w-48 items-center gap-3">
                   <Slider
                     value={batteryThreshold}
-                    onValueChange={setBatteryThreshold}
+                    onValueChange={(v) => { setBatteryThreshold(v); savePref({ batteryThreshold: v[0] }); }}
                     min={10}
                     max={50}
                     step={5}

@@ -35,6 +35,13 @@ export interface PropertyInput {
   instructions: string;
 }
 
+export interface AppSettings {
+  checkInTime: string;
+  checkOutTime: string;
+  batteryThreshold: number;
+  autoCleaning: boolean;
+}
+
 export interface PersonInput {
   name: string;
   phone: string;
@@ -95,6 +102,9 @@ export interface DataApi {
   /** Config global: margen en días para agendar limpiezas. */
   getCleaningMarginDays: () => number;
   saveCleaningMarginDays: (days: number) => Promise<void>;
+  /** Preferencias persistidas en BD (horarios, umbral batería, limpieza automática). */
+  getSettings: () => AppSettings;
+  saveSettings: (s: Partial<AppSettings>) => Promise<void>;
 
   getProperties: () => Property[];
   getProperty: (idOrSlug: string) => Property | undefined;

@@ -6,7 +6,7 @@ import { serveStatic } from '@hono/node-server/serve-static'
 import { Hono } from 'hono'
 import { z } from 'zod'
 import * as auth from './auth.js'
-import { openDb, kvGet, kvSet } from './db.js'
+import { audit, openDb, kvGet, kvSet } from './db.js'
 import { syncAll, syncStatus } from './sync.js'
 import { fetchIcs, icsToReservations, parseIcs } from './ical.js'
 import { seedDemo } from './seed-demo.js'
@@ -129,6 +129,7 @@ app.post('/api/users', auth.requireAuth(prodDb, demoDb), async (c) => {
   if (!parsed.success) return c.json({ error: 'formato inválido', code: 'format' }, 400)
   const user = await auth.createUser(prodDb, { ...parsed.data, role: 'admin' })
   if (!user) return c.json({ error: 'el usuario ya existe', code: 'exists' }, 409)
+  aud(c, 'create', 'user', user.id, user.username)
   return c.json({ ok: true, user }, 201)
 })
 
@@ -144,6 +145,13 @@ app.post('/api/update/apply', auth.requireAuth(prodDb, demoDb), async (c) => {
   // systemd Restart=always levanta el servicio con el código nuevo tras salir
   setTimeout(() => process.exit(0), 1500)
   return c.json({ ok, restarting: ok })
+})
+
+/* Audit log (solo admin, últimas 100 entradas) */
+app.get('/api/audit', auth.requireAuth(prodDb, demoDb), (c) => {
+  if (c.get('user').role !== 'admin') return c.json({ error: 'solo admin' }, 403)
+  const rows = c.get('db').prepare('SELECT * FROM audit_log ORDER BY at DESC LIMIT 100').all()
+  return c.json({ entries: rows })
 })
 
 /* Lista de usuarios (solo admin) */
@@ -216,7 +224,13 @@ guarded.get('/bootstrap', (c) => {
   let categories = kvGet(db, 'maint_categories')
   if (!categories) categories = JSON.stringify(DEFAULT_CATEGORIES)
   const cleaningMarginDays = Number(kvGet(db, 'cleaning_margin_days') || 7)
-  return c.json({ properties, reservations, cleanings, maintenance, people, categories: JSON.parse(categories), config: { cleaningMarginDays }, sync: syncStatus(db), demo: c.get('user').is_demo, demoEnabled: auth.demoEnabled(prodDb) })
+  const settings = {
+    checkInTime: kvGet(db, 'set_checkin') || '15:00',
+    checkOutTime: kvGet(db, 'set_checkout') || '11:00',
+    batteryThreshold: Number(kvGet(db, 'set_battery') || 30),
+    autoCleaning: kvGet(db, 'set_autoclean') !== '0',
+  }
+  return c.json({ properties, reservations, cleanings, maintenance, people, categories: JSON.parse(categories), config: { cleaningMarginDays, ...settings }, sync: syncStatus(db), demo: c.get('user').is_demo, demoEnabled: auth.demoEnabled(prodDb) })
 })
 
 const propertySchema = z.object({
@@ -236,6 +250,8 @@ function slugify(name) {
     .replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') || 'inmueble'
 }
 
+const aud = (c, action, entity, entityId, detail = '') => audit(c.get('db'), c.get('user')?.id, action, entity, entityId, detail)
+
 guarded.post('/properties', async (c) => {
   const body = await c.req.json().catch(() => null)
   const parsed = propertySchema.safeParse(body)
@@ -250,6 +266,7 @@ guarded.post('/properties', async (c) => {
               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`)
     .run(id, slug, d.name, d.address, d.bedrooms, d.bathrooms, d.area, d.photo, d.icalUrl, JSON.stringify(d.checklist), d.instructions, Date.now())
   const property = db.prepare('SELECT * FROM properties WHERE id = ?').get(id)
+  aud(c, 'create', 'property', id, d.name)
   return c.json({ ok: true, property: { ...property, checklist: JSON.parse(property.checklist) } }, 201)
 })
 
@@ -264,6 +281,7 @@ guarded.put('/properties/:id', async (c) => {
   db.prepare(`UPDATE properties SET name=?, address=?, bedrooms=?, bathrooms=?, area=?, photo=?, ical_url=?, checklist=?, instructions=? WHERE id=?`)
     .run(d.name, d.address, d.bedrooms, d.bathrooms, d.area, d.photo, d.icalUrl, JSON.stringify(d.checklist), d.instructions, existing.id)
   const property = db.prepare('SELECT * FROM properties WHERE id = ?').get(existing.id)
+  aud(c, 'update', 'property', existing.id, d.name)
   return c.json({ ok: true, property: { ...property, checklist: JSON.parse(property.checklist) } })
 })
 
@@ -328,6 +346,7 @@ guarded.post('/cleanings', async (c) => {
               VALUES (?, ?, ?, ?, 'pendiente', '[]', 2, ?, '[]', ?)`)
     .run(id, d.propertyId, d.reservationId ?? null, d.date, JSON.stringify(checks), Date.now())
   const cleaning = db.prepare('SELECT * FROM cleanings WHERE id = ?').get(id)
+  aud(c, 'create', 'cleaning', id, `${d.propertyId} ${d.date}`)
   return c.json({ ok: true, cleaning }, 201)
 })
 
@@ -369,6 +388,7 @@ guarded.post('/maintenance', async (c) => {
   db.prepare(`INSERT INTO maintenance_tasks (id, property_id, title, category, expense_tag, urgent, notes, status, created_at)
               VALUES (?, ?, ?, ?, ?, ?, ?, 'nueva', ?)`)
     .run(id, d.propertyId, d.title, d.category, d.expenseTag, d.urgent ? 1 : 0, d.notes, Date.now())
+  aud(c, 'create', 'maintenance', id, d.title)
   return c.json({ ok: true, task: db.prepare('SELECT * FROM maintenance_tasks WHERE id = ?').get(id) }, 201)
 })
 
@@ -416,6 +436,7 @@ guarded.put('/maintenance/:id', async (c) => {
       d.scheduledDate ?? null,
       existing.id,
     )
+  aud(c, 'update', 'maintenance', existing.id, JSON.stringify(Object.keys(d)))
   return c.json({ ok: true, task: db.prepare('SELECT * FROM maintenance_tasks WHERE id = ?').get(existing.id) })
 })
 
@@ -438,6 +459,7 @@ guarded.post('/people', async (c) => {
   db.prepare('INSERT INTO people (id, name, phone, role, specialty, hourly_rate, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)')
     .run(id, d.name, d.phone, d.role, d.specialty, d.hourlyRate, Date.now())
   const person = db.prepare('SELECT id, name, phone, role, specialty, hourly_rate, created_at FROM people WHERE id = ?').get(id)
+  aud(c, 'create', 'person', id, d.name)
   return c.json({ ok: true, person: { ...person, has_token: false } }, 201)
 })
 
@@ -452,12 +474,14 @@ guarded.put('/people/:id', async (c) => {
   db.prepare('UPDATE people SET name=?, phone=?, role=?, specialty=?, hourly_rate=? WHERE id=?')
     .run(d.name, d.phone, d.role, d.specialty, d.hourlyRate, existing.id)
   const person = db.prepare('SELECT id, name, phone, role, specialty, hourly_rate, token_hash, created_at FROM people WHERE id = ?').get(existing.id)
+  aud(c, 'update', 'person', existing.id, d.name)
   return c.json({ ok: true, person: { ...person, has_token: Boolean(person.token_hash), token_hash: undefined } })
 })
 
 guarded.delete('/people/:id', (c) => {
   const db = c.get('db')
   db.prepare('DELETE FROM people WHERE id = ?').run(c.req.param('id'))
+  aud(c, 'delete', 'person', c.req.param('id'))
   return c.json({ ok: true })
 })
 
@@ -522,7 +546,29 @@ guarded.put('/cleanings/:id', async (c) => {
       existing.id,
     )
   const cleaning = db.prepare('SELECT * FROM cleanings WHERE id = ?').get(existing.id)
+  aud(c, 'update', 'cleaning', existing.id, JSON.stringify(Object.keys(d)))
   return c.json({ ok: true, cleaning })
+})
+
+/* Preferencias de la app (admin): horarios, umbral batería, limpieza automática */
+const settingsSchema = z.object({
+  checkInTime: z.string().regex(/^\d{2}:\d{2}$/).optional(),
+  checkOutTime: z.string().regex(/^\d{2}:\d{2}$/).optional(),
+  batteryThreshold: z.coerce.number().int().min(5).max(90).optional(),
+  autoCleaning: z.boolean().optional(),
+})
+guarded.put('/config/settings', async (c) => {
+  if (c.get('user').role !== 'admin') return c.json({ error: 'solo admin' }, 403)
+  const body = await c.req.json().catch(() => null)
+  const parsed = settingsSchema.safeParse(body)
+  if (!parsed.success) return c.json({ error: 'formato inválido' }, 400)
+  const db = c.get('db')
+  const d = parsed.data
+  if (d.checkInTime) kvSet(db, 'set_checkin', d.checkInTime)
+  if (d.checkOutTime) kvSet(db, 'set_checkout', d.checkOutTime)
+  if (d.batteryThreshold !== undefined) kvSet(db, 'set_battery', String(d.batteryThreshold))
+  if (d.autoCleaning !== undefined) kvSet(db, 'set_autoclean', d.autoCleaning ? '1' : '0')
+  return c.json({ ok: true })
 })
 
 /* Margen en días para agendar limpiezas (defecto 7) */
@@ -684,6 +730,7 @@ guarded.post('/properties/:id/photo', async (c) => {
   const photoPath = `/photos/${filename}`
   db.prepare('UPDATE properties SET photo = ? WHERE id = ?').run(photoPath, existing.id)
   const property = db.prepare('SELECT * FROM properties WHERE id = ?').get(existing.id)
+  aud(c, 'update', 'property', existing.id, d.name)
   return c.json({ ok: true, property: { ...property, checklist: JSON.parse(property.checklist) } })
 })
 

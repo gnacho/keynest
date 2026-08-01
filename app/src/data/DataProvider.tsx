@@ -4,7 +4,7 @@ import i18n, { applyLanguage } from '@/i18n';
 import { api } from '@/lib/api';
 import { fetchMe, isAuthed } from '@/lib/auth';
 import { DataContext } from './data-context';
-import type { DataApi, OccupancyInfo, PropertyInput, SyncResult } from './data-context';
+import type { AppSettings, DataApi, OccupancyInfo, PropertyInput, SyncResult } from './data-context';
 import type {
   AppUser,
   Cleaning,
@@ -156,7 +156,7 @@ interface BootstrapData {
   maintenance: ApiMaintenance[];
   people: ApiPerson[];
   categories: MaintCategory[];
-  config?: { cleaningMarginDays?: number };
+  config?: { cleaningMarginDays?: number; checkInTime?: string; checkOutTime?: string; batteryThreshold?: number; autoCleaning?: boolean };
   sync: Record<string, { ok: boolean; at: number; count?: number; error?: string }>;
 }
 
@@ -203,6 +203,7 @@ export default function DataProvider({ children }: { children: ReactNode }) {
   const users = useRef<AppUser[]>([]);
   const categories = useRef<MaintCategory[]>([]);
   const marginDays = useRef(7);
+  const settings = useRef<AppSettings>({ checkInTime: '15:00', checkOutTime: '11:00', batteryThreshold: 30, autoCleaning: true });
   const locks = useRef<Lock[]>([]);
   const accesses = useRef<TedeeAccess[]>([]);
   const monthlyFinance = useRef<MonthlyFinance[]>([]);
@@ -225,6 +226,12 @@ export default function DataProvider({ children }: { children: ReactNode }) {
       maintenance.current = (data.maintenance ?? []).map(mapMaintenance);
       categories.current = data.categories ?? [];
       marginDays.current = data.config?.cleaningMarginDays ?? 7;
+      settings.current = {
+        checkInTime: data.config?.checkInTime ?? '15:00',
+        checkOutTime: data.config?.checkOutTime ?? '11:00',
+        batteryThreshold: data.config?.batteryThreshold ?? 30,
+        autoCleaning: data.config?.autoCleaning ?? true,
+      };
       syncMap.current = data.sync ?? {};
       bump();
     } catch {
@@ -388,6 +395,12 @@ export default function DataProvider({ children }: { children: ReactNode }) {
       saveCleaningMarginDays: async (days) => {
         await api('/api/config/cleaning-margin', { method: 'PUT', body: JSON.stringify({ days }) });
         marginDays.current = days;
+        bump();
+      },
+      getSettings: () => settings.current,
+      saveSettings: async (patch) => {
+        await api('/api/config/settings', { method: 'PUT', body: JSON.stringify(patch) });
+        settings.current = { ...settings.current, ...patch };
         bump();
       },
       getCategories: () => categories.current,
