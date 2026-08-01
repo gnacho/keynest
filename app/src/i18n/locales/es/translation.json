@@ -620,7 +620,15 @@
     "margenLimpiezas": "Margen para agendar limpiezas",
     "margenLimpiezasDesc": "Días de antelación máxima para crear limpiezas (por defecto 7)",
     "dias": "días",
-    "fueraMargen": "Fuera de margen: máximo {{days}} días de antelación"
+    "fueraMargen": "Fuera de margen: máximo {{days}} días de antelación",
+    "actualizaciones": "Actualizaciones",
+    "actualizacionesDesc": "Nuevas versiones de Keynest desde el repositorio",
+    "appActualizada": "La app está al día",
+    "nuevaVersion": "Nueva versión disponible",
+    "actualizarAhora": "Actualizar ahora",
+    "actualizando": "Actualizando…",
+    "actualizadoOk": "Actualizada — el servicio se reinicia, recarga en unos segundos",
+    "errorActualizar": "No se pudo comprobar/aplicar la actualización"
   },
   "common2": {
     "confirmar": "Confirmar",

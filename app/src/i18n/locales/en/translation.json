@@ -620,7 +620,15 @@
     "margenLimpiezas": "Cleaning scheduling margin",
     "margenLimpiezasDesc": "Maximum days ahead to create cleanings (default 7)",
     "dias": "days",
-    "fueraMargen": "Out of margin: max {{days}} days ahead"
+    "fueraMargen": "Out of margin: max {{days}} days ahead",
+    "actualizaciones": "Updates",
+    "actualizacionesDesc": "New Keynest versions from the repository",
+    "appActualizada": "The app is up to date",
+    "nuevaVersion": "New version available",
+    "actualizarAhora": "Update now",
+    "actualizando": "Updating…",
+    "actualizadoOk": "Updated — the service is restarting, reload in a few seconds",
+    "errorActualizar": "Could not check/apply the update"
   },
   "common2": {
     "confirmar": "Confirm",

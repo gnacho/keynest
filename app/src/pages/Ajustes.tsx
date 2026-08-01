@@ -215,6 +215,35 @@ export default function Ajustes() {
   const [themeMode, setThemeMode] = useState<'claro' | 'oscuro' | 'auto'>(theme === 'dark' ? 'oscuro' : 'claro');
   const [lang, setLang] = useState<AppLanguage>(() => cachedUser()?.language ?? cachedLanguagePref());
   const [demoOn, setDemoOn] = useState(true);
+  const [updateInfo, setUpdateInfo] = useState<{ current: string; latest: string | null; available: boolean } | null>(null);
+  const [applying, setApplying] = useState(false);
+  const isAdmin = cachedUser()?.role === 'admin';
+
+  const checkUpdate = async () => {
+    try {
+      const r = await fetch('/api/update/status', { credentials: 'same-origin' });
+      if (r.ok) setUpdateInfo(await r.json());
+    } catch { /* noop */ }
+  };
+
+  const applyUpdate = async () => {
+    if (applying) return;
+    setApplying(true);
+    try {
+      const r = await fetch('/api/update/apply', { method: 'POST', credentials: 'same-origin' });
+      if (r.ok) {
+        toast.success(tr('aj.actualizadoOk'));
+        setUpdateInfo(null);
+      } else {
+        toast.error(tr('aj.errorActualizar'));
+      }
+    } catch {
+      toast.error(tr('aj.errorActualizar'));
+    } finally {
+      setApplying(false);
+    }
+  };
+
   const [tedeeUrl, setTedeeUrl] = useState('');
   const [tedeeToken, setTedeeToken] = useState('');
   const [tedeeState, setTedeeState] = useState<{ state: 'idle' | 'checking' | 'ok' | 'error'; text?: string }>({ state: 'idle' });
@@ -222,6 +251,7 @@ export default function Ajustes() {
   const [realUsers, setRealUsers] = useState<ApiUser[]>([]);
   useEffect(() => {
     void demoStatus().then(setDemoOn);
+    void checkUpdate();
     void fetch('/api/config/tedee', { credentials: 'same-origin' })
       .then((r) => (r.ok ? r.json() : null))
       .then((d) => { if (d?.url) setTedeeUrl(d.url); })
@@ -1407,6 +1437,36 @@ export default function Ajustes() {
                 </div>
                 <Switch checked={demoOn} onCheckedChange={toggleDemo} />
               </motion.div>
+
+              {/* Actualizaciones (solo admin) */}
+              {isAdmin && (
+                <motion.div variants={itemV} className="flex min-h-14 flex-wrap items-center justify-between gap-3 px-4 py-3" style={{ borderColor: 'var(--border)' }}>
+                  <div>
+                    <p className="text-sm font-semibold">{tr('aj.actualizaciones')}</p>
+                    <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
+                      {tr('aj.actualizacionesDesc')}
+                    </p>
+                  </div>
+                  {updateInfo === null ? (
+                    <span className="text-xs" style={{ color: 'var(--text-faint)' }}>…</span>
+                  ) : updateInfo.available ? (
+                    <button
+                      type="button"
+                      disabled={applying}
+                      onClick={() => void applyUpdate()}
+                      className="brand-gradient flex h-9 items-center gap-1.5 rounded-xl px-4 text-xs font-semibold text-white disabled:opacity-50"
+                    >
+                      <RefreshCw className={cn('h-3.5 w-3.5', applying && 'animate-spin')} />
+                      {applying ? tr('aj.actualizando') : tr('aj.actualizarAhora')}
+                    </button>
+                  ) : (
+                    <span className="flex items-center gap-1.5 text-xs font-medium text-emerald-500">
+                      <Check className="h-3.5 w-3.5" />
+                      {tr('aj.appActualizada')}
+                    </span>
+                  )}
+                </motion.div>
+              )}
 
               {/* Horarios */}
               <motion.div variants={itemV} className="flex min-h-14 flex-wrap items-center justify-between gap-3 px-4 py-3" style={{ borderColor: 'var(--border)' }}>

@@ -11,6 +11,7 @@ import { syncAll, syncStatus } from './sync.js'
 import { fetchIcs, icsToReservations, parseIcs } from './ical.js'
 import { seedDemo } from './seed-demo.js'
 import { saveTedeeConfig, tedeeConfig, tedeeLocks } from './tedee.js'
+import { applyUpdate, updateStatus } from './update.js'
 
 const DEFAULT_CATEGORIES = [
   { key: 'cerradura/pilas', label: 'Cerradura/pilas', icon: 'lock' },
@@ -129,6 +130,20 @@ app.post('/api/users', auth.requireAuth(prodDb, demoDb), async (c) => {
   const user = await auth.createUser(prodDb, { ...parsed.data, role: 'admin' })
   if (!user) return c.json({ error: 'el usuario ya existe', code: 'exists' }, 409)
   return c.json({ ok: true, user }, 201)
+})
+
+/* Actualización de la app (solo admin): estado y aplicar */
+app.get('/api/update/status', auth.requireAuth(prodDb, demoDb), async (c) => {
+  if (c.get('user').role !== 'admin') return c.json({ error: 'solo admin' }, 403)
+  return c.json(await updateStatus(prodDb))
+})
+
+app.post('/api/update/apply', auth.requireAuth(prodDb, demoDb), async (c) => {
+  if (c.get('user').role !== 'admin') return c.json({ error: 'solo admin' }, 403)
+  const ok = await applyUpdate()
+  // systemd Restart=always levanta el servicio con el código nuevo tras salir
+  setTimeout(() => process.exit(0), 1500)
+  return c.json({ ok, restarting: ok })
 })
 
 /* Lista de usuarios (solo admin) */
