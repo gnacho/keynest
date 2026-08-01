@@ -202,7 +202,8 @@
   "estadoReserva": {
     "confirmada": "Confirmed",
     "pendiente": "Pending",
-    "completada": "Completed"
+    "completada": "Completed",
+    "activa": "Active"
   },
   "ted": {
     "subtitulo": "Smart locks · {{online}} of {{total}} online",
@@ -347,7 +348,11 @@
     "checksPlaceholder": "One check per line…",
     "checksNota": "The provider will see and tick these checks from the order link.",
     "asignada": "Assigned",
-    "finalizada": "Finished"
+    "finalizada": "Finished",
+    "editarTitulo": "Edit task",
+    "editarDesc": "Edit the work order details; the provider will see them updated in their link.",
+    "guardar": "Save",
+    "checksProgreso": "Checks ({{done}}/{{total}})"
   },
   "cat": {
     "cerradura": "Lock/batteries",

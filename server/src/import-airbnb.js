@@ -17,6 +17,7 @@ const HEADERS = {
   date: ['日期', 'Date'],
   type: ['类型', 'Type'],
   code: ['确认码', 'Confirmation Code'],
+  booked: ['预订日期', 'Booking Date'],
   start: ['开始日期', 'Start Date'],
   end: ['截止日期', 'End Date'],
   guest: ['客人', 'Guest'],
@@ -87,11 +88,12 @@ export function parseAirbnbCsv(text) {
     }
     byCode.set(code, {
       code,
+      bookedDate: idx.booked >= 0 ? toIso(r[idx.booked] || '') : null,
       checkin: toIso(r[idx.start] || ''),
       checkout: toIso(r[idx.end] || ''),
       guest: (r[idx.guest] || '').trim(),
       listing: (r[idx.listing] || '').trim(),
-      amount,
+      amount: toNum(r[idx.amount]),
     })
   }
   const reservations = [...byCode.values()].filter((r) => r.checkin && r.checkout)
@@ -119,8 +121,8 @@ export function importAirbnb(db, reservations, map, dry = true) {
         out.matched++
         out.totalMatched += r.amount
         if (!dry) {
-          db.prepare('UPDATE reservations SET guest_name = ?, amount = ? WHERE id = ?')
-            .run(r.guest, r.amount, existing.id)
+          db.prepare('UPDATE reservations SET guest_name = ?, amount = ?, booked_date = COALESCE(?, booked_date) WHERE id = ?')
+            .run(r.guest, r.amount, r.bookedDate, existing.id)
           out.updated++
         }
       } else {
@@ -128,9 +130,9 @@ export function importAirbnb(db, reservations, map, dry = true) {
         out.totalInserted += r.amount
         out.byProperty[propertyId] = (out.byProperty[propertyId] || 0) + 1
         if (!dry) {
-          db.prepare(`INSERT INTO reservations (id, property_id, uid, checkin, checkout, summary, confirmation_code, phone_last4, amount, guest_name, created_at)
-                      VALUES (?, ?, ?, ?, ?, ?, ?, '', ?, ?, ?)`)
-            .run(crypto.randomUUID(), propertyId, `csv-${r.code}`, r.checkin, r.checkout, 'CSV Airbnb', r.code, r.amount, r.guest, Date.now())
+          db.prepare(`INSERT INTO reservations (id, property_id, uid, checkin, checkout, summary, confirmation_code, phone_last4, amount, guest_name, booked_date, created_at)
+                      VALUES (?, ?, ?, ?, ?, ?, ?, '', ?, ?, ?, ?)`)
+            .run(crypto.randomUUID(), propertyId, `csv-${r.code}`, r.checkin, r.checkout, 'CSV Airbnb', r.code, r.amount, r.guest, r.bookedDate ?? '', Date.now())
         }
       }
     }

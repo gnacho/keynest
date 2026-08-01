@@ -30,6 +30,8 @@ const MIGRATIONS = [
    ALTER TABLE maintenance_tasks ADD COLUMN photos TEXT DEFAULT '[]';
    UPDATE people SET role = 'proveedor' WHERE role = 'mantenimiento';
    UPDATE people SET token_hash = NULL WHERE role != 'limpieza'`,
+  // 8: fecha REAL de reserva (CSV Airbnb 预订日期; '' = desconocida, p.ej. iCal)
+  `ALTER TABLE reservations ADD COLUMN booked_date TEXT DEFAULT ''`,
 ]
 
 export function migrate(db) {

@@ -32,7 +32,7 @@ interface ApiProperty {
 interface ApiReservation {
   id: string; property_id: string; uid: string; checkin: string; checkout: string;
   summary: string; confirmation_code: string; phone_last4: string;
-  amount?: number; notes?: string; guest_name?: string;
+  amount?: number; notes?: string; guest_name?: string; booked_date?: string;
 }
 
 function mapProperty(row: ApiProperty): Property {
@@ -74,9 +74,10 @@ function mapReservation(row: ApiReservation): Reservation {
     checkOut,
     guestsCount: 2,
     guestAges: [],
-    status: checkOut.getTime() < Date.now() ? 'completada' : 'confirmada',
+    status: checkOut.getTime() < Date.now() ? 'completada' : checkIn.getTime() <= Date.now() ? 'activa' : 'confirmada',
     amount: row.amount ?? 0,
     notes: row.notes ?? '',
+    bookedDate: row.booked_date || '',
   };
 }
 
@@ -537,7 +538,7 @@ export default function DataProvider({ children }: { children: ReactNode }) {
           });
         }
         const newest = reservations.current
-          .filter((r) => r.status === 'confirmada')
+          .filter((r) => r.status !== 'completada')
           .sort((a, b) => b.checkIn.getTime() - a.checkIn.getTime())[0];
         if (newest) {
           const p = properties.current.find((pp) => pp.id === newest.propertyId);

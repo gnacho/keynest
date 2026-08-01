@@ -6,7 +6,7 @@ import StatusBadge from '@/components/StatusBadge';
 import { useTranslation } from 'react-i18next';
 import { useData } from '@/data/useData';
 import type { Reservation } from '@/data/types';
-import { addDays, capitalize, fmtDateLong, startOfDay } from '@/lib/format';
+import { capitalize, fmtDateLong, startOfDay } from '@/lib/format';
 import { nightsOf } from './calendar-utils';
 import { requestIcon } from './request-icon';
 
@@ -16,12 +16,6 @@ const CLEANING_LABEL_KEY: Record<string, string> = {
   'en-curso': 'estado.enCurso',
   archivada: 'estado.archivada',
 };
-
-/** Fecha de reserva derivada de forma determinista (mock, el canal es Airbnb). */
-function bookedAt(r: Reservation): Date {
-  const n = Number(r.id.replace(/\D/g, '')) || 1;
-  return addDays(r.checkIn, -(10 + ((n * 11) % 32)));
-}
 
 function SectionTitle({ children }: { children: string }) {
   return (
@@ -82,9 +76,11 @@ export default function ReservationDetail({ reservation: r }: { reservation: Res
         <p className="text-[13px]" style={{ color: 'var(--text-muted)' }}>
           {t('res.edades', { ages: r.guestAges.length ? r.guestAges.join(', ') : '—' })}
         </p>
-        <p className="text-[13px]" style={{ color: 'var(--text-muted)' }}>
-          {t('res.reservadaEl', { date: fmtDateLong(bookedAt(r)) })}
-        </p>
+        {r.bookedDate && (
+          <p className="text-[13px]" style={{ color: 'var(--text-muted)' }}>
+            {t('res.reservadaEl', { date: fmtDateLong(new Date(`${r.bookedDate}T12:00:00`)) })}
+          </p>
+        )}
         <p className="text-[13px]" style={{ color: 'var(--text-muted)' }}>
           {t('res.canal')}
         </p>

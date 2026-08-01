@@ -223,6 +223,27 @@ export default function MaintenanceCard({ task: t, variants, animateEntry = true
         )}
       </p>
 
+      {/* Checks de la orden: progreso visible en la tarjeta */}
+      {(t.checks?.length ?? 0) > 0 && (
+        <div className="flex flex-col gap-1">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.08em]" style={{ color: 'var(--text-faint)' }}>
+            {tr('mant.checksProgreso', { done: (t.checks ?? []).filter((k) => k.done).length, total: (t.checks ?? []).length })}
+          </p>
+          <div className="flex h-1.5 w-full overflow-hidden rounded-full" style={{ backgroundColor: 'var(--surface-2)' }}>
+            <div
+              className="h-full rounded-full bg-emerald-500 transition-all duration-300"
+              style={{ width: `${(((t.checks ?? []).filter((k) => k.done).length) / ((t.checks ?? []).length || 1)) * 100}%` }}
+            />
+          </div>
+          {(t.checks ?? []).slice(0, notesOpen ? undefined : 3).map((k) => (
+            <span key={k.id} className={cn('flex items-center gap-1.5 text-xs', k.done && 'line-through opacity-60')} style={{ color: 'var(--text-muted)' }}>
+              <span className={cn('h-1.5 w-1.5 rounded-full', k.done ? 'bg-emerald-500' : '')} style={k.done ? undefined : { backgroundColor: 'var(--border)' }} />
+              {k.label}
+            </span>
+          ))}
+        </div>
+      )}
+
       {/* Asignación + acciones por estado */}
       <div className="mt-0.5 flex items-center justify-between gap-2">
         {onEdit && t.status !== 'finalizada' && (

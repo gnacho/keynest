@@ -202,7 +202,8 @@
   "estadoReserva": {
     "confirmada": "Confirmada",
     "pendiente": "Pendiente",
-    "completada": "Completada"
+    "completada": "Completada",
+    "activa": "Activa"
   },
   "ted": {
     "subtitulo": "Cerraduras inteligentes · {{online}} de {{total}} online",
@@ -347,7 +348,11 @@
     "checksPlaceholder": "Un check por línea…",
     "checksNota": "El proveedor verá y marcará estos checks desde el enlace de la orden.",
     "asignada": "Asignada",
-    "finalizada": "Finalizada"
+    "finalizada": "Finalizada",
+    "editarTitulo": "Editar tarea",
+    "editarDesc": "Modifica los datos de la orden; el proveedor los verá actualizados en su enlace.",
+    "guardar": "Guardar",
+    "checksProgreso": "Checks ({{done}}/{{total}})"
   },
   "cat": {
     "cerradura": "Cerradura/pilas",

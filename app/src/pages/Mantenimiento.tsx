@@ -497,9 +497,11 @@ function NewTaskDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="rounded-2xl border-[var(--border)] bg-[var(--surface)] shadow-overlay sm:max-w-md">
         <DialogHeader>
-          <DialogTitle className="font-display text-lg font-semibold">{tr('mant.nuevaTarea')}</DialogTitle>
+          <DialogTitle className="font-display text-lg font-semibold">
+            {task ? tr('mant.editarTitulo') : tr('mant.nuevaTarea')}
+          </DialogTitle>
           <DialogDescription style={{ color: 'var(--text-muted)' }}>
-            {tr('mant.nuevaDesc')}
+            {task ? tr('mant.editarDesc') : tr('mant.nuevaDesc')}
           </DialogDescription>
         </DialogHeader>
         <div className="flex max-h-[60vh] flex-col gap-3 overflow-y-auto pr-1">
@@ -588,7 +590,7 @@ function NewTaskDialog({
             onClick={() => void crear()}
             className="flex h-11 w-full items-center justify-center rounded-xl bg-rose-500 text-sm font-semibold text-white transition-all duration-150 hover:brightness-110 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
           >
-            {busy ? tr('res.creando') : tr('mant.crearTarea')}
+            {busy ? tr('res.creando') : task ? tr('mant.guardar') : tr('mant.crearTarea')}
           </button>
         </div>
       </DialogContent>

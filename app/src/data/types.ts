@@ -25,7 +25,7 @@ export interface Guest {
   initials: string;
 }
 
-export type ReservationStatus = 'confirmada' | 'pendiente' | 'completada';
+export type ReservationStatus = 'confirmada' | 'activa' | 'pendiente' | 'completada';
 
 export interface Reservation {
   id: string;
@@ -40,6 +40,8 @@ export interface Reservation {
   specialRequest?: string;
   /** Notas libres del propietario sobre la reserva. */
   notes?: string;
+  /** Fecha REAL de reserva (CSV Airbnb); '' = desconocida (p.ej. venidas del iCal). */
+  bookedDate?: string;
 }
 
 export type AccessType = 'entrada' | 'salida' | 'remota';
