@@ -43,7 +43,6 @@ const itemV: Variants = {
 const STATUS_OPTIONS = [
   { value: 'pendiente', labelKey: 'limp.pendientesF' },
   { value: 'asignada', labelKey: 'limp.asignadasF' },
-  { value: 'en-curso', labelKey: 'limp.enCursoF' },
   { value: 'archivada', labelKey: 'limp.archivadasF' },
 ];
 
@@ -78,7 +77,6 @@ export default function Limpieza() {
   const costeMes = monthDone.reduce((acc, c) => acc + data.getCleaningCost(c), 0);
 
   const pendientes = all.filter((c) => c.status === 'pendiente').length;
-  const enCurso = all.filter((c) => c.status === 'en-curso').length;
   const activas = all.filter((c) => c.status !== 'archivada').length;
 
   /* ---- Lista filtrada + orden: activas primero, archivadas solo si se piden ---- */
@@ -109,7 +107,7 @@ export default function Limpieza() {
             {t('limp.titulo')}
           </h1>
           <p className="mt-0.5 text-[13px]" style={{ color: 'var(--text-muted)' }}>
-            {t('limp.tareas', { count: activas })} · {t('limp.pendientes', { count: pendientes })} · {t('limp.enCurso', { count: enCurso })}
+            {t('limp.tareas', { count: activas })} · {t('limp.pendientes', { count: pendientes })}
           </p>
         </div>
         <button

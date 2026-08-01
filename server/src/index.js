@@ -711,7 +711,7 @@ app.post('/api/t/:token/cleanings/:id/photo', async (c) => {
 })
 
 const tokenActionSchema = z.object({
-  action: z.enum(['start', 'toggle-check', 'complete']),
+  action: z.enum(['toggle-check', 'complete']),
   checkId: z.string().optional(),
   workLog: z.array(z.object({ personId: z.string(), hours: z.number() })).optional(),
   supplies: z.array(z.object({ label: z.string(), amount: z.number() })).optional(),
@@ -727,13 +727,7 @@ app.post('/api/t/:token/cleanings/:id', async (c) => {
   if (!parsed.success) return c.json({ error: 'formato inválido' }, 400)
   const d = parsed.data
 
-  if (d.action === 'start') {
-    // La limpieza NO se puede iniciar antes de su fecha (misma regla que en la UI)
-    const today = new Date()
-    const ymd = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`
-    if (cl.date > ymd) return c.json({ error: 'aún no disponible', code: 'future' }, 409)
-    prodDb.prepare("UPDATE cleanings SET status = 'en-curso' WHERE id = ?").run(cl.id)
-  } else if (d.action === 'toggle-check') {
+  if (d.action === 'toggle-check') {
     let checks = JSON.parse(cl.checks || '[]')
     // Limpiezas antiguas con checks vacíos: hidratar del checklist del inmueble ANTES de tocar
     if (checks.length === 0) {
