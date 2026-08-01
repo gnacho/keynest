@@ -13,7 +13,6 @@ import {
   DoorOpen,
   Euro,
   Info,
-  KeyRound,
   Link2,
   MapPin,
   Pencil,
@@ -78,12 +77,11 @@ const itemV: Variants = {
   show: { opacity: 1, y: 0, transition: { duration: 0.5, ease: EASE_OUT_QUART } },
 };
 
-type TabId = 'inmuebles' | 'personas' | 'usuarios' | 'gasto' | 'categorias' | 'preferencias';
+type TabId = 'inmuebles' | 'personas' | 'gasto' | 'categorias' | 'preferencias';
 
 const TABS: { id: TabId; labelKey: string; icon: LucideIcon }[] = [
   { id: 'inmuebles', labelKey: 'aj.inmuebles', icon: Building2 },
   { id: 'personas', labelKey: 'aj.personas', icon: Users },
-  { id: 'usuarios', labelKey: 'aj.usuarios', icon: KeyRound },
   { id: 'gasto', labelKey: 'aj.tiposGasto', icon: Wallet },
   { id: 'categorias', labelKey: 'aj.categorias', icon: Wrench },
   { id: 'preferencias', labelKey: 'aj.preferencias', icon: Settings2 },
@@ -207,7 +205,6 @@ export default function Ajustes() {
   const [applying, setApplying] = useState(false);
   const isAdmin = cachedUser()?.role === 'admin';
   const isDemoUser = Boolean(cachedUser()?.is_demo);
-  const visibleTabs = TABS.filter((t) => t.id !== 'usuarios' || isAdmin);
 
   const checkUpdate = async () => {
     try {
@@ -511,7 +508,7 @@ export default function Ajustes() {
           className="inline-flex items-center gap-1 rounded-xl border p-1"
           style={{ borderColor: 'var(--border)', backgroundColor: 'var(--surface)' }}
         >
-          {visibleTabs.map((t) => {
+          {TABS.map((t) => {
             const active = tab === t.id;
             return (
               <button
@@ -840,9 +837,6 @@ export default function Ajustes() {
               })}
             </div>
           )}
-
-          {/* ===================================================== TAB USUARIOS */}
-          {tab === 'usuarios' && isAdmin && <UsersManager />}
 
           {/* ================================================= TAB TIPOS DE GASTO */}
           {tab === 'gasto' && (
@@ -1184,6 +1178,9 @@ export default function Ajustes() {
                   </div>
                 </Card>
               )}
+
+              {/* Usuarios (solo admin): gestión de cuentas de la app */}
+              {isAdmin && <UsersManager />}
 
               {/* Importar CSV de Airbnb (solo admin) */}
               {isAdmin && <ImportAirbnbCard />}
