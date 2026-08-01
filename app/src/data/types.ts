@@ -64,7 +64,7 @@ export interface Lock {
   lastSeen: Date;
 }
 
-export type PersonRole = 'limpieza' | 'mantenimiento';
+export type PersonRole = 'limpieza' | 'proveedor';
 
 export interface Person {
   id: string;
@@ -157,6 +157,10 @@ export interface MaintenanceTask {
   assigneeId?: string;
   notes: string;
   cost?: number; // coste final si finalizada
+  checks?: CleaningCheck[];
+  photos?: string[];
+  /** true si la orden tiene enlace público por token activo. */
+  hasToken?: boolean;
   createdAt: Date;
 }
 

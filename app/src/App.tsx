@@ -15,7 +15,7 @@ const Limpieza = lazy(() => import('@/pages/Limpieza'));
 const Mantenimiento = lazy(() => import('@/pages/Mantenimiento'));
 const Rentabilidad = lazy(() => import('@/pages/Rentabilidad'));
 const Ajustes = lazy(() => import('@/pages/Ajustes'));
-const LimpiezaToken = lazy(() => import('@/pages/LimpiezaToken'));
+const TokenView = lazy(() => import('@/pages/TokenView'));
 
 /**
  * AuthGate: sin sesión → /login. Un 401 de la API limpia la sesión y redirige.
@@ -48,7 +48,7 @@ function Root() {
     return (
       <Suspense fallback={null}>
         <Routes location={location}>
-          <Route path="/t/:token" element={<LimpiezaToken />} />
+          <Route path="/t/:token" element={<TokenView />} />
         </Routes>
       </Suspense>
     );

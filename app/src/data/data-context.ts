@@ -3,6 +3,7 @@ import type {
   AppUser,
   MaintCategory,
   Cleaning,
+  CleaningCheck,
   CleaningSupply,
   CleaningWorkEntry,
   Expense,
@@ -94,6 +95,8 @@ export interface DataApi {
   /** Genera enlace token; devuelve la ruta /t/<token> (el plano solo se ve una vez). */
   generatePersonToken: (id: string) => Promise<string | undefined>;
   revokePersonToken: (id: string) => Promise<void>;
+  generateMaintenanceToken: (id: string) => Promise<string | undefined>;
+  revokeMaintenanceToken: (id: string) => Promise<void>;
 
   /* Maestro de categorías de mantenimiento */
   getCategories: () => MaintCategory[];
@@ -154,9 +157,9 @@ export interface DataApi {
   setMaintenanceStatus: (taskId: string, status: MaintenanceTask['status']) => void;
   assignMaintenance: (taskId: string, personId: string) => void;
   /** Crea una tarea de mantenimiento real (BD). */
-  addMaintenance: (t: { propertyId: string; title: string; category: string; expenseTag: string; urgent: boolean; notes: string }) => Promise<MaintenanceTask | undefined>;
+  addMaintenance: (t: { propertyId: string; title: string; category: string; expenseTag: string; urgent: boolean; notes: string; checks?: CleaningCheck[] }) => Promise<MaintenanceTask | undefined>;
   /** Edita campos de una tarea existente (título, categoría, etiqueta, urgente, notas, fecha prevista). */
-  editMaintenance: (id: string, patch: Partial<{ title: string; category: string; expenseTag: string; urgent: boolean; notes: string; scheduledDate: string | null }>) => Promise<void>;
+  editMaintenance: (id: string, patch: Partial<{ title: string; category: string; expenseTag: string; urgent: boolean; notes: string; scheduledDate: string | null; checks: CleaningCheck[] }>) => Promise<void>;
   addExpense: (e: Omit<Expense, 'id'>) => void;
 }
 

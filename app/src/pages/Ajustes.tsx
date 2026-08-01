@@ -673,19 +673,19 @@ export default function Ajustes() {
           {/* ===================================================== TAB PERSONAS */}
           {tab === 'personas' && (
             <div className="flex flex-col gap-6">
-              {(['limpieza', 'mantenimiento'] as PersonRole[]).map((role) => {
+              {(['limpieza', 'proveedor'] as PersonRole[]).map((role) => {
                 const group = people.filter((p) => p.role === role);
                 const tone = role === 'limpieza' ? 'violet' : 'rose';
-                const chipBg = role === 'limpieza' ? 'var(--vi-chip-bg)' : 'var(--ro-chip-bg)';
-                const chipText = role === 'limpieza' ? 'var(--vi-chip-text)' : 'var(--ro-chip-text)';
-                const chipDot = role === 'limpieza' ? '#8B5CF6' : '#F43F5E';
+                const chipBg = role === 'limpieza' ? 'var(--vi-chip-bg)' : 'var(--sl-chip-bg)';
+                const chipText = role === 'limpieza' ? 'var(--vi-chip-text)' : 'var(--sl-chip-text)';
+                const chipDot = role === 'limpieza' ? '#8B5CF6' : '#64748B';
                 return (
                   <section key={role}>
                     <p
                       className="mb-2 text-[11px] font-semibold uppercase tracking-[0.08em]"
                       style={{ color: chipDot }}
                     >
-                      {role === 'limpieza' ? tr('aj.limpieza') : tr('aj.mantenimiento')}
+                      {role === 'limpieza' ? tr('aj.limpieza') : tr('aj.proveedores')}
                     </p>
                     <motion.div variants={containerV} initial="hidden" animate="show" className="grid gap-3 sm:grid-cols-2">
                       {group.map((p) => {
@@ -751,7 +751,9 @@ export default function Ajustes() {
                                 {tr('aj.activa', { count: active })}
                               </span>
                             </div>
-                            {/* Enlace de acceso por token (personal sin cuenta) */}
+                            {/* Enlace de acceso por token: SOLO personal de limpieza;
+                                los proveedores usan token por orden de trabajo */}
+                            {p.role === 'limpieza' && (
                             <div className="flex flex-col gap-2 border-t pt-2.5" style={{ borderColor: 'var(--border)' }}>
                               {p.hasToken && !personLinks[p.id] ? (
                                 <div className="flex items-center gap-2">
@@ -813,6 +815,7 @@ export default function Ajustes() {
                                 </button>
                               )}
                             </div>
+                            )}
                           </motion.div>
                         );
                       })}
@@ -1373,7 +1376,7 @@ export default function Ajustes() {
           <DialogHeader>
             <DialogTitle className="font-display text-lg font-semibold">{tr('aj.editarPersona')}</DialogTitle>
             <DialogDescription style={{ color: 'var(--text-muted)' }}>
-              {editPerson?.role === 'limpieza' ? tr('aj.equipoLimpieza') : tr('aj.equipoMantenimiento')}
+              {editPerson?.role === 'limpieza' ? tr('aj.equipoLimpieza') : tr('aj.equipoProveedores')}
             </DialogDescription>
           </DialogHeader>
           <div className="flex flex-col gap-3">
@@ -1447,7 +1450,7 @@ export default function Ajustes() {
                 </SelectTrigger>
                 <SelectContent className="rounded-xl border-[var(--border)] bg-[var(--surface)]">
                   <SelectItem value="limpieza">{tr('aj.limpieza')}</SelectItem>
-                  <SelectItem value="mantenimiento">{tr('aj.mantenimiento')}</SelectItem>
+                  <SelectItem value="proveedor">{tr('aj.proveedor')}</SelectItem>
                 </SelectContent>
               </Select>
             </label>

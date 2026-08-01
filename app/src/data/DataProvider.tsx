@@ -8,6 +8,7 @@ import type { AppSettings, DataApi, OccupancyInfo, PropertyInput, SyncResult } f
 import type {
   AppUser,
   Cleaning,
+  CleaningCheck,
   CleaningSupply,
   CleaningWorkEntry,
   Expense,
@@ -106,9 +107,12 @@ interface ApiMaintenance {
   id: string; property_id: string; title: string; category: string; expense_tag: string;
   urgent: number; notes: string; status: MaintenanceTask['status']; assignee_id: string | null;
   scheduled_date: string | null; cost: number | null; created_at: number;
+  checks?: CleaningCheck[] | string; photos?: string[] | string; has_token?: boolean;
 }
 
 function mapMaintenance(row: ApiMaintenance): MaintenanceTask {
+  const parseArr = <T,>(v: T[] | string | undefined): T[] =>
+    Array.isArray(v) ? v : JSON.parse(v || '[]') as T[];
   return {
     id: row.id,
     propertyId: row.property_id,
@@ -121,12 +125,15 @@ function mapMaintenance(row: ApiMaintenance): MaintenanceTask {
     assigneeId: row.assignee_id ?? undefined,
     scheduledDate: row.scheduled_date ? new Date(`${row.scheduled_date}T12:00:00`) : undefined,
     cost: row.cost ?? undefined,
+    checks: parseArr<CleaningCheck>(row.checks),
+    photos: parseArr<string>(row.photos),
+    hasToken: Boolean(row.has_token),
     createdAt: new Date(row.created_at),
   };
 }
 
 interface ApiPerson {
-  id: string; name: string; phone: string; role: 'limpieza' | 'mantenimiento';
+  id: string; name: string; phone: string; role: 'limpieza' | 'proveedor';
   specialty: string; hourly_rate: number; has_token?: boolean; created_at: number;
 }
 
@@ -393,6 +400,19 @@ export default function DataProvider({ children }: { children: ReactNode }) {
         await api(`/api/people/${id}/token`, { method: 'DELETE' });
         const idx = people.current.findIndex((p) => p.id === id);
         if (idx >= 0) people.current[idx] = { ...people.current[idx], hasToken: false };
+        bump();
+      },
+      generateMaintenanceToken: async (id) => {
+        const res = await api<{ path: string }>(`/api/maintenance/${id}/token`, { method: 'POST' });
+        const idx = maintenance.current.findIndex((t) => t.id === id);
+        if (idx >= 0) maintenance.current[idx] = { ...maintenance.current[idx], hasToken: true };
+        bump();
+        return res.path;
+      },
+      revokeMaintenanceToken: async (id) => {
+        await api(`/api/maintenance/${id}/token`, { method: 'DELETE' });
+        const idx = maintenance.current.findIndex((t) => t.id === id);
+        if (idx >= 0) maintenance.current[idx] = { ...maintenance.current[idx], hasToken: false };
         bump();
       },
       getSettings: () => settings.current,

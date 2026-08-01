@@ -337,7 +337,17 @@
     "prevista": "Scheduled: {{date}}",
     "tareaCreadaOk": "Task created",
     "editarTarea": "Edit task",
-    "tareaActualizada": "Task updated"
+    "tareaActualizada": "Task updated",
+    "compartirOrden": "Share order (link)",
+    "enlaceCopiado": "Order link copied",
+    "enlaceGenerado": "Link generated: {{url}}",
+    "enlaceRevocado": "Order link revoked",
+    "revocarEnlace": "Revoke link",
+    "checks": "Order checks",
+    "checksPlaceholder": "One check per line…",
+    "checksNota": "The provider will see and tick these checks from the order link.",
+    "asignada": "Assigned",
+    "finalizada": "Finished"
   },
   "cat": {
     "cerradura": "Lock/batteries",
@@ -707,7 +717,10 @@
     "impElegir": "Choose…",
     "aplicarImportacion": "Apply import",
     "importarOk": "Import applied: {{updated}} updated, {{inserted}} new",
-    "importarError": "Could not import the CSV"
+    "importarError": "Could not import the CSV",
+    "proveedores": "Providers",
+    "proveedor": "Provider",
+    "equipoProveedores": "Providers team"
   },
   "common2": {
     "confirmar": "Confirm",
@@ -727,5 +740,18 @@
     "salidaHoy": "Check-out today · {{name}}",
     "bateriaBaja": "Lock at {{name}}: battery at {{pct}}%",
     "nuevaReserva": "New reservation at {{name}}"
+  },
+  "wo": {
+    "enlaceInvalido": "This link is not valid or has been revoked.",
+    "ordenTrabajo": "Work order",
+    "trabajoARealizar": "Work to be done",
+    "fechaPrevista": "Scheduled date: {{date}}",
+    "checks": "Tasks ({{done}}/{{total}})",
+    "fotos": "Repair photos",
+    "costeFinal": "Final cost (€, optional)",
+    "marcarFinalizada": "Mark as finished",
+    "guardando": "Saving…",
+    "finalizadaOk": "Work finished · Cost: {{cost}}",
+    "reabrir": "Reopen order"
   }
 }

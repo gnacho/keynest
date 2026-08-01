@@ -2,7 +2,8 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import { AnimatePresence, motion, useMotionValue, useReducedMotion, useTransform } from 'framer-motion';
 import type { Variants } from 'framer-motion';
-import { CalendarOff, Check, ChevronsRight, Pencil, Undo2 } from 'lucide-react';
+import { Ban, CalendarOff, Check, ChevronsRight, Link2, Pencil, Undo2 } from 'lucide-react';
+import { toast } from 'sonner';
 import ConfirmDialog from '@/components/ConfirmDialog';
 import MoneyText from '@/components/MoneyText';
 import PersonAvatar from '@/components/PersonAvatar';
@@ -12,6 +13,7 @@ import AssignPopover from '@/components/tareas/AssignPopover';
 import { catIcon } from '@/lib/cat-icons';
 import { getFreeWindow } from '@/components/tareas/free-window';
 import { useBelowLg } from '@/components/tareas/use-below-lg';
+import { copyText } from '@/lib/clipboard';
 import { useTranslation } from 'react-i18next';
 import { useData } from '@/data/useData';
 import type { MaintenanceTask } from '@/data/types';
@@ -115,7 +117,7 @@ export default function MaintenanceCard({ task: t, variants, animateEntry = true
 
   const property = data.getProperty(t.propertyId)!;
   const assignee = t.assigneeId ? data.getPerson(t.assigneeId) : undefined;
-  const maintPeople = useMemo(() => data.getPeople().filter((p) => p.role === 'mantenimiento'), [data]);
+  const maintPeople = useMemo(() => data.getPeople().filter((p) => p.role === 'proveedor'), [data]);
   const catMeta = data.getCategories().find((c) => c.key === t.category);
   const cat = { icon: catIcon(catMeta?.icon ?? 'wrench'), label: catMeta?.label ?? t.category };
 
@@ -232,6 +234,41 @@ export default function MaintenanceCard({ task: t, variants, animateEntry = true
             style={{ color: 'var(--text-faint)' }}
           >
             <Pencil className="h-3.5 w-3.5" />
+          </button>
+        )}
+        {/* Enlace público de la orden (proveedor): generar+copiar / revocar */}
+        <button
+          type="button"
+          aria-label={tr('mant.compartirOrden')}
+          title={tr('mant.compartirOrden')}
+          onClick={async () => {
+            const path = await data.generateMaintenanceToken(t.id);
+            if (path) {
+              const ok = await copyText(`${window.location.origin}${path}`);
+              toast.success(ok ? tr('mant.enlaceCopiado') : tr('mant.enlaceGenerado', { url: `${window.location.origin}${path}` }));
+            }
+          }}
+          className={cn(
+            'flex h-7 w-7 items-center justify-center rounded-lg transition-colors hover:bg-[var(--surface-2)]',
+            t.hasToken ? 'text-[#6366F1]' : '',
+          )}
+          style={t.hasToken ? undefined : { color: 'var(--text-faint)' }}
+        >
+          <Link2 className="h-3.5 w-3.5" />
+        </button>
+        {t.hasToken && (
+          <button
+            type="button"
+            aria-label={tr('mant.revocarEnlace')}
+            title={tr('mant.revocarEnlace')}
+            onClick={() => {
+              void data.revokeMaintenanceToken(t.id);
+              toast.success(tr('mant.enlaceRevocado'));
+            }}
+            className="flex h-7 w-7 items-center justify-center rounded-lg transition-colors hover:bg-[var(--ro-chip-bg)]"
+            style={{ color: 'var(--text-faint)' }}
+          >
+            <Ban className="h-3.5 w-3.5" />
           </button>
         )}
         {assignee ? (

@@ -293,6 +293,7 @@ guarded.get('/bootstrap', (c) => {
       return cl
     })
   const maintenance = db.prepare('SELECT * FROM maintenance_tasks ORDER BY created_at DESC').all()
+    .map((t) => ({ ...t, has_token: Boolean(t.token_hash), token_hash: undefined }))
   const people = db.prepare('SELECT id, name, phone, role, specialty, hourly_rate, token_hash, created_at FROM people ORDER BY created_at').all()
     .map((p) => ({ ...p, has_token: Boolean(p.token_hash), token_hash: undefined }))
   let categories = kvGet(db, 'maint_categories')
@@ -441,6 +442,7 @@ guarded.put('/reservations/:id', async (c) => {
 })
 
 /* --------------------------------------------------- Tareas de mantenimiento */
+const checkSchema = z.object({ id: z.string(), label: z.string(), done: z.boolean() })
 const maintSchema = z.object({
   propertyId: z.string().min(1),
   title: z.string().min(1),
@@ -448,6 +450,7 @@ const maintSchema = z.object({
   expenseTag: z.string().default(''),
   urgent: z.boolean().default(false),
   notes: z.string().default(''),
+  checks: z.array(checkSchema).optional(),
 })
 guarded.post('/maintenance', async (c) => {
   const db = c.get('db')
@@ -457,9 +460,9 @@ guarded.post('/maintenance', async (c) => {
   const d = parsed.data
   if (!db.prepare('SELECT id FROM properties WHERE id = ?').get(d.propertyId)) return c.json({ error: 'inmueble no encontrado' }, 404)
   const id = crypto.randomUUID()
-  db.prepare(`INSERT INTO maintenance_tasks (id, property_id, title, category, expense_tag, urgent, notes, status, created_at)
-              VALUES (?, ?, ?, ?, ?, ?, ?, 'nueva', ?)`)
-    .run(id, d.propertyId, d.title, d.category, d.expenseTag, d.urgent ? 1 : 0, d.notes, Date.now())
+  db.prepare(`INSERT INTO maintenance_tasks (id, property_id, title, category, expense_tag, urgent, notes, status, checks, created_at)
+              VALUES (?, ?, ?, ?, ?, ?, ?, 'nueva', ?, ?)`)
+    .run(id, d.propertyId, d.title, d.category, d.expenseTag, d.urgent ? 1 : 0, d.notes, JSON.stringify(d.checks ?? []), Date.now())
   aud(c, 'create', 'maintenance', id, d.title)
   return c.json({ ok: true, task: db.prepare('SELECT * FROM maintenance_tasks WHERE id = ?').get(id) }, 201)
 })
@@ -474,6 +477,7 @@ const maintUpdateSchema = z.object({
   urgent: z.boolean().optional(),
   notes: z.string().optional(),
   scheduledDate: z.string().nullable().optional(),
+  checks: z.array(checkSchema).optional(),
 })
 guarded.put('/maintenance/:id', async (c) => {
   const db = c.get('db')
@@ -492,7 +496,8 @@ guarded.put('/maintenance/:id', async (c) => {
     expense_tag = COALESCE(?, expense_tag),
     urgent = COALESCE(?, urgent),
     notes = COALESCE(?, notes),
-    scheduled_date = CASE WHEN ? THEN ? ELSE scheduled_date END
+    scheduled_date = CASE WHEN ? THEN ? ELSE scheduled_date END,
+    checks = COALESCE(?, checks)
     WHERE id = ?`)
     .run(
       d.status ?? null,
@@ -506,17 +511,40 @@ guarded.put('/maintenance/:id', async (c) => {
       d.notes ?? null,
       d.scheduledDate !== undefined ? 1 : 0,
       d.scheduledDate ?? null,
+      d.checks !== undefined ? JSON.stringify(d.checks) : null,
       existing.id,
     )
   aud(c, 'update', 'maintenance', existing.id, JSON.stringify(Object.keys(d)))
   return c.json({ ok: true, task: db.prepare('SELECT * FROM maintenance_tasks WHERE id = ?').get(existing.id) })
 })
 
+/* Token POR ORDEN de trabajo (proveedores): enlace a la vista pública de ESA orden.
+   Solo el hash en BD; el plano se devuelve una vez. */
+guarded.post('/maintenance/:id/token', (c) => {
+  const db = c.get('db')
+  const task = db.prepare('SELECT * FROM maintenance_tasks WHERE id = ?').get(c.req.param('id'))
+  if (!task) return c.json({ error: 'no encontrada' }, 404)
+  const alphabet = 'abcdefghijklmnopqrstuvwxyz0123456789'
+  const rand = Array.from(crypto.randomBytes(16), (b) => alphabet[b % alphabet.length]).join('')
+  const token = `kn-wo-${rand}`
+  const hash = crypto.createHash('sha256').update(token).digest('hex')
+  db.prepare('UPDATE maintenance_tasks SET token_hash = ? WHERE id = ?').run(hash, task.id)
+  aud(c, 'update', 'maintenance', task.id, 'token creado')
+  return c.json({ ok: true, token, path: `/t/${token}` })
+})
+
+guarded.delete('/maintenance/:id/token', (c) => {
+  const db = c.get('db')
+  db.prepare('UPDATE maintenance_tasks SET token_hash = NULL WHERE id = ?').run(c.req.param('id'))
+  aud(c, 'update', 'maintenance', c.req.param('id'), 'token revocado')
+  return c.json({ ok: true })
+})
+
 /* ---------------------------------------------------------- Personas (staff) */
 const personSchema = z.object({
   name: z.string().min(1),
   phone: z.string().default(''),
-  role: z.enum(['limpieza', 'mantenimiento']),
+  role: z.enum(['limpieza', 'proveedor']),
   specialty: z.string().default(''),
   hourlyRate: z.coerce.number().min(0).default(10),
 })
@@ -557,11 +585,13 @@ guarded.delete('/people/:id', (c) => {
   return c.json({ ok: true })
 })
 
-/* Token de acceso por enlace (capability URL): se guarda SOLO el hash; el plano se devuelve una vez */
+/* Token de acceso por enlace (capability URL): se guarda SOLO el hash; el plano se devuelve una vez.
+   REGLA: solo personas de limpieza — los proveedores usan token POR ORDEN de trabajo. */
 guarded.post('/people/:id/token', (c) => {
   const db = c.get('db')
   const person = db.prepare('SELECT * FROM people WHERE id = ?').get(c.req.param('id'))
   if (!person) return c.json({ error: 'no encontrada' }, 404)
+  if (person.role !== 'limpieza') return c.json({ error: 'solo limpieza tiene enlace por persona', code: 'not-limpieza' }, 409)
   const slug = person.name.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().split(/\s+/)[0].replace(/[^a-z]/g, '') || 'user'
   const alphabet = 'abcdefghijklmnopqrstuvwxyz0123456789'
   const rand = Array.from(crypto.randomBytes(16), (b) => alphabet[b % alphabet.length]).join('')
@@ -664,25 +694,94 @@ function personByToken(db, token) {
   return db.prepare('SELECT id, name, phone, role, specialty, hourly_rate FROM people WHERE token_hash = ?').get(hash)
 }
 
+function taskByToken(db, token) {
+  const hash = crypto.createHash('sha256').update(token).digest('hex')
+  return db.prepare('SELECT * FROM maintenance_tasks WHERE token_hash = ?').get(hash)
+}
+
 app.get('/api/t/:token', (c) => {
   const person = personByToken(prodDb, c.req.param('token'))
-  if (!person) return c.json({ error: 'enlace no válido' }, 404)
-  const props = prodDb.prepare('SELECT * FROM properties').all()
-    .map((p) => ({ id: p.id, name: p.name, address: p.address, photo: p.photo, instructions: p.instructions, checklist: JSON.parse(p.checklist || '[]') }))
-  const cleanings = prodDb.prepare(
-    `SELECT * FROM cleanings
-     WHERE status != 'archivada'
-       AND EXISTS (SELECT 1 FROM json_each(assignee_ids) WHERE value = ?)
-     ORDER BY date`,
-  ).all(person.id)
-    .map((cl) => {
-      if (JSON.parse(cl.checks || '[]').length === 0) {
-        const prop = props.find((p) => p.id === cl.property_id)
-        if (prop) cl.checks = JSON.stringify(prop.checklist.map((label, i) => ({ id: `chk-${i}`, label, done: false })))
-      }
-      return cl
-    })
-  return c.json({ person, cleanings, properties: props })
+  if (person) {
+    const props = prodDb.prepare('SELECT * FROM properties').all()
+      .map((p) => ({ id: p.id, name: p.name, address: p.address, photo: p.photo, instructions: p.instructions, checklist: JSON.parse(p.checklist || '[]') }))
+    const cleanings = prodDb.prepare(
+      `SELECT * FROM cleanings
+       WHERE status != 'archivada'
+         AND EXISTS (SELECT 1 FROM json_each(assignee_ids) WHERE value = ?)
+       ORDER BY date`,
+    ).all(person.id)
+      .map((cl) => {
+        if (JSON.parse(cl.checks || '[]').length === 0) {
+          const prop = props.find((p) => p.id === cl.property_id)
+          if (prop) cl.checks = JSON.stringify(prop.checklist.map((label, i) => ({ id: `chk-${i}`, label, done: false })))
+        }
+        return cl
+      })
+    return c.json({ type: 'person', person, cleanings, properties: props })
+  }
+  // Token POR ORDEN de trabajo (proveedor): la orden + su inmueble + su asignado
+  const task = taskByToken(prodDb, c.req.param('token'))
+  if (!task) return c.json({ error: 'enlace no válido' }, 404)
+  const prop = prodDb.prepare('SELECT id, name, address, photo, instructions FROM properties WHERE id = ?').get(task.property_id)
+  const assignee = task.assignee_id
+    ? prodDb.prepare('SELECT id, name, phone, specialty, hourly_rate FROM people WHERE id = ?').get(task.assignee_id)
+    : null
+  return c.json({
+    type: 'workorder',
+    task: { ...task, checks: JSON.parse(task.checks || '[]'), photos: JSON.parse(task.photos || '[]'), token_hash: undefined },
+    property: prop,
+    assignee,
+  })
+})
+
+/* Acciones del proveedor sobre la orden (checks / fotos / finalizar) */
+const woActionSchema = z.object({
+  action: z.enum(['toggle-check', 'complete', 'reopen']),
+  checkId: z.string().optional(),
+  cost: z.number().nullable().optional(),
+  notes: z.string().optional(),
+})
+app.post('/api/t/:token/task', async (c) => {
+  const task = taskByToken(prodDb, c.req.param('token'))
+  if (!task) return c.json({ error: 'enlace no válido' }, 404)
+  const body = await c.req.json().catch(() => null)
+  const parsed = woActionSchema.safeParse(body)
+  if (!parsed.success) return c.json({ error: 'formato inválido' }, 400)
+  const d = parsed.data
+  if (d.action === 'toggle-check') {
+    const checks = JSON.parse(task.checks || '[]')
+    const k = checks.find((x) => x.id === d.checkId)
+    if (k) k.done = !k.done
+    prodDb.prepare('UPDATE maintenance_tasks SET checks = ? WHERE id = ?').run(JSON.stringify(checks), task.id)
+  } else if (d.action === 'complete') {
+    const checks = JSON.parse(task.checks || '[]').map((k) => ({ ...k, done: true }))
+    prodDb.prepare("UPDATE maintenance_tasks SET status = 'finalizada', cost = COALESCE(?, cost), notes = COALESCE(?, notes), checks = ? WHERE id = ?")
+      .run(d.cost ?? null, d.notes ?? null, JSON.stringify(checks), task.id)
+  } else if (d.action === 'reopen') {
+    prodDb.prepare("UPDATE maintenance_tasks SET status = 'asignada' WHERE id = ?").run(task.id)
+  }
+  const updated = prodDb.prepare('SELECT * FROM maintenance_tasks WHERE id = ?').get(task.id)
+  return c.json({ ok: true, task: { ...updated, checks: JSON.parse(updated.checks || '[]'), photos: JSON.parse(updated.photos || '[]'), token_hash: undefined } })
+})
+
+app.post('/api/t/:token/task/photo', async (c) => {
+  const task = taskByToken(prodDb, c.req.param('token'))
+  if (!task) return c.json({ error: 'enlace no válido' }, 404)
+  const body = await c.req.parseBody().catch(() => null)
+  const file = body?.photo
+  if (!file || !(file instanceof File)) return c.json({ error: 'falta el fichero (campo photo)' }, 400)
+  const ext = PHOTO_MIME[file.type]
+  if (!ext) return c.json({ error: 'formato' }, 400)
+  if (file.size > 10 * 1024 * 1024) return c.json({ error: 'grande' }, 400)
+  const photosDir = join(config.dataDir, 'photos')
+  mkdirSync(photosDir, { recursive: true })
+  const filename = `maint-${task.id}-${Date.now()}.${ext}`
+  writeFileSync(join(photosDir, filename), Buffer.from(await file.arrayBuffer()))
+  const photos = JSON.parse(task.photos || '[]')
+  photos.push(`/photos/${filename}`)
+  prodDb.prepare('UPDATE maintenance_tasks SET photos = ? WHERE id = ?').run(JSON.stringify(photos), task.id)
+  const updated = prodDb.prepare('SELECT * FROM maintenance_tasks WHERE id = ?').get(task.id)
+  return c.json({ ok: true, task: { ...updated, checks: JSON.parse(updated.checks || '[]'), photos: JSON.parse(updated.photos || '[]'), token_hash: undefined } })
 })
 
 app.post('/api/t/:token/cleanings/:id/photo', async (c) => {

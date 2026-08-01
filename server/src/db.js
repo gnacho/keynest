@@ -24,6 +24,12 @@ const MIGRATIONS = [
   `ALTER TABLE reservations ADD COLUMN guest_name TEXT DEFAULT ''`,
   // 6: días de aviso del panel POR USUARIO (0 = usar el defecto global)
   `ALTER TABLE users ADD COLUMN lookahead_days INTEGER DEFAULT 0`,
+  // 7: token por orden + checks/photos en maintenance_tasks; rol 'proveedor'
+  `ALTER TABLE maintenance_tasks ADD COLUMN token_hash TEXT;
+   ALTER TABLE maintenance_tasks ADD COLUMN checks TEXT DEFAULT '[]';
+   ALTER TABLE maintenance_tasks ADD COLUMN photos TEXT DEFAULT '[]';
+   UPDATE people SET role = 'proveedor' WHERE role = 'mantenimiento';
+   UPDATE people SET token_hash = NULL WHERE role != 'limpieza'`,
 ]
 
 export function migrate(db) {

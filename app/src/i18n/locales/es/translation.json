@@ -337,7 +337,17 @@
     "prevista": "Prevista: {{date}}",
     "tareaCreadaOk": "Tarea creada",
     "editarTarea": "Editar tarea",
-    "tareaActualizada": "Tarea actualizada"
+    "tareaActualizada": "Tarea actualizada",
+    "compartirOrden": "Compartir orden (enlace)",
+    "enlaceCopiado": "Enlace de la orden copiado",
+    "enlaceGenerado": "Enlace generado: {{url}}",
+    "enlaceRevocado": "Enlace de la orden revocado",
+    "revocarEnlace": "Revocar enlace",
+    "checks": "Checks de la orden",
+    "checksPlaceholder": "Un check por línea…",
+    "checksNota": "El proveedor verá y marcará estos checks desde el enlace de la orden.",
+    "asignada": "Asignada",
+    "finalizada": "Finalizada"
   },
   "cat": {
     "cerradura": "Cerradura/pilas",
@@ -707,7 +717,10 @@
     "impElegir": "Elegir…",
     "aplicarImportacion": "Aplicar importación",
     "importarOk": "Importación aplicada: {{updated}} actualizadas, {{inserted}} nuevas",
-    "importarError": "No se pudo importar el CSV"
+    "importarError": "No se pudo importar el CSV",
+    "proveedores": "Proveedores",
+    "proveedor": "Proveedor",
+    "equipoProveedores": "Equipo de proveedores"
   },
   "common2": {
     "confirmar": "Confirmar",
@@ -727,5 +740,18 @@
     "salidaHoy": "Salida hoy · {{name}}",
     "bateriaBaja": "Cerradura de {{name}}: batería al {{pct}}%",
     "nuevaReserva": "Nueva reserva en {{name}}"
+  },
+  "wo": {
+    "enlaceInvalido": "Este enlace no es válido o ha sido revocado.",
+    "ordenTrabajo": "Orden de trabajo",
+    "trabajoARealizar": "Trabajo a realizar",
+    "fechaPrevista": "Fecha prevista: {{date}}",
+    "checks": "Tareas ({{done}}/{{total}})",
+    "fotos": "Fotos de la reparación",
+    "costeFinal": "Coste final (€, opcional)",
+    "marcarFinalizada": "Marcar como finalizada",
+    "guardando": "Guardando…",
+    "finalizadaOk": "Trabajo finalizado · Coste: {{cost}}",
+    "reabrir": "Reabrir orden"
   }
 }

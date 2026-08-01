@@ -96,8 +96,8 @@ const NIGHTLY_PRICE: Record<string, number> = {
 export const PEOPLE: Person[] = [
   { id: 'per-maria', name: 'María Llopis', initials: 'ML', role: 'limpieza', specialty: 'Limpieza general', hourlyRate: 14, phone: '612 345 678' },
   { id: 'per-carla', name: 'Carla Vidal', initials: 'CV', role: 'limpieza', specialty: 'Limpieza a fondo', hourlyRate: 13, phone: '655 902 114' },
-  { id: 'per-andres', name: 'Andrés Roca', initials: 'AR', role: 'mantenimiento', specialty: 'Electricidad y cerraduras', hourlyRate: 18, phone: '699 412 887' },
-  { id: 'per-pascual', name: 'Pascual Mir', initials: 'PM', role: 'mantenimiento', specialty: 'Fontanería y climatización', hourlyRate: 16, phone: '677 208 431' },
+  { id: 'per-andres', name: 'Andrés Roca', initials: 'AR', role: 'proveedor', specialty: 'Electricidad y cerraduras', hourlyRate: 18, phone: '699 412 887' },
+  { id: 'per-pascual', name: 'Pascual Mir', initials: 'PM', role: 'proveedor', specialty: 'Fontanería y climatización', hourlyRate: 16, phone: '677 208 431' },
 ];
 
 /* ------------------------------------------------------------------ Usuarios */

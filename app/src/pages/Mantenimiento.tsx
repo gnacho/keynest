@@ -410,6 +410,7 @@ function NewTaskDialog({
   const [etiqueta, setEtiqueta] = useState('');
   const [urgente, setUrgente] = useState(false);
   const [notas, setNotas] = useState('');
+  const [checksText, setChecksText] = useState('');
 
   // Modo edición: precargar la tarea
   useEffect(() => {
@@ -421,6 +422,7 @@ function NewTaskDialog({
       setEtiqueta(task.expenseTag);
       setUrgente(task.urgent);
       setNotas(task.notes);
+      setChecksText((task.checks ?? []).map((k) => k.label).join('\n'));
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, task?.id]);
@@ -428,16 +430,27 @@ function NewTaskDialog({
   const valid = Boolean(slug && titulo.trim() && categoria);
   const [busy, setBusy] = useState(false);
 
+  const checksFromText = () =>
+    checksText
+      .split('\n')
+      .map((s) => s.trim())
+      .filter(Boolean)
+      .map((label, i) => ({ id: `chk-${i}`, label, done: false }));
+
   const crear = async () => {
     if (!valid || busy) return;
     setBusy(true);
     if (task) {
+      // Preserva el estado done de los checks que siguen existiendo
+      const prev = new Map((task.checks ?? []).map((k) => [k.label, k.done]));
+      const checks = checksFromText().map((k) => ({ ...k, done: prev.get(k.label) ?? false }));
       await data.editMaintenance(task.id, {
         title: titulo.trim(),
         category: categoria ?? '',
         expenseTag: etiqueta.trim() || (categoria ?? ''),
         urgent: urgente,
         notes: notas.trim(),
+        checks,
       });
       setBusy(false);
       onCreated();
@@ -454,6 +467,7 @@ function NewTaskDialog({
       expenseTag: etiqueta.trim() || (categoria ?? ''),
       urgent: urgente,
       notes: notas.trim(),
+      checks: checksFromText(),
     });
     setBusy(false);
     if (created) {
@@ -470,6 +484,7 @@ function NewTaskDialog({
     setEtiqueta('');
     setUrgente(false);
     setNotas('');
+    setChecksText('');
   };
 
   const label = (text: string) => (
@@ -552,6 +567,20 @@ function NewTaskDialog({
               className="w-full resize-none rounded-xl border bg-[var(--surface)] px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-[#6366F1]"
               style={{ borderColor: 'var(--border)' }}
             />
+          </div>
+          <div>
+            {label(tr('mant.checks'))}
+            <textarea
+              value={checksText}
+              onChange={(e) => setChecksText(e.target.value)}
+              rows={4}
+              placeholder={tr('mant.checksPlaceholder')}
+              className="w-full resize-none rounded-xl border bg-[var(--surface)] px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-[#6366F1]"
+              style={{ borderColor: 'var(--border)' }}
+            />
+            <span className="text-[11px]" style={{ color: 'var(--text-faint)' }}>
+              {tr('mant.checksNota')}
+            </span>
           </div>
           <button
             type="button"
