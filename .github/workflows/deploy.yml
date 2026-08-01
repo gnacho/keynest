@@ -47,6 +47,7 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          gh release delete latest --yes 2>/dev/null || true
+          gh release delete latest --yes --cleanup-tag 2>/dev/null || true
+          git push origin :refs/tags/latest 2>/dev/null || true
           gh release create latest keynest-dist.tar.gz keynest-server.tar.gz \
             --title "latest" --notes "Build automático de main ($(date -u +%Y-%m-%d\ %H:%M\ UTC))" --prerelease
