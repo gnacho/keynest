@@ -36,7 +36,11 @@ import { useTranslation } from 'react-i18next';
 import { Toaster } from '@/components/ui/sonner';
 import { useData } from '@/data/useData';
 import type { Reservation } from '@/data/types';
-import { addDays, fmtDateShort, isSameDay, startOfDay } from '@/lib/format';
+import { addDays, fmtDateShort, fmtDateShortYear, isSameDay, startOfDay } from '@/lib/format';
+
+/** Fecha de un rango: con año cuando entrada y salida cruzan años (30 dic 2026 → 10 ene 2027) */
+const fmtRangeDate = (a: Date, b: Date, d: Date) =>
+  a.getFullYear() !== b.getFullYear() ? fmtDateShortYear(d) : fmtDateShort(d);
 import { cn } from '@/lib/utils';
 
 const EASE_OUT_QUART: [number, number, number, number] = [0.25, 1, 0.5, 1];
@@ -140,8 +144,10 @@ export default function Reservas() {
     const q = search.trim().toLowerCase();
     return base.filter((r) => {
       if (filteredProp && r.propertyId !== filteredProp.id) return false;
+      const cat = categoryOf(r, today);
+      // "Todos" = activas + próximas; las completadas solo salen con su filtro
+      if (tipo === 'todos' && cat === 'completada') return false;
       if (tipo !== 'todos') {
-        const cat = categoryOf(r, today);
         if (tipo === 'activas' && cat !== 'activa') return false;
         if (tipo === 'proximas' && cat !== 'proxima') return false;
         if (tipo === 'completadas' && cat !== 'completada') return false;
@@ -632,10 +638,10 @@ export default function Reservas() {
                     </span>
                     <span className="flex items-center gap-1.5 font-display text-[13px] font-medium">
                       <span className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: '#10B981' }} />
-                      {fmtDateShort(r.checkIn)}
+                      {fmtRangeDate(r.checkIn, r.checkOut, r.checkIn)}
                       <span style={{ color: 'var(--text-faint)' }}>→</span>
                       <span className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: '#F97316' }} />
-                      {fmtDateShort(r.checkOut)}
+                      {fmtRangeDate(r.checkIn, r.checkOut, r.checkOut)}
                       <span className="tnum text-xs" style={{ color: 'var(--text-muted)' }}>
                         · {t('cal.noches', { count: nightsOf(r) })}
                       </span>

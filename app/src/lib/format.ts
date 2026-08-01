@@ -53,6 +53,18 @@ export function fmtDateShort(d: Date): string {
   return dt('short', { day: 'numeric', month: 'short' }).format(d).replace('.', '');
 }
 
+/** "14 may 2026" / "May 14, 2026" */
+export function fmtDateShortYear(d: Date): string {
+  return dt('shortY', { day: 'numeric', month: 'short', year: 'numeric' }).format(d).replace(/\./g, '');
+}
+
+/** Rango "14 may → 20 may"; si cruza años, con año en ambas: "30 dic 2026 → 10 ene 2027" */
+export function fmtDateRangeShort(a: Date, b: Date): string {
+  const cross = a.getFullYear() !== b.getFullYear();
+  const f = cross ? fmtDateShortYear : fmtDateShort;
+  return `${f(a)} → ${f(b)}`;
+}
+
 /** "14 de mayo de 2025" / "May 14, 2025" */
 export function fmtDateLong(d: Date): string {
   return dt('long', { day: 'numeric', month: 'long', year: 'numeric' }).format(d);

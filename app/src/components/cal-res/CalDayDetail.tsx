@@ -11,7 +11,7 @@ import EmptyState from '@/components/EmptyState';
 import { useTranslation } from 'react-i18next';
 import { useData } from '@/data/useData';
 import type { Property, Reservation } from '@/data/types';
-import { capitalize, fmtDateLong, fmtDateShort, fmtTime, isSameDay } from '@/lib/format';
+import { capitalize, fmtDateLong, fmtDateShort, fmtDateShortYear, fmtTime, isSameDay } from '@/lib/format';
 import { agesBreakdown, dayInfoFor, nextReservationAfter, nightsOf } from './calendar-utils';
 import type { DayKind } from './calendar-utils';
 import { requestIcon } from './request-icon';
@@ -183,8 +183,9 @@ export default function CalDayDetail({ date, open, onOpenChange, properties, onl
             >
               <div className="text-xs font-medium" style={{ color: 'var(--text-muted)' }}>
                 <p className="font-display tnum text-[13px] font-medium" style={{ color: 'var(--text)' }}>
-                  {fmtDateShort(r.checkIn)} {fmtTime(r.checkIn)} → {fmtDateShort(r.checkOut)}{' '}
-                  {fmtTime(r.checkOut)}
+                  {r.checkIn.getFullYear() !== r.checkOut.getFullYear()
+                    ? `${fmtDateShortYear(r.checkIn)} ${fmtTime(r.checkIn)} → ${fmtDateShortYear(r.checkOut)} ${fmtTime(r.checkOut)}`
+                    : `${fmtDateShort(r.checkIn)} ${fmtTime(r.checkIn)} → ${fmtDateShort(r.checkOut)} ${fmtTime(r.checkOut)}`}
                 </p>
                 <p>{t('cal.noches', { count: nightsOf(r) })}</p>
               </div>
