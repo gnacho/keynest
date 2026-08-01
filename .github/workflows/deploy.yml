@@ -1,0 +1,52 @@
+name: Build & Release
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      # 1) Backend: deps + tests (Vitest)
+      - name: Server — install & test
+        working-directory: server
+        run: |
+          npm ci
+          npx vitest run
+
+      # 2) Frontend: lint + build
+      - name: App — lint
+        working-directory: app
+        run: |
+          npm ci
+          npm run lint
+
+      - name: App — build
+        working-directory: app
+        run: npm run build
+
+      # 3) Paquetes desplegables
+      - name: Package
+        run: |
+          tar czf keynest-dist.tar.gz -C app dist
+          tar czf keynest-server.tar.gz -C server src package.json package-lock.json
+
+      # 4) Release "latest" (repo público → el CT la descarga sin auth)
+      - name: Publish release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release delete latest --yes 2>/dev/null || true
+          gh release create latest keynest-dist.tar.gz keynest-server.tar.gz \
+            --title "latest" --notes "Build automático de main ($(date -u +%Y-%m-%d\ %H:%M\ UTC))" --prerelease
