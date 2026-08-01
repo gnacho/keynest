@@ -2,9 +2,10 @@ import type { SemColor } from '@/data/types';
 
 /** Catálogo de estados → semántica invariable (design.md §3.2 y §7.4). */
 export const STATUS_CATALOG: Record<string, SemColor> = {
+  Activa: 'emerald',
   Confirmada: 'blue',
   Pendiente: 'slate',
-  Completada: 'emerald',
+  Completada: 'slate',
   'En curso': 'blue',
   Asignada: 'violet',
   Nueva: 'slate',
@@ -16,6 +17,17 @@ export const STATUS_CATALOG: Record<string, SemColor> = {
   Libre: 'slate',
   Entrada: 'emerald',
   Salida: 'orange',
+  // Etiquetas EN (el catálogo indexa por etiqueta traducida)
+  Active: 'emerald',
+  Confirmed: 'blue',
+  Pending: 'slate',
+  Completed: 'slate',
+  Assigned: 'violet',
+  New: 'slate',
+  Finished: 'emerald',
+  Urgent: 'rose',
+  Booked: 'blue',
+  Free: 'slate',
 };
 
 export const CHIP_COLORS: Record<SemColor, { bg: string; text: string; dot: string }> = {

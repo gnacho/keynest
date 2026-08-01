@@ -211,7 +211,6 @@ if [ ! -f "$ENV_FILE" ]; then
         ok "port $DEFAULT_PORT is free"
     fi
 fi
-fi
 
 # --------------------------------------------------------- resolve version --
 if [ -z "$VERSION" ]; then
