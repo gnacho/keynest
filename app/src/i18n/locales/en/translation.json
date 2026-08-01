@@ -16,7 +16,9 @@
     "volver": "Back",
     "temaClaro": "Switch to light theme",
     "temaOscuro": "Switch to dark theme",
-    "demoBadge": "DEMO"
+    "demoBadge": "DEMO",
+    "demoBanner": "Demo mode — changes are not applied to the system",
+    "demoSalir": "Exit demo"
   },
   "login": {
     "bienvenido": "Welcome back",

@@ -16,7 +16,9 @@
     "volver": "Volver",
     "temaClaro": "Cambiar a tema claro",
     "temaOscuro": "Cambiar a tema oscuro",
-    "demoBadge": "DEMO"
+    "demoBadge": "DEMO",
+    "demoBanner": "Modo demo — los cambios no se aplican al sistema",
+    "demoSalir": "Salir del demo"
   },
   "login": {
     "bienvenido": "Bienvenido de nuevo",

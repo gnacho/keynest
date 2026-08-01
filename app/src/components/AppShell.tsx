@@ -24,7 +24,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import PersonAvatar from '@/components/PersonAvatar';
 import { useTheme } from '@/theme/ThemeProvider';
 import { useData } from '@/data/useData';
-import { cachedUser } from '@/lib/auth';
+import { cachedUser, logout } from '@/lib/auth';
 import { cn } from '@/lib/utils';
 
 const EASE_OUT_QUART: [number, number, number, number] = [0.25, 1, 0.5, 1];
@@ -35,6 +35,8 @@ interface NavItem {
   icon: LucideIcon;
 }
 
+/* Items de dominio; Ajustes NO va en el nav principal del sidebar: va abajo,
+   junto al ThemeToggle (webapp-shell). En móvil sí entra en el sheet "Más". */
 const NAV_ITEMS: NavItem[] = [
   { to: '/', labelKey: 'resumen', icon: LayoutDashboard },
   { to: '/calendario', labelKey: 'calendario', icon: CalendarDays },
@@ -42,11 +44,12 @@ const NAV_ITEMS: NavItem[] = [
   { to: '/limpieza', labelKey: 'limpieza', icon: Sparkles },
   { to: '/mantenimiento', labelKey: 'mantenimiento', icon: Wrench },
   { to: '/rentabilidad', labelKey: 'rentabilidad', icon: TrendingUp },
-  { to: '/ajustes', labelKey: 'ajustes', icon: Settings },
 ];
 
+const SETTINGS_ITEM: NavItem = { to: '/ajustes', labelKey: 'ajustes', icon: Settings };
+
 const BOTTOM_ITEMS: NavItem[] = NAV_ITEMS.slice(0, 4);
-const MORE_ITEMS: NavItem[] = NAV_ITEMS.slice(4);
+const MORE_ITEMS: NavItem[] = [...NAV_ITEMS.slice(4), SETTINGS_ITEM];
 
 const TITLE_KEYS: Record<string, string> = {
   '/': 'resumen',
@@ -129,67 +132,79 @@ export default function AppShell({ children }: { children: ReactNode }) {
     return 0;
   };
 
+  /* ------------------------------------------------ Item solo-icono (raíl/colapsado) */
+  const renderIconItem = (item: NavItem) => {
+    const active = isActive(item.to);
+    const badge = badgeFor(item.to);
+    return (
+      <Tooltip key={item.to} delayDuration={150}>
+        <TooltipTrigger asChild>
+          <NavLink
+            to={item.to}
+            aria-label={t(`nav.${item.labelKey}`)}
+            className={cn(
+              'relative flex h-10 w-10 items-center justify-center rounded-xl transition-colors duration-150',
+              active ? 'text-[var(--text)]' : 'text-[var(--text-muted)] hover:text-[var(--text)]',
+            )}
+            style={active ? { backgroundColor: 'var(--surface-2)' } : undefined}
+          >
+            {active && (
+              <motion.span
+                key={`dot-${location.pathname}`}
+                initial={reduce ? false : { scale: 0 }}
+                animate={{ scale: 1 }}
+                transition={{ duration: 0.2, ease: EASE_OUT_QUART }}
+                className="brand-gradient absolute -left-[13px] top-1/2 h-2 w-2 -translate-y-1/2 rounded-full"
+              />
+            )}
+            <item.icon className="h-5 w-5" strokeWidth={active ? 2.2 : 1.8} />
+            {badge > 0 && (
+              <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-rose-500 px-1 text-[10px] font-semibold text-white">
+                {badge}
+              </span>
+            )}
+          </NavLink>
+        </TooltipTrigger>
+        <TooltipContent side="right" className="rounded-lg border-[var(--border)] bg-[var(--surface)] text-[var(--text)] shadow-overlay">
+          {t(`nav.${item.labelKey}`)}
+        </TooltipContent>
+      </Tooltip>
+    );
+  };
+
   /* ---------------------------------------------------------- Sidebar item */
   const renderNavItem = (item: NavItem) => {
     const active = isActive(item.to);
     const badge = badgeFor(item.to);
-    const content = (
+    return (
       <NavLink
+        key={item.to}
         to={item.to}
         className={cn(
           'relative flex h-10 items-center gap-3 rounded-xl px-3 text-sm font-medium transition-colors duration-150',
           active ? 'text-[var(--text)]' : 'text-[var(--text-muted)] hover:text-[var(--text)]',
-          collapsed && 'justify-center px-0',
         )}
         style={active ? { backgroundColor: 'var(--surface-2)' } : undefined}
       >
-        {active &&
-          (collapsed ? (
-            <motion.span
-              key={`dot-${location.pathname}`}
-              initial={reduce ? false : { scale: 0 }}
-              animate={{ scale: 1 }}
-              transition={{ duration: 0.2, ease: EASE_OUT_QUART }}
-              className="brand-gradient absolute -left-[13px] top-1/2 h-2 w-2 -translate-y-1/2 rounded-full"
-            />
-          ) : (
-            <motion.span
-              key={`bar-${location.pathname}`}
-              initial={reduce ? false : { scaleY: 0 }}
-              animate={{ scaleY: 1 }}
-              transition={{ duration: 0.2, ease: EASE_OUT_QUART }}
-              className="brand-gradient absolute left-0 top-1/2 h-5 w-[3px] -translate-y-1/2 rounded-full"
-              style={{ originY: 0.5 }}
-            />
-          ))}
+        {active && (
+          <motion.span
+            key={`bar-${location.pathname}`}
+            initial={reduce ? false : { scaleY: 0 }}
+            animate={{ scaleY: 1 }}
+            transition={{ duration: 0.2, ease: EASE_OUT_QUART }}
+            className="brand-gradient absolute left-0 top-1/2 h-5 w-[3px] -translate-y-1/2 rounded-full"
+            style={{ originY: 0.5 }}
+          />
+        )}
         <item.icon className="h-5 w-5 shrink-0" strokeWidth={active ? 2.2 : 1.8} />
-        <span
-          className={cn(
-            'flex-1 truncate transition-opacity duration-150',
-            collapsed ? 'hidden opacity-0' : 'opacity-100',
-          )}
-        >
-          {t(`nav.${item.labelKey}`)}
-        </span>
-        {!collapsed && badge > 0 && (
+        <span className="flex-1 truncate">{t(`nav.${item.labelKey}`)}</span>
+        {badge > 0 && (
           <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-rose-500 px-1.5 text-[11px] font-semibold text-white">
             {badge}
           </span>
         )}
       </NavLink>
     );
-
-    if (collapsed) {
-      return (
-        <Tooltip key={item.to} delayDuration={150}>
-          <TooltipTrigger asChild>{content}</TooltipTrigger>
-          <TooltipContent side="right" className="rounded-lg border-[var(--border)] bg-[var(--surface)] text-[var(--text)] shadow-overlay">
-            {t(`nav.${item.labelKey}`)}
-          </TooltipContent>
-        </Tooltip>
-      );
-    }
-    return <div key={item.to}>{content}</div>;
   };
 
   return (
@@ -201,7 +216,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
             'fixed inset-y-0 left-0 z-40 hidden flex-col border-r transition-[width] duration-250 ease-out-quart lg:flex',
           )}
           style={{
-            width: collapsed ? 72 : 232,
+            width: collapsed ? 64 : 232,
             backgroundColor: 'var(--surface)',
             borderColor: 'var(--border)',
             transitionDuration: '250ms',
@@ -218,9 +233,15 @@ export default function AppShell({ children }: { children: ReactNode }) {
             </Link>
           </div>
 
-          <nav className="flex flex-1 flex-col gap-1 overflow-y-auto px-3 py-2">
-            {NAV_ITEMS.map(renderNavItem)}
-          </nav>
+          {collapsed ? (
+            <nav className="flex flex-1 flex-col items-center gap-1 overflow-y-auto px-3 py-2">
+              {[...NAV_ITEMS, SETTINGS_ITEM].map(renderIconItem)}
+            </nav>
+          ) : (
+            <nav className="flex flex-1 flex-col gap-1 overflow-y-auto px-3 py-2">
+              {NAV_ITEMS.map(renderNavItem)}
+            </nav>
+          )}
 
           <div className={cn('flex flex-col gap-2 border-t p-3', collapsed && 'items-center')} style={{ borderColor: 'var(--border)' }}>
             <div className={cn('flex items-center gap-2.5 rounded-xl p-1.5', collapsed && 'justify-center')}>
@@ -235,6 +256,19 @@ export default function AppShell({ children }: { children: ReactNode }) {
               )}
               {!collapsed && <ThemeToggle />}
             </div>
+            {!collapsed && (
+              <NavLink
+                to={SETTINGS_ITEM.to}
+                className={cn(
+                  'relative flex h-9 items-center gap-2.5 rounded-xl px-3 text-sm font-medium transition-colors duration-150',
+                  isActive(SETTINGS_ITEM.to) ? 'text-[var(--text)]' : 'text-[var(--text-muted)] hover:text-[var(--text)]',
+                )}
+                style={isActive(SETTINGS_ITEM.to) ? { backgroundColor: 'var(--surface-2)' } : undefined}
+              >
+                <SETTINGS_ITEM.icon className="h-[18px] w-[18px]" strokeWidth={1.8} />
+                {t('nav.ajustes')}
+              </NavLink>
+            )}
             <button
               type="button"
               onClick={() => setCollapsed((c) => !c)}
@@ -248,9 +282,23 @@ export default function AppShell({ children }: { children: ReactNode }) {
           </div>
         </aside>
 
-        {/* ============================== Header móvil (< lg) */}
+        {/* ============================== Raíl tablet (md, por breakpoint) */}
+        <aside
+          className="fixed inset-y-0 left-0 z-40 hidden w-16 flex-col items-center border-r py-3 md:flex lg:hidden"
+          style={{ backgroundColor: 'var(--surface)', borderColor: 'var(--border)' }}
+        >
+          <Link to="/" aria-label={t('nav.irResumen')} className="flex h-10 items-center justify-center">
+            <LogoMark size={26} />
+          </Link>
+          <nav className="mt-3 flex flex-1 flex-col items-center gap-1 overflow-y-auto">
+            {[...NAV_ITEMS, SETTINGS_ITEM].map(renderIconItem)}
+          </nav>
+          <ThemeToggle />
+        </aside>
+
+        {/* ============================== Header móvil (< md) */}
         <header
-          className="fixed inset-x-0 top-0 z-40 flex h-14 items-center gap-2 border-b px-4 backdrop-blur-md lg:hidden"
+          className="fixed inset-x-0 top-0 z-40 flex h-14 items-center gap-2 border-b px-4 backdrop-blur-md md:hidden"
           style={{
             backgroundColor: 'color-mix(in srgb, var(--surface) 85%, transparent)',
             borderColor: 'var(--border)',
@@ -284,10 +332,32 @@ export default function AppShell({ children }: { children: ReactNode }) {
 
         {/* ============================== Contenido */}
         <div
-          className="transition-[margin] ease-out-quart lg:pl-[var(--sbw)]"
-          style={{ ['--sbw' as string]: collapsed ? '72px' : '232px', transitionDuration: '250ms' }}
+          className="transition-[margin] ease-out-quart md:pl-16 lg:pl-[var(--sbw)]"
+          style={{ ['--sbw' as string]: collapsed ? '64px' : '232px', transitionDuration: '250ms' }}
         >
-          <main className="mx-auto w-full max-w-[1440px] px-4 pb-24 pt-[72px] lg:px-8 lg:pb-10 lg:pt-7">
+          <main className="mx-auto w-full max-w-[1440px] px-4 pb-24 pt-[72px] md:px-8 md:pb-10 md:pt-7">
+            {sessionUser?.is_demo && (
+              <div
+                role="status"
+                className="mb-4 flex items-center gap-2.5 rounded-xl border px-3.5 py-2.5 text-[13px] font-semibold"
+                style={{
+                  borderColor: 'rgb(245 158 11 / 0.35)',
+                  backgroundColor: 'rgb(245 158 11 / 0.1)',
+                  color: '#F59E0B',
+                }}
+              >
+                <span className="animate-ping-soft h-2 w-2 shrink-0 rounded-full" style={{ backgroundColor: '#F59E0B' }} />
+                <span>{t('nav.demoBanner')}</span>
+                <button
+                  type="button"
+                  onClick={() => void logout()}
+                  className="ml-auto flex h-8 items-center rounded-lg border px-3 text-xs font-medium transition-colors"
+                  style={{ borderColor: 'rgb(245 158 11 / 0.4)', color: '#F59E0B' }}
+                >
+                  {t('nav.demoSalir')}
+                </button>
+              </div>
+            )}
             <AnimatePresence mode="wait" initial={false}>
               <motion.div
                 key={location.pathname}
@@ -306,9 +376,9 @@ export default function AppShell({ children }: { children: ReactNode }) {
           </main>
         </div>
 
-        {/* ============================== Bottom-nav móvil (< lg) */}
+        {/* ============================== Bottom-nav móvil (< md) */}
         <nav
-          className="fixed inset-x-0 bottom-0 z-40 border-t lg:hidden"
+          className="fixed inset-x-0 bottom-0 z-40 border-t md:hidden"
           style={{
             backgroundColor: 'color-mix(in srgb, var(--surface) 92%, transparent)',
             borderColor: 'var(--border)',
