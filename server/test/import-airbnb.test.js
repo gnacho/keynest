@@ -40,12 +40,12 @@ describe('parseAirbnbCsv', () => {
     expect(dupes).toBe(1);
     expect(skipped).toBe(2);
     const r1 = reservations.find((r) => r.code === 'HMTEST0001');
-    expect(r1.amount).toBe(1750.0); // última gana
+    expect(r1.amount).toBe(1510.0); // última gana
     expect(r1.checkin).toBe('2026-07-27');
     expect(r1.checkout).toBe('2026-08-03');
     const r2 = reservations.find((r) => r.code === 'HMTEST0002');
-    expect(r2.guest).toBe('García, María'); // comillas con coma
-    expect(r2.amount).toBe(2050.5); // separador de miles
+    expect(r2.guest).toBe('Ejemplo, María'); // comillas con coma
+    expect(r2.amount).toBe(1234.5); // separador de miles
   });
 
   it('rechaza CSV sin las columnas esperadas', () => {
@@ -73,11 +73,11 @@ describe('importAirbnb', () => {
     expect(out.inserted).toBe(1);
     const r1 = db.prepare('SELECT * FROM reservations WHERE confirmation_code = ?').get('HMTEST0001');
     expect(r1.guest_name).toBe('John Smith');
-    expect(r1.amount).toBe(1750.0);
+    expect(r1.amount).toBe(1510.0);
     expect(r1.uid).toBe('abc@airbnb.com'); // uid iCal conservado
     const r2 = db.prepare('SELECT * FROM reservations WHERE confirmation_code = ?').get('HMTEST0002');
     expect(r2.uid).toBe('csv-HMTEST0002');
-    expect(r2.guest_name).toBe('García, María');
+    expect(r2.guest_name).toBe('Ejemplo, María');
     expect(r2.property_id).toBe('prop-dos');
   });
 
@@ -112,7 +112,7 @@ describe('sync iCal vs reservas CSV', () => {
     const uids = db.prepare("SELECT uid FROM reservations WHERE property_id = 'prop-chalet'").all().map((r) => r.uid);
     expect(uids).toContain('nueva-uid@airbnb.com'); // upsert
     expect(uids).not.toContain('abc@airbnb.com'); // iCal obsoleto borrado
-    // la reserva CSV del inmueble guimerá sigue intacta
+    // la reserva CSV del segundo inmueble sigue intacta
     expect(db.prepare("SELECT COUNT(*) n FROM reservations WHERE uid = 'csv-HMTEST0002'").get().n).toBe(1);
   });
 });
