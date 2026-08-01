@@ -91,6 +91,18 @@ export function requireAuth(prodDb, demoDb) {
   }
 }
 
+/** requireAuth + rol admin (factorizado: antes se repetía el check en ~11 endpoints). */
+export function requireAdmin(prodDb, demoDb) {
+  return async (c, next) => {
+    const user = currentUser(prodDb, demoDb, c)
+    if (!user) return c.json({ error: 'no autorizado' }, 401)
+    if (user.role !== 'admin') return c.json({ error: 'solo admin' }, 403)
+    c.set('user', user)
+    c.set('db', user.is_demo ? demoDb : prodDb)
+    await next()
+  }
+}
+
 /** Login demo sin contraseña (un clic). Solo si demo_enabled (kv de prod). */
 export function demoEnabled(prodDb) {
   return kvGet(prodDb, 'demo_enabled') !== '0'
@@ -160,6 +172,30 @@ export async function createUser(db, { username, password, phone, role }) {
 export function updateLanguage(db, userId, language) {
   db.prepare('UPDATE users SET language = ? WHERE id = ?').run(language, userId)
   return db.prepare('SELECT id, username, email, phone, language, role, created_at FROM users WHERE id = ?').get(userId)
+}
+
+/** Reset de contraseña por un admin: re-hashea y destruye las sesiones del usuario. */
+export async function setUserPassword(db, userId, password) {
+  const user = db.prepare('SELECT id FROM users WHERE id = ?').get(userId)
+  if (!user) return false
+  const hash = await bcrypt.hash(password, 10)
+  db.prepare('UPDATE users SET password_hash = ? WHERE id = ?').run(hash, userId)
+  db.prepare('DELETE FROM sessions WHERE user_id = ?').run(userId)
+  return true
+}
+
+export function setUserRole(db, userId, role) {
+  db.prepare('UPDATE users SET role = ? WHERE id = ?').run(role, userId)
+  return db.prepare('SELECT id, username, email, phone, language, role, created_at FROM users WHERE id = ?').get(userId)
+}
+
+export function countAdmins(db) {
+  return db.prepare("SELECT COUNT(*) n FROM users WHERE role = 'admin'").get().n
+}
+
+export function deleteUser(db, userId) {
+  db.prepare('DELETE FROM sessions WHERE user_id = ?').run(userId)
+  return db.prepare('DELETE FROM users WHERE id = ?').run(userId).changes > 0
 }
 
 export function cleanExpiredSessions(db) {

@@ -116,31 +116,29 @@ app.put('/api/auth/password', auth.requireAuth(prodDb, demoDb), async (c) => {
   return c.json({ ok: true })
 })
 
-/* Alta de usuario gestión (solo admin, password inicial ≥6) */
+/* Alta de usuario gestión (solo admin, password inicial ≥6, rol user|admin) */
 const newUserSchema = z.object({
   username: z.string().min(1),
   password: z.string().min(6),
   phone: z.string().optional(),
+  role: z.enum(['user', 'admin']).optional(),
 })
-app.post('/api/users', auth.requireAuth(prodDb, demoDb), async (c) => {
-  if (c.get('user').role !== 'admin') return c.json({ error: 'solo admin' }, 403)
+app.post('/api/users', auth.requireAdmin(prodDb, demoDb), async (c) => {
   const body = await c.req.json().catch(() => null)
   const parsed = newUserSchema.safeParse(body)
   if (!parsed.success) return c.json({ error: 'formato inválido', code: 'format' }, 400)
-  const user = await auth.createUser(prodDb, { ...parsed.data, role: 'admin' })
+  const user = await auth.createUser(prodDb, parsed.data)
   if (!user) return c.json({ error: 'el usuario ya existe', code: 'exists' }, 409)
   aud(c, 'create', 'user', user.id, user.username)
   return c.json({ ok: true, user }, 201)
 })
 
 /* Actualización de la app (solo admin): estado y aplicar */
-app.get('/api/update/status', auth.requireAuth(prodDb, demoDb), async (c) => {
-  if (c.get('user').role !== 'admin') return c.json({ error: 'solo admin' }, 403)
+app.get('/api/update/status', auth.requireAdmin(prodDb, demoDb), async (c) => {
   return c.json(await updateStatus(prodDb))
 })
 
-app.post('/api/update/apply', auth.requireAuth(prodDb, demoDb), async (c) => {
-  if (c.get('user').role !== 'admin') return c.json({ error: 'solo admin' }, 403)
+app.post('/api/update/apply', auth.requireAdmin(prodDb, demoDb), async (c) => {
   const ok = await applyUpdate()
   // systemd Restart=always levanta el servicio con el código nuevo tras salir
   setTimeout(() => process.exit(0), 1500)
@@ -148,29 +146,80 @@ app.post('/api/update/apply', auth.requireAuth(prodDb, demoDb), async (c) => {
 })
 
 /* Audit log (solo admin, últimas 100 entradas) */
-app.get('/api/audit', auth.requireAuth(prodDb, demoDb), (c) => {
-  if (c.get('user').role !== 'admin') return c.json({ error: 'solo admin' }, 403)
+app.get('/api/audit', auth.requireAdmin(prodDb, demoDb), (c) => {
   const rows = c.get('db').prepare('SELECT * FROM audit_log ORDER BY at DESC LIMIT 100').all()
   return c.json({ entries: rows })
 })
 
 /* Lista de usuarios (solo admin) */
-app.get('/api/users', auth.requireAuth(prodDb, demoDb), (c) => {
-  if (c.get('user').role !== 'admin') return c.json({ error: 'solo admin' }, 403)
+app.get('/api/users', auth.requireAdmin(prodDb, demoDb), (c) => {
   const users = prodDb.prepare('SELECT id, username, email, phone, language, role, created_at FROM users ORDER BY created_at').all()
   return c.json({ users })
 })
 
+/* Reset de contraseña por admin: destruye las sesiones del usuario */
+const resetPwdSchema = z.object({ password: z.string().min(6) })
+app.put('/api/users/:id/password', auth.requireAdmin(prodDb, demoDb), async (c) => {
+  const body = await c.req.json().catch(() => null)
+  const parsed = resetPwdSchema.safeParse(body)
+  if (!parsed.success) return c.json({ error: 'formato inválido', code: 'format' }, 400)
+  const ok = await auth.setUserPassword(prodDb, c.req.param('id'), parsed.data.password)
+  if (!ok) return c.json({ error: 'usuario no encontrado' }, 404)
+  aud(c, 'update', 'user', c.req.param('id'), 'password reset')
+  return c.json({ ok: true })
+})
+
+/* Cambio de rol (admin): prohibido sobre uno mismo, protege el último admin */
+const roleSchema = z.object({ role: z.enum(['user', 'admin']) })
+app.put('/api/users/:id/role', auth.requireAdmin(prodDb, demoDb), async (c) => {
+  const targetId = c.req.param('id')
+  if (targetId === c.get('user').id) return c.json({ error: 'no puedes cambiar tu propio rol', code: 'self' }, 403)
+  const body = await c.req.json().catch(() => null)
+  const parsed = roleSchema.safeParse(body)
+  if (!parsed.success) return c.json({ error: 'formato inválido', code: 'format' }, 400)
+  const target = prodDb.prepare('SELECT id, role FROM users WHERE id = ?').get(targetId)
+  if (!target) return c.json({ error: 'usuario no encontrado' }, 404)
+  if (target.role === 'admin' && parsed.data.role === 'user' && auth.countAdmins(prodDb) <= 1) {
+    return c.json({ error: 'debe quedar al menos un administrador', code: 'last-admin' }, 409)
+  }
+  const user = auth.setUserRole(prodDb, targetId, parsed.data.role)
+  aud(c, 'update', 'user', targetId, `role=${parsed.data.role}`)
+  return c.json({ ok: true, user })
+})
+
+/* Cambio de idioma (admin sobre cualquier usuario) */
+const userLangSchema = z.object({ language: z.enum(['auto', 'es', 'en']) })
+app.put('/api/users/:id/language', auth.requireAdmin(prodDb, demoDb), async (c) => {
+  const body = await c.req.json().catch(() => null)
+  const parsed = userLangSchema.safeParse(body)
+  if (!parsed.success) return c.json({ error: 'formato inválido', code: 'format' }, 400)
+  const user = auth.updateLanguage(prodDb, c.req.param('id'), parsed.data.language)
+  if (!user) return c.json({ error: 'usuario no encontrado' }, 404)
+  return c.json({ ok: true, user })
+})
+
+/* Borrado de usuario (admin): prohibido sobre uno mismo, protege el último admin, borra sus sesiones */
+app.delete('/api/users/:id', auth.requireAdmin(prodDb, demoDb), (c) => {
+  const targetId = c.req.param('id')
+  if (targetId === c.get('user').id) return c.json({ error: 'no puedes eliminarte a ti mismo', code: 'self' }, 403)
+  const target = prodDb.prepare('SELECT id, username, role FROM users WHERE id = ?').get(targetId)
+  if (!target) return c.json({ error: 'usuario no encontrado' }, 404)
+  if (target.role === 'admin' && auth.countAdmins(prodDb) <= 1) {
+    return c.json({ error: 'debe quedar al menos un administrador', code: 'last-admin' }, 409)
+  }
+  auth.deleteUser(prodDb, targetId)
+  aud(c, 'delete', 'user', targetId, target.username)
+  return c.json({ ok: true })
+})
+
 /* Config Tedee (solo admin): bridge local + token */
-app.get('/api/config/tedee', auth.requireAuth(prodDb, demoDb), (c) => {
-  if (c.get('user').role !== 'admin') return c.json({ error: 'solo admin' }, 403)
+app.get('/api/config/tedee', auth.requireAdmin(prodDb, demoDb), (c) => {
   const { url, token } = tedeeConfig(prodDb)
   return c.json({ url, hasToken: Boolean(token) })
 })
 
 const tedeeSchema = z.object({ url: z.string().url().or(z.literal('')), token: z.string().optional() })
-app.put('/api/config/tedee', auth.requireAuth(prodDb, demoDb), async (c) => {
-  if (c.get('user').role !== 'admin') return c.json({ error: 'solo admin' }, 403)
+app.put('/api/config/tedee', auth.requireAdmin(prodDb, demoDb), async (c) => {
   const body = await c.req.json().catch(() => null)
   const parsed = tedeeSchema.safeParse(body)
   if (!parsed.success) return c.json({ error: 'formato inválido' }, 400)
@@ -191,8 +240,7 @@ app.get('/api/tedee/test', auth.requireAuth(prodDb, demoDb), async (c) => {
 
 /* Toggle modo demo (solo admin de producción) */
 const demoSchema = z.object({ enabled: z.boolean() })
-app.put('/api/config/demo', auth.requireAuth(prodDb, demoDb), async (c) => {
-  if (c.get('user').role !== 'admin') return c.json({ error: 'solo admin' }, 403)
+app.put('/api/config/demo', auth.requireAdmin(prodDb, demoDb), async (c) => {
   const body = await c.req.json().catch(() => null)
   const parsed = demoSchema.safeParse(body)
   if (!parsed.success) return c.json({ error: 'formato inválido' }, 400)
