@@ -1,23 +1,31 @@
 import crypto from 'node:crypto'
 import { fetchIcs, icsToReservations, parseIcs } from './ical.js'
-import { kvSet } from './db.js'
+import { kvGet, kvSet } from './db.js'
 
 /**
  * Sincroniza las reservas de todos los inmuebles con ical_url.
  * Estrategia: reemplazo completo por inmueble (los uid que ya no vienen se borran).
  * Devuelve stats por inmueble para mostrar en la UI.
+ * onNews(nombreInmueble, items): reservas con uid NUEVO (no estaban en BD).
+ * NUNCA se llama en el primer sync OK del inmueble (import inicial = todo
+ * "nuevo" → anti-spam; se detecta por el kv sync_<id> con ok previo).
  */
-export async function syncAll(db) {
+export async function syncAll(db, { onNews } = {}) {
   const props = db.prepare("SELECT id, name, ical_url FROM properties WHERE ical_url != ''").all()
   const results = []
   for (const p of props) {
     const key = `sync_${p.id}`
+    let prevOk = false
+    try {
+      prevOk = JSON.parse(kvGet(db, key) || '{}').ok === true
+    } catch { /* noop */ }
     try {
       const text = await fetchIcs(p.ical_url)
       const events = parseIcs(text)
       const items = icsToReservations(events)
       const now = Date.now()
       const seen = new Set(items.map((i) => i.uid))
+      const prevUids = new Set(db.prepare('SELECT uid FROM reservations WHERE property_id = ?').all(p.id).map((r) => r.uid))
 
       const upsert = db.prepare(`
         INSERT INTO reservations (id, property_id, uid, checkin, checkout, summary, confirmation_code, phone_last4, created_at)
@@ -43,6 +51,10 @@ export async function syncAll(db) {
         }
       })
       tx()
+      if (onNews && prevOk) {
+        const news = items.filter((i) => !prevUids.has(i.uid))
+        if (news.length > 0) onNews(p.name, news)
+      }
       const status = { ok: true, at: now, count: items.length }
       kvSet(db, key, JSON.stringify(status))
       results.push({ propertyId: p.id, name: p.name, ...status })

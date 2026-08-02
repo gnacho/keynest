@@ -228,13 +228,31 @@ export default function Ajustes() {
 
   const [tedeeUrl, setTedeeUrl] = useState('');
   const [tedeeToken, setTedeeToken] = useState('');
-  const [tedeeState, setTedeeState] = useState<{ state: 'idle' | 'checking' | 'ok' | 'error'; text?: string }>({ state: 'idle' });
+  const [tedeeState, setTedeeState] = useState<{ state: 'idle' | 'checking' | 'ok' | 'error'; text?: string; locks?: { name: string; battery: number; online: boolean }[] }>({ state: 'idle' });
+  const [tedeeConfigured, setTedeeConfigured] = useState(false);
+  const [tedeeEditOpen, setTedeeEditOpen] = useState(false);
   useEffect(() => {
     void demoStatus().then(setDemoOn);
     void checkUpdate();
-    void api<{ url: string }>('/api/config/tedee')
-      .then((d) => { if (d?.url) setTedeeUrl(d.url); })
+    void api<{ url: string; hasToken: boolean }>('/api/config/tedee')
+      .then(async (d) => {
+        if (!d?.url) return;
+        setTedeeConfigured(Boolean(d.hasToken));
+        // Comprobación de salud al entrar (sin mostrar campos si está configurada)
+        setTedeeState({ state: 'checking' });
+        try {
+          const test = await api<{ ok: boolean; locks?: { name: string; battery: number; online: boolean }[]; code?: string }>('/api/tedee/test');
+          if (test.ok) {
+            setTedeeState({ state: 'ok', locks: test.locks ?? [] });
+          } else {
+            setTedeeState({ state: 'error', text: tr('aj.tedeeErrFetch') });
+          }
+        } catch {
+          setTedeeState({ state: 'error', text: tr('aj.tedeeErrFetch') });
+        }
+      })
       .catch(() => undefined);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const saveTedee = async () => {
@@ -244,9 +262,13 @@ export default function Ajustes() {
         method: 'PUT',
         body: JSON.stringify({ url: tedeeUrl.trim(), token: tedeeToken.trim() }),
       });
-      const test = await api<{ ok: boolean; locks?: { name: string }[]; code?: string }>('/api/tedee/test');
+      const test = await api<{ ok: boolean; locks?: { name: string; battery: number; online: boolean }[]; code?: string }>('/api/tedee/test');
       if (test.ok) {
-        setTedeeState({ state: 'ok', text: tr('aj.tedeeOk', { count: (test.locks ?? []).length, names: (test.locks ?? []).map((l: { name: string }) => l.name).join(', ') }) });
+        setTedeeState({ state: 'ok', locks: test.locks ?? [] });
+        setTedeeConfigured(true);
+        setTedeeEditOpen(false);
+        setTedeeUrl('');
+        setTedeeToken('');
         toast.success(tr('aj.tedeeGuardado'));
       } else if (test.code === 'not-configured') {
         setTedeeState({ state: 'error', text: tr('aj.tedeeErrConfig') });
@@ -1096,47 +1118,92 @@ export default function Ajustes() {
               </Card>
               )}
 
-              {/* Conexión Tedee (solo admin) */}
+              {/* Conexión Tedee (solo admin): estado de salud sin campos visibles;
+                  la tuerca permite cambiar la API (muy poco habitual) con re-test */}
               {isAdmin && (
                 <Card title={tr('aj.tedeeApi')} desc={tr('aj.tedeeApiDesc')}>
-                  <div className="grid gap-2 sm:grid-cols-[1fr_1fr_auto]">
-                    <input
-                      value={tedeeUrl}
-                      onChange={(e) => setTedeeUrl(e.target.value)}
-                      placeholder={tr('aj.tedeeUrlPlaceholder')}
-                      aria-label={tr('aj.tedeeUrl')}
-                      className={cn(inputCls, 'w-full')}
-                      style={inputStyle}
-                    />
-                    <input
-                      type="password"
-                      value={tedeeToken}
-                      onChange={(e) => setTedeeToken(e.target.value)}
-                      placeholder={tr('aj.tedeeToken')}
-                      aria-label={tr('aj.tedeeToken')}
-                      className={cn(inputCls, 'w-full')}
-                      style={inputStyle}
-                    />
+                  {/* Estado de salud */}
+                  <div className="flex items-center gap-2.5">
+                    {tedeeState.state === 'checking' && (
+                      <span className="flex items-center gap-2 text-[13px] font-medium" style={{ color: 'var(--text-muted)' }}>
+                        <RefreshCw className="h-4 w-4 animate-spin" />
+                        {tr('aj.tedeeComprobando')}
+                      </span>
+                    )}
+                    {tedeeState.state === 'ok' && (
+                      <span className="flex min-w-0 flex-1 items-start gap-2">
+                        <span className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-emerald-500" />
+                        <span className="text-[13px]">
+                          <span className="font-semibold text-emerald-500">{tr('aj.tedeeConectada')}</span>
+                          {tedeeState.locks && tedeeState.locks.length > 0 && (
+                            <span style={{ color: 'var(--text-muted)' }}>
+                              {' · '}
+                              {tr('aj.tedeeCerraduras', { count: tedeeState.locks.length })}
+                              {': '}
+                              {tedeeState.locks.map((l) => `${l.name} (${l.battery}%)`).join(', ')}
+                            </span>
+                          )}
+                        </span>
+                      </span>
+                    )}
+                    {tedeeState.state === 'error' && (
+                      <span className="flex items-center gap-1.5 text-[13px] font-medium text-rose-500">
+                        <Ban className="h-4 w-4" />
+                        {tedeeState.text}
+                      </span>
+                    )}
+                    {tedeeState.state === 'idle' && !tedeeConfigured && (
+                      <span className="text-[13px]" style={{ color: 'var(--text-muted)' }}>
+                        {tr('aj.tedeeSinConfigurar')}
+                      </span>
+                    )}
                     <button
                       type="button"
-                      disabled={!tedeeUrl.trim() || tedeeState.state === 'checking'}
-                      onClick={() => void saveTedee()}
-                      className="brand-gradient flex h-10 items-center justify-center rounded-xl px-4 text-xs font-semibold text-white disabled:opacity-50"
+                      aria-label={tr('aj.tedeeCambiar')}
+                      title={tr('aj.tedeeCambiar')}
+                      onClick={() => setTedeeEditOpen((v) => !v)}
+                      className="ml-auto flex h-8 w-8 shrink-0 items-center justify-center rounded-lg transition-colors hover:bg-[var(--surface-2)]"
+                      style={{ color: 'var(--text-faint)' }}
                     >
-                      {tedeeState.state === 'checking' ? tr('aj.probando') : tr('aj.tedeeGuardar')}
+                      <Settings2 className="h-4 w-4" />
                     </button>
                   </div>
-                  {tedeeState.state === 'ok' && (
-                    <p className="flex items-center gap-1.5 text-xs font-medium text-emerald-500">
-                      <Check className="h-3.5 w-3.5" />
-                      {tedeeState.text}
-                    </p>
-                  )}
-                  {tedeeState.state === 'error' && (
-                    <p className="flex items-center gap-1.5 text-xs font-medium text-rose-500">
-                      <Ban className="h-3.5 w-3.5" />
-                      {tedeeState.text}
-                    </p>
+
+                  {/* Formulario (oculto cuando está configurada y sana) */}
+                  {(!tedeeConfigured || tedeeEditOpen) && (
+                    <div className="flex flex-col gap-2">
+                      <div className="grid gap-2 sm:grid-cols-[1fr_1fr_auto]">
+                        <input
+                          value={tedeeUrl}
+                          onChange={(e) => setTedeeUrl(e.target.value)}
+                          placeholder={tr('aj.tedeeUrlPlaceholder')}
+                          aria-label={tr('aj.tedeeUrl')}
+                          className={cn(inputCls, 'w-full')}
+                          style={inputStyle}
+                        />
+                        <input
+                          type="password"
+                          value={tedeeToken}
+                          onChange={(e) => setTedeeToken(e.target.value)}
+                          placeholder={tr('aj.tedeeToken')}
+                          aria-label={tr('aj.tedeeToken')}
+                          autoComplete="new-password"
+                          className={cn(inputCls, 'w-full')}
+                          style={inputStyle}
+                        />
+                        <button
+                          type="button"
+                          disabled={!tedeeUrl.trim() || tedeeState.state === 'checking'}
+                          onClick={() => void saveTedee()}
+                          className="brand-gradient flex h-10 items-center justify-center rounded-xl px-4 text-xs font-semibold text-white disabled:opacity-50"
+                        >
+                          {tedeeState.state === 'checking' ? tr('aj.probando') : tr('aj.tedeeGuardar')}
+                        </button>
+                      </div>
+                      <p className="text-[11px]" style={{ color: 'var(--text-faint)' }}>
+                        {tr('aj.tedeeNotaSeguridad')}
+                      </p>
+                    </div>
                   )}
                 </Card>
               )}

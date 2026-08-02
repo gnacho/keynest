@@ -13,6 +13,9 @@ import { seedDemo } from './seed-demo.js'
 import { saveTedeeConfig, tedeeConfig, tedeeLocks } from './tedee.js'
 import { applyUpdate, updateStatus } from './update.js'
 import { importAirbnb, parseAirbnbCsv } from './import-airbnb.js'
+import { configurePush, flushNotificationQueue } from './push.js'
+import { registerPushRoutes } from './routes-push.js'
+import * as alerts from './alerts.js'
 
 const DEFAULT_CATEGORIES = [
   { key: 'cerradura/pilas', label: 'Cerradura/pilas', icon: 'lock' },
@@ -30,6 +33,9 @@ const envSchema = z.object({
   AUTH_USER: z.string().min(1),
   AUTH_PASS: z.string().min(6),
   SYNC_INTERVAL_MS: z.coerce.number().int().min(60000).default(15 * 60 * 1000),
+  VAPID_PUBLIC_KEY: z.string().optional(),
+  VAPID_PRIVATE_KEY: z.string().optional(),
+  VAPID_SUBJECT: z.string().optional(),
 })
 const env = envSchema.parse(process.env) // fail-fast si falta algo crítico
 const config = {
@@ -46,6 +52,11 @@ const demoDb = openDb(config.dataDir, 'keynest_demo.db')
 seedDemo(demoDb)
 await auth.ensureBootstrapAdmin(prodDb, config)
 auth.cleanExpiredSessions(prodDb)
+configurePush({
+  publicKey: process.env.VAPID_PUBLIC_KEY,
+  privateKey: process.env.VAPID_PRIVATE_KEY,
+  subject: process.env.VAPID_SUBJECT,
+})
 
 const app = new Hono()
 
@@ -277,6 +288,7 @@ app.put('/api/config/demo', auth.requireAdmin(prodDb, demoDb), async (c) => {
 /* ------------------------------------------------------------------ data API */
 const guarded = new Hono()
 guarded.use('*', auth.requireAuth(prodDb, demoDb))
+registerPushRoutes(guarded)
 
 guarded.get('/bootstrap', (c) => {
   const db = c.get('db')
@@ -897,12 +909,13 @@ guarded.post('/properties/:id/photo', async (c) => {
 })
 
 let syncing = false
+const onSyncNews = (prop, items) => alerts.notifyReservasNuevas(prodDb, prop, items)
 guarded.post('/sync', async (c) => {
   if (c.get('user').is_demo) return c.json({ ok: true, results: [] })
   if (syncing) return c.json({ error: 'ya hay una sincronización en curso' }, 409)
   syncing = true
   try {
-    const results = await syncAll(prodDb)
+    const results = await syncAll(prodDb, { onNews: onSyncNews })
     return c.json({ ok: true, results })
   } finally {
     syncing = false
@@ -934,13 +947,22 @@ app.get('*', (c) => {
 })
 
 /* ------------------------------------------------------------------- jobs */
-const runSync = () => syncAll(prodDb).catch((e) => console.error('[sync] error job:', e.message))
+const runSync = () => syncAll(prodDb, { onNews: onSyncNews }).catch((e) => console.error('[sync] error job:', e.message))
 setTimeout(runSync, 5000) // sync inicial al arrancar
 setInterval(runSync, config.syncIntervalMs)
 setInterval(() => auth.cleanExpiredSessions(prodDb), 3600 * 1000)
 setInterval(() => {
   try { prodDb.pragma('wal_checkpoint(TRUNCATE)'); demoDb.pragma('wal_checkpoint(TRUNCATE)') } catch { /* noop */ }
+  flushNotificationQueue(prodDb).catch((err) => console.error('[keynest] flush cola push error:', err.message))
 }, 3600 * 1000)
+
+/* Alertas push: Tedee cada 5 min (anti-rebote 3 ticks), reservas del día a
+ * las 09:00 y limpiezas pendientes a las 12:00 (hora local del CT). */
+const tedeeChecker = alerts.createTedeeChecker({ db: prodDb })
+setTimeout(() => tedeeChecker.check().catch((e) => console.error('[keynest] tedee check error:', e.message)), 10000)
+setInterval(() => tedeeChecker.check().catch((e) => console.error('[keynest] tedee check error:', e.message)), 5 * 60 * 1000)
+alerts.scheduleDaily(9, () => alerts.checkReservasHoy(prodDb), 'reservas-hoy')
+alerts.scheduleDaily(12, () => alerts.checkLimpiezas(prodDb), 'limpiezas-pendientes')
 
 serve({ fetch: app.fetch, port: config.port }, (info) => {
   console.log(`[keynest] escuchando en :${info.port} (static: ${config.staticDir}, data: ${config.dataDir})`)

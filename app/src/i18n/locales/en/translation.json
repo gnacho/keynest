@@ -726,7 +726,13 @@
     "proveedores": "Providers",
     "proveedor": "Provider",
     "equipoProveedores": "Providers team",
-    "tedeeUrlPlaceholder": "http://192.168.1.111 or https://api.tedee.com"
+    "tedeeUrlPlaceholder": "http://192.168.1.111 or https://api.tedee.com",
+    "tedeeComprobando": "Checking connection…",
+    "tedeeConectada": "Connected",
+    "tedeeCerraduras": "{{count}} locks",
+    "tedeeSinConfigurar": "Not configured — enter URL and token to connect.",
+    "tedeeCambiar": "Change the Tedee API",
+    "tedeeNotaSeguridad": "The token is stored encrypted on the server and never shown here. The connection is tested on save."
   },
   "common2": {
     "confirmar": "Confirm",

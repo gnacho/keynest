@@ -12,6 +12,7 @@
     "bcryptjs": "^3.0.2",
     "better-sqlite3": "^12.2.0",
     "hono": "^4.8.0",
+    "web-push": "^3.6.7",
     "zod": "^4.0.0"
   },
   "allowScripts": {
