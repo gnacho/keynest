@@ -32,6 +32,8 @@ const MIGRATIONS = [
    UPDATE people SET token_hash = NULL WHERE role != 'limpieza'`,
   // 8: fecha REAL de reserva (CSV Airbnb 预订日期; '' = desconocida, p.ej. iCal)
   `ALTER TABLE reservations ADD COLUMN booked_date TEXT DEFAULT ''`,
+  // 9: cerradura Tedee asociada a cada inmueble (id de lock cloud/bridge)
+  `ALTER TABLE properties ADD COLUMN tedee_lock_id INTEGER`,
 ]
 
 export function migrate(db) {

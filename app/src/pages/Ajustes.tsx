@@ -60,6 +60,7 @@ import { catIcon, CAT_ICONS } from '@/lib/cat-icons';
 import { AppearanceCard, AboutCard, Card, SessionCard } from '@/components/settings/settings-cards';
 import UsersManager from '@/components/settings/UsersManager';
 import ImportAirbnbCard from '@/components/settings/ImportAirbnbCard';
+import NotificationsCard from '@/components/settings/NotificationsCard';
 import type { MaintCategory } from '@/data/types';
 import type { ExpenseType, Person, PersonRole } from '@/data/types';
 import { fmtDateShort, fmtMoney, fmtRelative } from '@/lib/format';
@@ -1256,6 +1257,7 @@ export default function Ajustes() {
               {isAdmin && <ImportAirbnbCard />}
 
               <SessionCard isDemo={isDemoUser} />
+              <NotificationsCard />
               <AboutCard />
             </div>
           )}
