@@ -786,5 +786,16 @@
     "guardando": "Guardando…",
     "finalizadaOk": "Trabajo finalizado · Coste: {{cost}}",
     "reabrir": "Reabrir orden"
+  },
+  "time": {
+    "ahora": "ahora",
+    "haceMin": "hace {{n}} min",
+    "enMin": "en {{n}} min",
+    "haceH": "hace {{n}} h",
+    "enH": "en {{n}} h",
+    "ayer": "ayer",
+    "manana": "mañana",
+    "haceDias": "hace {{n}} días",
+    "enDias": "en {{n}} días"
   }
 }

@@ -786,5 +786,16 @@
     "guardando": "Saving…",
     "finalizadaOk": "Work finished · Cost: {{cost}}",
     "reabrir": "Reopen order"
+  },
+  "time": {
+    "ahora": "now",
+    "haceMin": "{{n}} min ago",
+    "enMin": "in {{n}} min",
+    "haceH": "{{n}} h ago",
+    "enH": "in {{n}} h",
+    "ayer": "yesterday",
+    "manana": "tomorrow",
+    "haceDias": "{{n}} days ago",
+    "enDias": "in {{n}} days"
   }
 }
