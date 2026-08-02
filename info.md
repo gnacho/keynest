@@ -1,4 +1,4 @@
-# Research / Spec — PWA Gestor de Inmuebles Airbnb (MOCKUP)
+# Research / Spec — PWA Gestor de inmuebles de alquiler (MOCKUP)
 
 Mockup navegable frontend-only con datos mock realistas y coherentes (KPIs computados desde los datos, nunca hardcodeados; mock determinista con semilla). Idioma de la UI: español (es-ES). Formato números: coma decimal, miles con punto, moneda EUR.
 

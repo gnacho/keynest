@@ -1,4 +1,4 @@
-# Plan — Mockup PWA "Gestor de Inmuebles Airbnb"
+# Plan — Mockup PWA "Gestor de inmuebles de alquiler"
 
 ## Objetivo
 Mockup navegable (frontend-only, datos mock deterministas) de la PWA de gestión de inmuebles Airbnb,
