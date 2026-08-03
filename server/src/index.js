@@ -67,7 +67,7 @@ app.use('*', async (c, next) => {
   c.header('Referrer-Policy', 'strict-origin-when-cross-origin')
   c.header('Permissions-Policy', 'geolocation=(), microphone=(), camera=()')
   c.header('Strict-Transport-Security', 'max-age=31536000; includeSubDomains')
-  c.header('Content-Security-Policy', "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'")
+  c.header('Content-Security-Policy', "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self'")
   await next()
 })
 
@@ -904,7 +904,7 @@ guarded.post('/properties/:id/photo', async (c) => {
   const photoPath = `/photos/${filename}`
   db.prepare('UPDATE properties SET photo = ? WHERE id = ?').run(photoPath, existing.id)
   const property = db.prepare('SELECT * FROM properties WHERE id = ?').get(existing.id)
-  aud(c, 'update', 'property', existing.id, d.name)
+  aud(c, 'update', 'property', existing.id, existing.name)
   return c.json({ ok: true, property: { ...property, checklist: JSON.parse(property.checklist) } })
 })
 
