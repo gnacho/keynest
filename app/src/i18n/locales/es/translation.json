@@ -753,7 +753,12 @@
     "tedeeCerraduras": "{{count}} cerraduras",
     "tedeeSinConfigurar": "Sin configurar — introduce la URL y el token para conectar.",
     "tedeeCambiar": "Cambiar la API de Tedee",
-    "tedeeNotaSeguridad": "El token se guarda cifrado en el servidor y nunca se muestra aquí. Al guardar se comprueba la conexión."
+    "tedeeNotaSeguridad": "El token se guarda cifrado en el servidor y nunca se muestra aquí. Al guardar se comprueba la conexión.",
+    "recortarFoto": "Recortar foto",
+    "recortarFotoDesc": "Arrastra para encuadrar y usa el zoom. Se guarda en formato 4:3 (WebP) para verse bien en todas las vistas.",
+    "zoom": "Zoom",
+    "zonaAdmin": "Administración",
+    "zonaAdminDesc": "Opciones sensibles: solo los administradores pueden cambiarlas"
   },
   "common2": {
     "confirmar": "Confirmar",

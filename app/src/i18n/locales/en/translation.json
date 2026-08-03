@@ -753,7 +753,12 @@
     "tedeeCerraduras": "{{count}} locks",
     "tedeeSinConfigurar": "Not configured — enter URL and token to connect.",
     "tedeeCambiar": "Change the Tedee API",
-    "tedeeNotaSeguridad": "The token is stored encrypted on the server and never shown here. The connection is tested on save."
+    "tedeeNotaSeguridad": "The token is stored encrypted on the server and never shown here. The connection is tested on save.",
+    "recortarFoto": "Crop photo",
+    "recortarFotoDesc": "Drag to frame and use the zoom. Saved in 4:3 (WebP) so it looks good in every view.",
+    "zoom": "Zoom",
+    "zonaAdmin": "Administration",
+    "zonaAdminDesc": "Sensitive options: only administrators can change them"
   },
   "common2": {
     "confirmar": "Confirm",

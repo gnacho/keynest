@@ -21,6 +21,7 @@ import {
   RefreshCw,
   Ruler,
   Settings2,
+  ShieldCheck,
   Sparkles,
   Trash2,
   TrendingUp,
@@ -33,6 +34,7 @@ import type { LucideIcon } from 'lucide-react';
 import { toast } from 'sonner';
 import ConfirmDialog from '@/components/ConfirmDialog';
 import PersonAvatar from '@/components/PersonAvatar';
+import PhotoCropDialog from '@/components/PhotoCropDialog';
 import { Toaster } from '@/components/ui/sonner';
 import {
   Dialog,
@@ -134,13 +136,23 @@ export default function Ajustes() {
   const [editProp, setEditProp] = useState<string | 'new' | null>(null);
   const [icalCheck, setIcalCheck] = useState<{ state: 'idle' | 'checking' | 'ok' | 'error'; count?: number; code?: string; status?: number }>({ state: 'idle' });
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
+  const [cropFile, setCropFile] = useState<File | null>(null);
   const photoInputRef = useRef<HTMLInputElement>(null);
 
-  const handlePhotoPick = async (file: File | undefined) => {
+  const handlePhotoPick = (file: File | undefined) => {
     if (!file || !editProp || editProp === 'new') return;
+    setCropFile(file); // abre el diálogo de recorte
+  };
+
+  /** Recorte confirmado: el diálogo devuelve un WebP 800×600 (fallback JPEG). */
+  const uploadCroppedPhoto = async (blob: Blob) => {
+    if (!editProp || editProp === 'new') return;
     setUploadingPhoto(true);
     try {
-      await data.uploadPropertyPhoto(editProp, file);
+      const ext = blob.type === 'image/webp' ? 'webp' : 'jpg';
+      const file = new File([blob], `foto-${editProp}.${ext}`, { type: blob.type });
+      const updated = await data.uploadPropertyPhoto(editProp, file);
+      if (!updated) throw new Error('upload');
       toast.success(tr('aj.fotoOk'));
     } catch {
       toast.error(tr('aj.fotoError'));
@@ -1041,11 +1053,38 @@ export default function Ajustes() {
           {/* ================================================= TAB PREFERENCIAS */}
           {tab === 'preferencias' && (
             <div className="flex flex-col gap-4">
-              <AppearanceCard />
+              {/* Zona general (todos los usuarios). En vista amplia, grid de 2
+                  columnas emparejadas por altura (webapp-shell, 2-Ago-2026):
+                  [Apariencia | Notificaciones] · [Mi sesión | Acerca de].
+                  items-start: prohibido estirar la tarjeta corta. */}
+              <div className="grid items-start gap-4 2xl:grid-cols-2">
+                <AppearanceCard />
+                <NotificationsCard />
+                <SessionCard isDemo={isDemoUser} />
+                <AboutCard />
+              </div>
 
-              {/* Operativa: preferencias de dominio (solo admin, globales) */}
+              {/* ============================== ZONA ADMIN (solo administradores)
+                  Cabecera de ZONA (no es una tarjeta) con tinte ámbar sutil según
+                  webapp-shell; agrupa todo lo que un usuario normal no puede tocar. */}
               {isAdmin && (
-              <Card title={tr('aj.operativa')} desc={tr('aj.operativaDesc')}>
+                <div
+                  className="flex flex-col gap-4 rounded-2xl border p-4 sm:p-5"
+                  style={{ borderColor: 'rgb(var(--warn-rgb) / 0.35)', backgroundColor: 'rgb(var(--warn-rgb) / 0.04)' }}
+                >
+                  <header className="flex items-start gap-2.5">
+                    <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0" style={{ color: 'rgb(var(--warn-rgb))' }} />
+                    <div>
+                      <h2 className="font-display text-[15px] font-semibold tracking-[-0.01em]">{tr('aj.zonaAdmin')}</h2>
+                      <p className="text-xs" style={{ color: 'var(--text-muted)' }}>{tr('aj.zonaAdminDesc')}</p>
+                    </div>
+                  </header>
+
+                  {/* Grid de 2 columnas en vista amplia: [Operativa | Tedee]
+                      [Actualizaciones | Importar Airbnb]; Usuarios a ancho completo */}
+                  <div className="grid items-start gap-4 2xl:grid-cols-2">
+                  {/* Operativa: preferencias de dominio (solo admin, globales) */}
+                  <Card title={tr('aj.operativa')} desc={tr('aj.operativaDesc')}>
                 <div className="flex flex-col divide-y" style={{ borderColor: 'var(--border)' }}>
                   {/* Horarios */}
                   <div className="flex min-h-14 flex-wrap items-center justify-between gap-3 py-3" style={{ borderColor: 'var(--border)' }}>
@@ -1116,13 +1155,11 @@ export default function Ajustes() {
                     </div>
                   </div>
                 </div>
-              </Card>
-              )}
+                  </Card>
 
-              {/* Conexión Tedee (solo admin): estado de salud sin campos visibles;
-                  la tuerca permite cambiar la API (muy poco habitual) con re-test */}
-              {isAdmin && (
-                <Card title={tr('aj.tedeeApi')} desc={tr('aj.tedeeApiDesc')}>
+                  {/* Conexión Tedee: estado de salud sin campos visibles;
+                      la tuerca permite cambiar la API (muy poco habitual) con re-test */}
+                  <Card title={tr('aj.tedeeApi')} desc={tr('aj.tedeeApiDesc')}>
                   {/* Estado de salud */}
                   <div className="flex items-center gap-2.5">
                     {tedeeState.state === 'checking' && (
@@ -1206,12 +1243,10 @@ export default function Ajustes() {
                       </p>
                     </div>
                   )}
-                </Card>
-              )}
+                  </Card>
 
-              {/* Administración (solo admin): actualizaciones + modo demo */}
-              {isAdmin && (
-                <Card title={tr('aj.administracion')}>
+                  {/* Actualizaciones + modo demo */}
+                  <Card title={tr('aj.administracion')}>
                   <div className="flex min-h-10 flex-wrap items-center justify-between gap-3">
                     <div>
                       <p className="text-sm font-semibold">{tr('aj.actualizaciones')}</p>
@@ -1247,18 +1282,19 @@ export default function Ajustes() {
                     </div>
                     <Switch checked={demoOn} onCheckedChange={toggleDemo} />
                   </div>
-                </Card>
+                  </Card>
+
+                  {/* Importar CSV de Airbnb */}
+                  <ImportAirbnbCard />
+
+                  {/* Usuarios: tabla alta → ancho completo también en vista amplia
+                      (excepción de la regla de ½ ancho, webapp-shell) */}
+                  <div className="2xl:col-span-2">
+                    <UsersManager />
+                  </div>
+                  </div>
+                </div>
               )}
-
-              {/* Usuarios (solo admin): gestión de cuentas de la app */}
-              {isAdmin && <UsersManager />}
-
-              {/* Importar CSV de Airbnb (solo admin) */}
-              {isAdmin && <ImportAirbnbCard />}
-
-              <SessionCard isDemo={isDemoUser} />
-              <NotificationsCard />
-              <AboutCard />
             </div>
           )}
         </motion.div>
@@ -1284,10 +1320,10 @@ export default function Ajustes() {
                 <input
                   ref={photoInputRef}
                   type="file"
-                  accept="image/jpeg,image/png,image/webp"
+                  accept="image/*"
                   className="hidden"
                   onChange={(e) => {
-                    void handlePhotoPick(e.target.files?.[0]);
+                    handlePhotoPick(e.target.files?.[0]);
                     e.target.value = '';
                   }}
                 />
@@ -1438,6 +1474,16 @@ export default function Ajustes() {
           )}
         </DialogContent>
       </Dialog>
+
+      {/* ============================== Dialog recorte de foto (4:3 → WebP) */}
+      {cropFile && (
+        <PhotoCropDialog
+          file={cropFile}
+          open={!!cropFile}
+          onClose={() => setCropFile(null)}
+          onSave={uploadCroppedPhoto}
+        />
+      )}
 
       {/* ============================== Dialog edición persona */}
       <Dialog open={!!editPerson} onOpenChange={(o) => !o && setEditPerson(null)}>
