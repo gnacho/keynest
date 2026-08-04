@@ -758,7 +758,21 @@
     "recortarFotoDesc": "Drag to frame and use the zoom. Saved in 4:3 (WebP) so it looks good in every view.",
     "zoom": "Zoom",
     "zonaAdmin": "Administration",
-    "zonaAdminDesc": "Sensitive options: only administrators can change them"
+    "zonaAdminDesc": "Sensitive options: only administrators can change them",
+    "backup": "Backups",
+    "backupDesc": "Automatic daily database backup with configurable retention",
+    "backupAuto": "Automatic backup",
+    "backupAutoDesc": "Creates a backup every day at 03:00",
+    "retencion": "Retention",
+    "retencionDesc": "Days to keep backups",
+    "dias": "days",
+    "ultimoBackup": "Last backup",
+    "nunca": "Never",
+    "ejecutarAhora": "Run now",
+    "ejecutando": "Running…",
+    "backupGuardado": "Settings saved",
+    "backupCreado": "Backup created successfully",
+    "backupError": "Error creating backup"
   },
   "common2": {
     "confirmar": "Confirm",

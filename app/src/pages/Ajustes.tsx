@@ -63,6 +63,7 @@ import { AppearanceCard, AboutCard, Card, SessionCard } from '@/components/setti
 import UsersManager from '@/components/settings/UsersManager';
 import ImportAirbnbCard from '@/components/settings/ImportAirbnbCard';
 import NotificationsCard from '@/components/settings/NotificationsCard';
+import BackupCard from '@/components/settings/BackupCard';
 import type { MaintCategory } from '@/data/types';
 import type { ExpenseType, Person, PersonRole } from '@/data/types';
 import { fmtDateShort, fmtMoney, fmtRelative } from '@/lib/format';
@@ -1283,6 +1284,9 @@ export default function Ajustes() {
                     <Switch checked={demoOn} onCheckedChange={toggleDemo} />
                   </div>
                   </Card>
+
+                  {/* Backups automáticos */}
+                  <BackupCard />
 
                   {/* Importar CSV de Airbnb */}
                   <ImportAirbnbCard />

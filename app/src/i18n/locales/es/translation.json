@@ -758,7 +758,21 @@
     "recortarFotoDesc": "Arrastra para encuadrar y usa el zoom. Se guarda en formato 4:3 (WebP) para verse bien en todas las vistas.",
     "zoom": "Zoom",
     "zonaAdmin": "Administración",
-    "zonaAdminDesc": "Opciones sensibles: solo los administradores pueden cambiarlas"
+    "zonaAdminDesc": "Opciones sensibles: solo los administradores pueden cambiarlas",
+    "backup": "Copias de seguridad",
+    "backupDesc": "Backup automático diario de la base de datos con retención configurable",
+    "backupAuto": "Backup automático",
+    "backupAutoDesc": "Crea una copia cada día a las 03:00",
+    "retencion": "Retención",
+    "retencionDesc": "Días que se mantienen los backups",
+    "dias": "días",
+    "ultimoBackup": "Último backup",
+    "nunca": "Nunca",
+    "ejecutarAhora": "Ejecutar ahora",
+    "ejecutando": "Ejecutando…",
+    "backupGuardado": "Configuración guardada",
+    "backupCreado": "Backup creado correctamente",
+    "backupError": "Error al crear el backup"
   },
   "common2": {
     "confirmar": "Confirmar",
