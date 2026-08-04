@@ -112,6 +112,7 @@ export default function PhotoLightbox({ photos, index, onIndexChange }: PhotoLig
             animate={{ opacity: 1, scale: 1 }}
             transition={{ duration: 0.18 }}
             onClick={(e) => e.stopPropagation()}
+            onError={(e) => { (e.target as HTMLImageElement).src = 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="400" height="300" fill="%2394a3b8"><rect width="400" height="300" rx="16" fill="%23182338"/><text x="200" y="165" text-anchor="middle" font-size="48">?</text></svg>'; }}
           />
 
           {photos.length > 1 && (

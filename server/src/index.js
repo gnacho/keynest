@@ -1027,13 +1027,45 @@ app.get('*', (c) => {
 })
 
 /* ------------------------------------------------------------------- jobs */
+/* Borrado de fotos de limpieza expiradas (> 1 mes desde la fecha de limpieza).
+ * Las fotos se conservan 1 mes como indica la UI; tras ese plazo se borran
+ * los ficheros de disco y se limpia el array photos en la BD. */
+function purgeExpiredPhotos(db, dataDir) {
+  const photosDir = join(dataDir, 'photos')
+  const now = new Date()
+  const cutoff = new Date(now)
+  cutoff.setMonth(cutoff.getMonth() - 1)
+  const cutoffStr = cutoff.toISOString().slice(0, 10) // YYYY-MM-DD
+
+  const expired = db.prepare(
+    "SELECT id, photos FROM cleanings WHERE date < ? AND photos != '[]'"
+  ).all(cutoffStr)
+
+  let deleted = 0
+  for (const c of expired) {
+    const photos = JSON.parse(c.photos || '[]')
+    for (const p of photos) {
+      const filename = p.replace('/photos/', '')
+      const filepath = join(photosDir, filename)
+      try { if (existsSync(filepath)) { unlinkSync(filepath); deleted++ } } catch { /* noop */ }
+    }
+    db.prepare("UPDATE cleanings SET photos = '[]' WHERE id = ?").run(c.id)
+  }
+  if (expired.length > 0) {
+    console.log(`[photos] purgado: ${expired.length} limpiezas, ${deleted} ficheros`)
+  }
+  return { cleanings: expired.length, files: deleted }
+}
+
 const runSync = () => syncAll(prodDb, { onNews: onSyncNews }).catch((e) => console.error('[sync] error job:', e.message))
 setTimeout(runSync, 5000) // sync inicial al arrancar
+try { purgeExpiredPhotos(prodDb, config.dataDir) } catch { /* noop */ } // purge fotos expiradas al arrancar
 setInterval(runSync, config.syncIntervalMs)
 setInterval(() => auth.cleanExpiredSessions(prodDb), 3600 * 1000)
 setInterval(() => {
   try { prodDb.pragma('wal_checkpoint(TRUNCATE)'); demoDb.pragma('wal_checkpoint(TRUNCATE)') } catch { /* noop */ }
   flushNotificationQueue(prodDb).catch((err) => console.error('[keynest] flush cola push error:', err.message))
+  try { purgeExpiredPhotos(prodDb, config.dataDir) } catch (err) { console.error('[keynest] purge photos error:', err.message) }
 }, 3600 * 1000)
 
 /* Alertas push: Tedee cada 5 min (anti-rebote 3 ticks), reservas del día a

@@ -48,7 +48,12 @@ export default function CleaningPhotos({ photos, onUpload, onRemove }: CleaningP
               className="block h-16 w-16 overflow-hidden rounded-xl border transition-transform duration-150 hover:-translate-y-0.5"
               style={{ borderColor: 'var(--border)' }}
             >
-              <img src={src} alt={t('tareas.foto', { n: i + 1 })} className="h-full w-full object-cover" />
+              <img
+                src={src}
+                alt={t('tareas.foto', { n: i + 1 })}
+                className="h-full w-full object-cover"
+                onError={(e) => { (e.target as HTMLImageElement).src = 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" fill="%2394a3b8"><rect width="64" height="64" rx="8" fill="%23eef1f6"/><text x="32" y="38" text-anchor="middle" font-size="24">?</text></svg>'; }}
+              />
             </button>
             {onRemove && (
               <button
