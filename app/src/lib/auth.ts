@@ -7,6 +7,7 @@ export interface SessionUser {
   phone: string | null;
   language: 'auto' | 'es' | 'en';
   role: string;
+  notification_level?: 'all' | 'important' | 'none';
   is_demo?: boolean;
 }
 
@@ -87,6 +88,13 @@ export async function saveLanguage(language: 'auto' | 'es' | 'en'): Promise<Sess
   });
   storeUser(res.user);
   return res.user;
+}
+
+export async function saveNotificationLevel(level: 'all' | 'important' | 'none'): Promise<void> {
+  await api('/api/auth/profile', {
+    method: 'PUT',
+    body: JSON.stringify({ notificationLevel: level }),
+  });
 }
 
 export function clearSession(): void {

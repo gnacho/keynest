@@ -1,5 +1,6 @@
 import { mkdirSync, readFileSync, writeFileSync, unlinkSync, existsSync } from 'node:fs'
 import { join, resolve } from 'node:path'
+import { hostname, arch as osArch, platform, totalmem, type, release, cpus } from 'node:os'
 import crypto from 'node:crypto'
 import { serve } from '@hono/node-server'
 import { serveStatic } from '@hono/node-server/serve-static'
@@ -115,6 +116,7 @@ app.get('/api/auth/me', (c) => {
 const profileSchema = z.object({
   language: z.enum(['auto', 'es', 'en']).optional(),
   lookaheadDays: z.coerce.number().int().min(1).max(30).optional(),
+  notificationLevel: z.enum(['all', 'important', 'none']).optional(),
 })
 app.put('/api/auth/profile', auth.requireAuth(prodDb, demoDb), async (c) => {
   const body = await c.req.json().catch(() => null)
@@ -124,6 +126,7 @@ app.put('/api/auth/profile', auth.requireAuth(prodDb, demoDb), async (c) => {
   let user = c.get('user')
   if (parsed.data.language) user = auth.updateLanguage(db, user.id, parsed.data.language)
   if (parsed.data.lookaheadDays) user = auth.updateLookaheadDays(db, user.id, parsed.data.lookaheadDays)
+  if (parsed.data.notificationLevel) auth.updateNotificationLevel(db, user.id, parsed.data.notificationLevel)
   return c.json({ ok: true, user })
 })
 
@@ -175,7 +178,7 @@ app.get('/api/audit', auth.requireAdmin(prodDb, demoDb), (c) => {
 
 /* Lista de usuarios (solo admin) */
 app.get('/api/users', auth.requireAdmin(prodDb, demoDb), (c) => {
-  const users = prodDb.prepare('SELECT id, username, email, phone, language, role, lookahead_days, created_at FROM users ORDER BY created_at').all()
+  const users = prodDb.prepare('SELECT id, username, email, phone, language, role, lookahead_days, notification_level, created_at FROM users ORDER BY created_at').all()
   return c.json({ users })
 })
 
@@ -986,9 +989,31 @@ app.get('/health', (c) => {
   return c.json({ status: dbOk === 'connected' ? 'ok' : 'degraded', uptime: process.uptime(), db: dbOk })
 })
 
+const pkgJson = JSON.parse(readFileSync(join(import.meta.dirname, '..', 'package.json'), 'utf8'))
+app.get('/api/system/info', auth.requireAuth(prodDb, demoDb), (c) => {
+  const cpuInfo = cpus()
+  const distro = platform() === 'linux' && existsSync('/etc/os-release')
+    ? (() => { try { return readFileSync('/etc/os-release', 'utf8').match(/^PRETTY_NAME="?([^"\n]+)"?/m)?.[1] || '' } catch { return '' } })()
+    : ''
+  return c.json({
+    version: pkgJson.version,
+    nodeVersion: process.version.replace(/^v/, ''),
+    os: platform(),
+    arch: osArch(),
+    distro,
+    kernel: `${type()} ${release()}`,
+    cpuModel: cpuInfo[0]?.model || '',
+    cpuCores: cpuInfo.length,
+    memTotalMb: Math.round(totalmem() / 1024 / 1024),
+    uptimeS: Math.round(process.uptime()),
+    hostname: hostname(),
+    demo: c.get('user')?.is_demo ?? false,
+  })
+})
+
 /* ------------------------------------------------------------- estático SPA */
 app.use('/assets/*', serveStatic({ root: config.staticDir }))
-app.use('/photos/*', serveStatic({ root: join(config.dataDir, 'photos') }))
+app.use('/photos/*', serveStatic({ root: config.dataDir }))
 app.use('/*', serveStatic({ root: config.staticDir }))
 // index.html se lee EN CADA PETICIÓN: tras un deploy (rsync/tar) no hace falta reiniciar
 app.get('*', (c) => {

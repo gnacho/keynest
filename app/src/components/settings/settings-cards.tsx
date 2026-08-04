@@ -1,11 +1,12 @@
 // Tarjetas de Ajustes (webapp-shell adaptado a Keynest):
-// Apariencia (tema con previews pintados con las variables CSS reales, idioma
-// en desplegable con banderas, densidad, reduce-motion), Mi sesión (cambiar
-// contraseña inline + cerrar sesión), Modo demo y Acerca de (versión del build
-// + instalar PWA solo si el navegador lo soporta).
+// Apariencia (tema con previews pintados con las variables CSS reales,
+// densidad, reduce-motion), Mi sesión (idioma, nivel de alertas, push,
+// cambiar contraseña + cerrar sesión), y Acerca de (versión + repo + PWA +
+// bloque de sistema tipo NetPulse).
 import { useEffect, useState } from 'react';
 import type { ReactNode } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
+import React from 'react';
 import { Check, Download, Github, KeyRound, LogOut, Moon, MonitorSmartphone, Sun } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
@@ -13,10 +14,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useTheme } from '@/theme/ThemeProvider';
 import type { ThemeMode } from '@/theme/ThemeProvider';
 import { api } from '@/lib/api';
-import { cachedUser, logout } from '@/lib/auth';
+import { cachedUser, logout, saveNotificationLevel } from '@/lib/auth';
 import { applyLanguage, cachedLanguagePref } from '@/i18n';
 import type { AppLanguage } from '@/i18n';
 import { useData } from '@/data/useData';
+import { usePush } from '@/hooks/usePush';
 import { cn } from '@/lib/utils';
 import pkg from '../../../package.json';
 
@@ -91,18 +93,6 @@ const THEME_OPTIONS: { value: ThemeMode; labelKey: string; icon: typeof Moon }[]
 export function AppearanceCard() {
   const { t: tr } = useTranslation();
   const { mode, setMode, density, setDensity, reduceMotion, setReduceMotion } = useTheme();
-  const [lang, setLang] = useState<AppLanguage>(() => cachedUser()?.language ?? cachedLanguagePref());
-
-  const changeLang = (v: AppLanguage) => {
-    setLang(v);
-    applyLanguage(v);
-    void saveLanguageBd(v);
-  };
-  // El idioma se persiste en BD (fuente de verdad) y en localStorage (caché, lo hace applyLanguage)
-  const saveLanguageBd = async (v: AppLanguage) => {
-    const { saveLanguage } = await import('@/lib/auth');
-    await saveLanguage(v).catch(() => undefined);
-  };
 
   return (
     <Card title={tr('aj.apariencia')} desc={tr('aj.aparienciaDesc')}>
@@ -144,32 +134,6 @@ export function AppearanceCard() {
             </button>
           ))}
         </div>
-      </div>
-
-      {/* Idioma: DESPLEGABLE (shadcn Select, respeta el tema) con banderas + nombres nativos */}
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <p className="text-sm font-semibold">{tr('aj.idioma')}</p>
-          <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
-            {tr('aj.idiomaDesc')}
-          </p>
-        </div>
-        <Select value={lang} onValueChange={(v) => changeLang(v as AppLanguage)}>
-          <SelectTrigger
-            aria-label={tr('aj.idioma')}
-            className="h-10 w-[190px] rounded-xl border-[var(--border)] bg-[var(--surface)] shadow-none"
-          >
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent className="rounded-xl border-[var(--border)] bg-[var(--surface)]">
-            <SelectItem value="auto">🌐 {tr('aj.idiomaAuto')}</SelectItem>
-            {LANGUAGES.map((l) => (
-              <SelectItem key={l.code} value={l.code}>
-                {l.flag} {l.nativeName}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
       </div>
 
       {/* Densidad */}
@@ -333,13 +297,38 @@ export function useInstallPrompt() {
   return { state, install };
 }
 
-/* ---------- Tarjeta Mi sesión: cambiar contraseña (inline) + cerrar sesión ---------- */
+type NotifLevel = 'all' | 'important' | 'none';
+
+const NOTIF_LEVELS: { value: NotifLevel; labelKey: string }[] = [
+  { value: 'all', labelKey: 'aj.notifLevelAll' },
+  { value: 'important', labelKey: 'aj.notifLevelImportant' },
+  { value: 'none', labelKey: 'aj.notifLevelNone' },
+];
+
+/* ---------- Tarjeta Mi sesión: idioma + notificaciones + password + logout ---------- */
 export function SessionCard({ isDemo }: { isDemo: boolean }) {
   const { t: tr } = useTranslation();
   const [showPwd, setShowPwd] = useState(false);
   const [form, setForm] = useState({ current: '', next: '', repeat: '' });
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
+  const [lang, setLang] = useState<AppLanguage>(() => cachedUser()?.language ?? cachedLanguagePref());
+  const [notifLevel, setNotifLevel] = useState<NotifLevel>(() => cachedUser()?.notification_level ?? 'all');
+  const { soporte, estado, activar, desactivar } = usePush();
+
+  const changeLang = (v: AppLanguage) => {
+    setLang(v);
+    applyLanguage(v);
+    void (async () => {
+      const { saveLanguage } = await import('@/lib/auth');
+      await saveLanguage(v).catch(() => undefined);
+    })();
+  };
+
+  const changeNotifLevel = (v: NotifLevel) => {
+    setNotifLevel(v);
+    void saveNotificationLevel(v).catch(() => setNotifLevel(notifLevel));
+  };
 
   const inputCls =
     'h-10 w-full rounded-xl border bg-[var(--surface)] px-3 text-sm outline-none focus:ring-2 focus:ring-[#6366F1]/40';
@@ -372,7 +361,112 @@ export function SessionCard({ isDemo }: { isDemo: boolean }) {
 
   return (
     <Card title={tr('aj.miSesion')}>
-      <div className="flex flex-wrap gap-2.5">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <p className="text-sm font-semibold">{tr('aj.idioma')}</p>
+          <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
+            {tr('aj.idiomaDesc')}
+          </p>
+        </div>
+        <Select value={lang} onValueChange={(v) => changeLang(v as AppLanguage)}>
+          <SelectTrigger
+            aria-label={tr('aj.idioma')}
+            className="h-10 w-[190px] rounded-xl border-[var(--border)] bg-[var(--surface)] shadow-none"
+          >
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent className="rounded-xl border-[var(--border)] bg-[var(--surface)]">
+            <SelectItem value="auto">🌐 {tr('aj.idiomaAuto')}</SelectItem>
+            {LANGUAGES.map((l) => (
+              <SelectItem key={l.code} value={l.code}>
+                {l.flag} {l.nativeName}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <p className="text-sm font-semibold">{tr('aj.notifLevel')}</p>
+          <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
+            {tr('aj.notifLevelDesc')}
+          </p>
+        </div>
+        <div
+          role="radiogroup"
+          aria-label={tr('aj.notifLevel')}
+          className="flex items-center gap-1 rounded-xl border p-1"
+          style={{ borderColor: 'var(--border)', backgroundColor: 'var(--surface-2)' }}
+        >
+          {NOTIF_LEVELS.map((opt) => {
+            const active = notifLevel === opt.value;
+            return (
+              <button
+                key={opt.value}
+                type="button"
+                role="radio"
+                aria-checked={active}
+                onClick={() => changeNotifLevel(opt.value)}
+                className={cn(
+                  'flex h-8 items-center rounded-lg px-3 text-xs font-semibold transition-colors duration-150',
+                  active ? 'text-white' : 'text-[var(--text-muted)] hover:text-[var(--text)]',
+                )}
+                style={active ? { backgroundImage: 'linear-gradient(135deg,#6366F1,#8B5CF6)' } : undefined}
+              >
+                {tr(opt.labelKey)}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {soporte === 'requiere-https' ? (
+        <p className="rounded-xl border px-3.5 py-2.5 text-[13px] leading-snug" style={{ borderColor: 'rgb(245 158 11 / 0.3)', backgroundColor: 'rgb(245 158 11 / 0.08)', color: '#D97706' }}>
+          {tr('aj.notifRequiereHttps')}
+        </p>
+      ) : soporte === 'ok' && !isDemo ? (
+        <div className="flex flex-wrap items-center gap-2.5">
+          {estado.suscrito ? (
+            <button
+              type="button"
+              onClick={() => void desactivar()}
+              disabled={estado.cargando}
+              className="flex h-10 items-center gap-2 rounded-xl border px-4 text-sm font-semibold transition-colors duration-150 hover:bg-[var(--surface-2)] disabled:opacity-50"
+              style={{ borderColor: 'var(--border)', color: 'var(--text)' }}
+            >
+              {tr('aj.notifDesactivar')}
+            </button>
+          ) : (
+            <button
+              type="button"
+              onClick={() => void activar()}
+              disabled={estado.cargando}
+              className="flex h-10 items-center gap-2 rounded-xl border px-4 text-sm font-semibold transition-colors duration-150 disabled:opacity-50"
+              style={{
+                borderColor: 'rgb(99 102 241 / 0.4)',
+                backgroundColor: 'rgb(99 102 241 / 0.1)',
+                color: '#6366F1',
+              }}
+            >
+              {tr('aj.notifActivar')}
+            </button>
+          )}
+          {estado.suscrito && (
+            <span className="flex items-center gap-1.5 text-[13px]" style={{ color: '#059669' }}>
+              <Check className="h-3.5 w-3.5" strokeWidth={2.2} />
+              {tr('aj.notifActivadas')}
+            </span>
+          )}
+          {estado.permiso === 'denied' && (
+            <p className="rounded-xl border px-3.5 py-2.5 text-[13px]" style={{ borderColor: 'rgb(244 63 94 / 0.3)', backgroundColor: 'rgb(244 63 94 / 0.08)', color: '#F43F5E' }}>
+              {tr('aj.notifPermisoDenegado')}
+            </p>
+          )}
+        </div>
+      ) : null}
+
+      <div className="flex flex-wrap gap-2.5 border-t pt-4" style={{ borderColor: 'var(--border)' }}>
         {!isDemo && (
           <button
             type="button"
@@ -486,7 +580,100 @@ export function SessionCard({ isDemo }: { isDemo: boolean }) {
   );
 }
 
-/* ---------- Tarjeta Acerca de: versión del build + repo + instalar PWA ---------- */
+function fmtUptime(s: number): string {
+  if (!s || s <= 0) return '—';
+  const d = Math.floor(s / 86400);
+  const h = Math.floor((s % 86400) / 3600);
+  const m = Math.floor((s % 3600) / 60);
+  if (d > 0) return `${d}d ${h}h`;
+  if (h > 0) return `${h}h ${m}m`;
+  if (m > 0) return `${m}m`;
+  return `${Math.floor(s)}s`;
+}
+
+interface SystemInfoData {
+  version: string;
+  nodeVersion: string;
+  os: string;
+  arch: string;
+  distro: string;
+  kernel: string;
+  cpuModel: string;
+  cpuCores: number;
+  memTotalMb: number;
+  uptimeS: number;
+  hostname: string;
+  demo: boolean;
+}
+
+function SystemInfoBlock() {
+  const { t } = useTranslation();
+  const [info, setInfo] = useState<SystemInfoData | null>(null);
+  const [failed, setFailed] = useState(false);
+
+  useEffect(() => {
+    let disposed = false;
+    void (async () => {
+      try {
+        const res = await fetch('/api/system/info');
+        if (!res.ok || !(res.headers.get('content-type') ?? '').includes('application/json')) {
+          throw new Error(`HTTP ${res.status}`);
+        }
+        const json = (await res.json()) as SystemInfoData;
+        if (!disposed) setInfo(json);
+      } catch {
+        if (!disposed) setFailed(true);
+      }
+    })();
+    return () => { disposed = true; };
+  }, []);
+
+  const server = info && !info.demo ? info : null;
+  const rows: { label: string; value: string }[] = [
+    { label: t('aj.sysApp'), value: `v${server?.version || APP_VERSION}` },
+    ...(server ? [{ label: t('aj.sysNode'), value: server.nodeVersion }] : []),
+    { label: t('aj.sysReact'), value: React.version },
+    ...(server
+      ? [
+          { label: t('aj.sysOs'), value: `${server.distro || server.os} ${server.arch}`.trim() || '—' },
+          { label: t('aj.sysKernel'), value: server.kernel || '—' },
+          { label: t('aj.sysCpu'), value: server.cpuModel ? `${server.cpuModel} (${server.cpuCores})` : server.cpuCores > 0 ? `${server.cpuCores}` : '—' },
+          { label: t('aj.sysRam'), value: server.memTotalMb > 0 ? `${(server.memTotalMb / 1024).toFixed(1)} GiB` : '—' },
+          { label: t('aj.sysUptime'), value: fmtUptime(server.uptimeS) },
+          { label: t('aj.sysHostname'), value: server.hostname || '—' },
+        ]
+      : []),
+  ];
+
+  return (
+    <div className="mt-5 border-t pt-4" style={{ borderColor: 'var(--border)' }}>
+      <p className="mb-2 text-[11px] font-semibold uppercase tracking-[0.06em]" style={{ color: 'var(--text-muted)' }}>
+        {t('aj.sistema')}
+      </p>
+      {!info && !failed ? (
+        <div className="grid animate-pulse grid-cols-1 gap-x-6 gap-y-2.5 sm:grid-cols-2" aria-hidden="true">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <div key={i} className="flex items-baseline justify-between gap-3">
+              <span className="h-3 w-14 rounded" style={{ backgroundColor: 'var(--surface-2)' }} />
+              <span className="h-3 w-24 rounded" style={{ backgroundColor: 'var(--surface-2)' }} />
+            </div>
+          ))}
+        </div>
+      ) : (
+        <dl className="grid grid-cols-1 gap-x-6 gap-y-1.5 sm:grid-cols-2">
+          {rows.map((r) => (
+            <div key={r.label} className="flex items-baseline justify-between gap-3">
+              <dt className="shrink-0 text-[11px]" style={{ color: 'var(--text-muted)' }}>{r.label}</dt>
+              <dd className="truncate font-mono text-[11px]" style={{ color: 'var(--text-muted)' }}>{r.value}</dd>
+            </div>
+          ))}
+        </dl>
+      )}
+    </div>
+  );
+}
+
+/* ---------- Tarjeta Acerca de: versión + repo + PWA + sistema ---------- */
 export function AboutCard() {
   const { t: tr } = useTranslation();
   const { state, install } = useInstallPrompt();
@@ -516,7 +703,6 @@ export function AboutCard() {
         {tr('aj.codigoFuente')}
       </a>
 
-      {/* Instalar: nada si state === 'hidden' (navegador sin soporte) */}
       {state === 'installed' && (
         <p
           className="inline-flex w-fit items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-semibold"
@@ -539,6 +725,8 @@ export function AboutCard() {
           {tr('aj.instalarIos')}
         </p>
       )}
+
+      <SystemInfoBlock />
     </Card>
   );
 }

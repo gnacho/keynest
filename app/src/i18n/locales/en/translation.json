@@ -695,6 +695,15 @@
     "instalarApp": "Install app",
     "appInstalada": "App installed",
     "instalarIos": "To install: Share → Add to Home Screen",
+    "sysApp": "Keynest",
+    "sysNode": "Node.js",
+    "sysReact": "React",
+    "sysOs": "System",
+    "sysKernel": "Kernel",
+    "sysCpu": "CPU",
+    "sysRam": "RAM",
+    "sysUptime": "Uptime",
+    "sysHostname": "Host",
     "operativa": "Operations",
     "operativaDesc": "Schedules, cleaning and dashboard notices",
     "notificaciones": "Notifications",
@@ -709,6 +718,11 @@
     "notifNoSoportado": "This browser does not support push notifications.",
     "notifPermisoDenegado": "Notification permission is blocked in the browser. Enable it in the site settings to receive alerts.",
     "notifTipos": "Alerts you want to receive",
+    "notifLevel": "Alert level",
+    "notifLevelDesc": "Controls which notifications you receive",
+    "notifLevelAll": "All",
+    "notifLevelImportant": "Important only",
+    "notifLevelNone": "None",
     "notifTipo": {
       "checkin_hoy": "Today's check-ins",
       "checkout_hoy": "Today's check-outs",
@@ -765,7 +779,6 @@
     "backupAutoDesc": "Creates a backup every day at 03:00",
     "retencion": "Retention",
     "retencionDesc": "Days to keep backups",
-    "dias": "days",
     "ultimoBackup": "Last backup",
     "nunca": "Never",
     "ejecutarAhora": "Run now",
@@ -816,5 +829,15 @@
     "manana": "tomorrow",
     "haceDias": "{{n}} days ago",
     "enDias": "in {{n}} days"
+  },
+  "crop": {
+    "title": "Crop photo",
+    "desc": "Drag to frame, scroll or slider to zoom",
+    "viewport": "Crop area. Arrows to move, +/- to zoom, Enter to save",
+    "zoom": "Zoom",
+    "cancel": "Cancel",
+    "save": "Save",
+    "saving": "Saving…",
+    "free": "Free"
   }
 }

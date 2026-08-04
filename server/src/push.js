@@ -95,6 +95,7 @@ function stmts(db) {
     s = {
       subsPorUsuario: db.prepare('SELECT id, endpoint, p256dh, auth FROM push_subscriptions WHERE user_id = ?'),
       idioma: db.prepare('SELECT language FROM users WHERE id = ?'),
+      notifLevel: db.prepare('SELECT notification_level FROM users WHERE id = ?'),
       pref: db.prepare('SELECT enabled, min_severity FROM notification_preferences WHERE user_id = ? AND tipo = ?'),
       quiet: db.prepare('SELECT quiet_start, quiet_end, tz FROM notification_quiet_hours WHERE user_id = ?'),
       borrarPorEndpoint: db.prepare('DELETE FROM push_subscriptions WHERE endpoint = ?'),
@@ -181,6 +182,9 @@ export async function notifyUsers(db, userIds, tipo, datos = {}, opciones = {}) 
   const s = stmts(db)
 
   for (const userId of [...new Set(userIds)]) {
+    const level = s.notifLevel.get(userId)?.notification_level || 'all'
+    if (level === 'none') { res.omitidos++; continue }
+    if (level === 'important' && SEVERIDADES.indexOf(severity) < SEVERIDADES.indexOf('high')) { res.omitidos++; continue }
     const pref = s.pref.get(userId, tipo)
     if (pref) {
       if (!pref.enabled || SEVERIDADES.indexOf(severity) < SEVERIDADES.indexOf(pref.min_severity)) {

@@ -62,7 +62,6 @@ import { catIcon, CAT_ICONS } from '@/lib/cat-icons';
 import { AppearanceCard, AboutCard, Card, SessionCard } from '@/components/settings/settings-cards';
 import UsersManager from '@/components/settings/UsersManager';
 import ImportAirbnbCard from '@/components/settings/ImportAirbnbCard';
-import NotificationsCard from '@/components/settings/NotificationsCard';
 import BackupCard from '@/components/settings/BackupCard';
 import type { MaintCategory } from '@/data/types';
 import type { ExpenseType, Person, PersonRole } from '@/data/types';
@@ -1054,15 +1053,9 @@ export default function Ajustes() {
           {/* ================================================= TAB PREFERENCIAS */}
           {tab === 'preferencias' && (
             <div className="flex flex-col gap-4">
-              {/* Zona general (todos los usuarios). En vista amplia, grid de 2
-                  columnas emparejadas por altura (webapp-shell, 2-Ago-2026):
-                  [Apariencia | Notificaciones] · [Mi sesión | Acerca de].
-                  items-start: prohibido estirar la tarjeta corta. */}
               <div className="grid items-start gap-4 2xl:grid-cols-2">
                 <AppearanceCard />
-                <NotificationsCard />
                 <SessionCard isDemo={isDemoUser} />
-                <AboutCard />
               </div>
 
               {/* ============================== ZONA ADMIN (solo administradores)
@@ -1299,6 +1292,8 @@ export default function Ajustes() {
                   </div>
                 </div>
               )}
+
+              <AboutCard />
             </div>
           )}
         </motion.div>

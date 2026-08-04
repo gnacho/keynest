@@ -695,6 +695,15 @@
     "instalarApp": "Instalar aplicación",
     "appInstalada": "App instalada",
     "instalarIos": "Para instalar: Compartir → Añadir a pantalla de inicio",
+    "sysApp": "Keynest",
+    "sysNode": "Node.js",
+    "sysReact": "React",
+    "sysOs": "Sistema",
+    "sysKernel": "Kernel",
+    "sysCpu": "CPU",
+    "sysRam": "RAM",
+    "sysUptime": "Uptime",
+    "sysHostname": "Host",
     "operativa": "Operativa",
     "operativaDesc": "Horarios, limpieza y avisos del panel",
     "notificaciones": "Notificaciones",
@@ -709,6 +718,11 @@
     "notifNoSoportado": "Este navegador no soporta notificaciones push.",
     "notifPermisoDenegado": "El permiso de notificaciones está bloqueado en el navegador. Actívalo en los ajustes del sitio para recibir alertas.",
     "notifTipos": "Alertas que quieres recibir",
+    "notifLevel": "Nivel de alertas",
+    "notifLevelDesc": "Controla qué notificaciones recibes",
+    "notifLevelAll": "Todas",
+    "notifLevelImportant": "Solo importantes",
+    "notifLevelNone": "Ninguna",
     "notifTipo": {
       "checkin_hoy": "Check-in del día",
       "checkout_hoy": "Check-out del día",
@@ -765,7 +779,6 @@
     "backupAutoDesc": "Crea una copia cada día a las 03:00",
     "retencion": "Retención",
     "retencionDesc": "Días que se mantienen los backups",
-    "dias": "días",
     "ultimoBackup": "Último backup",
     "nunca": "Nunca",
     "ejecutarAhora": "Ejecutar ahora",
@@ -816,5 +829,15 @@
     "manana": "mañana",
     "haceDias": "hace {{n}} días",
     "enDias": "en {{n}} días"
+  },
+  "crop": {
+    "title": "Recortar foto",
+    "desc": "Arrastra para encuadrar, scroll o slider para zoom",
+    "viewport": "Área de recorte. Flechas para mover, +/- para zoom, Enter para guardar",
+    "zoom": "Zoom",
+    "cancel": "Cancelar",
+    "save": "Guardar",
+    "saving": "Guardando…",
+    "free": "Libre"
   }
 }

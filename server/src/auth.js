@@ -109,7 +109,7 @@ export function currentUser(prodDb, demoDb, c) {
   const s = sessionFromCookie(prodDb, c)
   if (!s) return null
   const dataDb = s.is_demo ? demoDb : prodDb
-  const user = dataDb.prepare('SELECT id, username, email, phone, language, role, lookahead_days, created_at FROM users WHERE id = ?').get(s.user_id) || null
+  const user = dataDb.prepare('SELECT id, username, email, phone, language, role, lookahead_days, notification_level, created_at FROM users WHERE id = ?').get(s.user_id) || null
   if (!user) return null
   return { ...user, is_demo: Boolean(s.is_demo) }
 }
@@ -148,11 +148,11 @@ export function handleDemoLogin(prodDb, c) {
   setCookie(c, COOKIE_NAME, `${id}.${mac}`, {
     httpOnly: true,
     sameSite: 'Lax',
-    secure: true,
+    secure: false,
     maxAge: SESSION_TTL_MS / 1000,
     path: '/',
   })
-  return { id: 'demo-user', username: 'demo', email: null, phone: null, language: 'auto', role: 'demo', is_demo: true }
+  return { id: 'demo-user', username: 'demo', email: null, phone: null, language: 'auto', role: 'demo', notification_level: 'all', is_demo: true }
 }
 
 export async function handleLogin(db, c, { username, password, remember }) {
@@ -166,7 +166,7 @@ export async function handleLogin(db, c, { username, password, remember }) {
   setCookie(c, COOKIE_NAME, `${id}.${mac}`, {
     httpOnly: true,
     sameSite: 'Lax',
-    secure: true,
+    secure: false,
     ...(remember ? { maxAge: SESSION_TTL_MS / 1000 } : {}),
     path: '/',
   })
@@ -199,18 +199,22 @@ export async function createUser(db, { username, password, phone, role }) {
   const id = crypto.randomUUID()
   db.prepare('INSERT INTO users (id, username, password_hash, phone, language, role, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)')
     .run(id, username, hash, phone || null, 'auto', role || 'user', Date.now())
-  return db.prepare('SELECT id, username, email, phone, language, role, lookahead_days, created_at FROM users WHERE id = ?').get(id)
+  return db.prepare('SELECT id, username, email, phone, language, role, lookahead_days, notification_level, created_at FROM users WHERE id = ?').get(id)
 }
 
 export function updateLanguage(db, userId, language) {
   db.prepare('UPDATE users SET language = ? WHERE id = ?').run(language, userId)
-  return db.prepare('SELECT id, username, email, phone, language, role, lookahead_days, created_at FROM users WHERE id = ?').get(userId)
+  return db.prepare('SELECT id, username, email, phone, language, role, lookahead_days, notification_level, created_at FROM users WHERE id = ?').get(userId)
 }
 
 /** Días de aviso del panel por usuario (1-30; 0 = defecto global). */
 export function updateLookaheadDays(db, userId, days) {
   db.prepare('UPDATE users SET lookahead_days = ? WHERE id = ?').run(days, userId)
-  return db.prepare('SELECT id, username, email, phone, language, role, lookahead_days, created_at FROM users WHERE id = ?').get(userId)
+  return db.prepare('SELECT id, username, email, phone, language, role, lookahead_days, notification_level, created_at FROM users WHERE id = ?').get(userId)
+}
+
+export function updateNotificationLevel(db, userId, level) {
+  db.prepare('UPDATE users SET notification_level = ? WHERE id = ?').run(level, userId)
 }
 
 /** Reset de contraseña por un admin: re-hashea y destruye las sesiones del usuario. */
@@ -225,7 +229,7 @@ export async function setUserPassword(db, userId, password) {
 
 export function setUserRole(db, userId, role) {
   db.prepare('UPDATE users SET role = ? WHERE id = ?').run(role, userId)
-  return db.prepare('SELECT id, username, email, phone, language, role, lookahead_days, created_at FROM users WHERE id = ?').get(userId)
+  return db.prepare('SELECT id, username, email, phone, language, role, lookahead_days, notification_level, created_at FROM users WHERE id = ?').get(userId)
 }
 
 export function countAdmins(db) {

@@ -34,6 +34,8 @@ const MIGRATIONS = [
   `ALTER TABLE reservations ADD COLUMN booked_date TEXT DEFAULT ''`,
   // 9: cerradura Tedee asociada a cada inmueble (id de lock cloud/bridge)
   `ALTER TABLE properties ADD COLUMN tedee_lock_id INTEGER`,
+  // 10: nivel de notificaciones por usuario (all | important | none)
+  `ALTER TABLE users ADD COLUMN notification_level TEXT DEFAULT 'all'`,
 ]
 
 export function migrate(db) {
