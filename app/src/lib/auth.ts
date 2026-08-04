@@ -8,6 +8,8 @@ export interface SessionUser {
   language: 'auto' | 'es' | 'en';
   role: string;
   notification_level?: 'all' | 'important' | 'none';
+  display_name?: string;
+  avatar?: string;
   is_demo?: boolean;
 }
 

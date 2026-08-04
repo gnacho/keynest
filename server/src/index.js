@@ -117,6 +117,8 @@ const profileSchema = z.object({
   language: z.enum(['auto', 'es', 'en']).optional(),
   lookaheadDays: z.coerce.number().int().min(1).max(30).optional(),
   notificationLevel: z.enum(['all', 'important', 'none']).optional(),
+  displayName: z.string().max(50).optional(),
+  email: z.string().email().max(100).or(z.literal('')).optional(),
 })
 app.put('/api/auth/profile', auth.requireAuth(prodDb, demoDb), async (c) => {
   const body = await c.req.json().catch(() => null)
@@ -127,6 +129,14 @@ app.put('/api/auth/profile', auth.requireAuth(prodDb, demoDb), async (c) => {
   if (parsed.data.language) user = auth.updateLanguage(db, user.id, parsed.data.language)
   if (parsed.data.lookaheadDays) user = auth.updateLookaheadDays(db, user.id, parsed.data.lookaheadDays)
   if (parsed.data.notificationLevel) auth.updateNotificationLevel(db, user.id, parsed.data.notificationLevel)
+  if (parsed.data.displayName !== undefined) {
+    db.prepare('UPDATE users SET display_name = ? WHERE id = ?').run(parsed.data.displayName, user.id)
+    user = { ...user, display_name: parsed.data.displayName }
+  }
+  if (parsed.data.email !== undefined) {
+    db.prepare('UPDATE users SET email = ? WHERE id = ?').run(parsed.data.email, user.id)
+    user = { ...user, email: parsed.data.email }
+  }
   return c.json({ ok: true, user })
 })
 
@@ -139,6 +149,34 @@ app.put('/api/auth/password', auth.requireAuth(prodDb, demoDb), async (c) => {
   const res = await auth.changePassword(c.get('db'), c.get('user').id, parsed.data.current, parsed.data.next)
   if (res === 'wrong-current') return c.json({ error: 'contraseña actual incorrecta', code: 'wrong-current' }, 403)
   return c.json({ ok: true })
+})
+
+/* Subida de avatar de perfil (multipart, campo 'avatar', máx 2 MB, crop 1:1) */
+guarded.post('/avatar', async (c) => {
+  if (auth.rateLimitAction(c.get('db'), 'avatar:user', c, 10)) return c.json({ error: 'demasiadas subidas' }, 429)
+  const body = await c.req.parseBody().catch(() => null)
+  const file = body?.avatar
+  if (!file || !(file instanceof File)) return c.json({ error: 'falta el fichero (campo avatar)' }, 400)
+  const ext = PHOTO_MIME[file.type]
+  if (!ext) return c.json({ error: 'formato no válido (jpg/png/webp)' }, 400)
+  if (file.size > 2 * 1024 * 1024) return c.json({ error: 'máximo 2 MB' }, 400)
+  const buffer = Buffer.from(await file.arrayBuffer())
+  if (!validatePhotoMagic(buffer, ext)) return c.json({ error: 'contenido inválido' }, 400)
+
+  const avatarsDir = join(config.dataDir, 'avatars')
+  mkdirSync(avatarsDir, { recursive: true })
+  const userId = c.get('user').id
+  const filename = `${userId}.${ext}`
+  writeFileSync(join(avatarsDir, filename), buffer)
+
+  // Borra el avatar anterior si era de otro formato
+  for (const e of ['jpg', 'png', 'webp']) {
+    if (e !== ext) { try { unlinkSync(join(avatarsDir, `${userId}.${e}`)) } catch { /* noop */ } }
+  }
+  const avatarPath = `/avatars/${filename}`
+  c.get('db').prepare('UPDATE users SET avatar = ? WHERE id = ?').run(avatarPath, userId)
+  const user = { ...c.get('user'), avatar: avatarPath }
+  return c.json({ ok: true, user })
 })
 
 /* Alta de usuario gestión (solo admin, password inicial ≥10, rol user|admin) */
@@ -178,7 +216,7 @@ app.get('/api/audit', auth.requireAdmin(prodDb, demoDb), (c) => {
 
 /* Lista de usuarios (solo admin) */
 app.get('/api/users', auth.requireAdmin(prodDb, demoDb), (c) => {
-  const users = prodDb.prepare('SELECT id, username, email, phone, language, role, lookahead_days, notification_level, created_at FROM users ORDER BY created_at').all()
+  const users = prodDb.prepare('SELECT id, username, email, phone, language, role, lookahead_days, notification_level, display_name, avatar, created_at FROM users ORDER BY created_at').all()
   return c.json({ users })
 })
 
@@ -1014,6 +1052,7 @@ app.get('/api/system/info', auth.requireAuth(prodDb, demoDb), (c) => {
 /* ------------------------------------------------------------- estático SPA */
 app.use('/assets/*', serveStatic({ root: config.staticDir }))
 app.use('/photos/*', serveStatic({ root: config.dataDir }))
+app.use('/avatars/*', serveStatic({ root: config.dataDir }))
 app.use('/*', serveStatic({ root: config.staticDir }))
 // index.html se lee EN CADA PETICIÓN: tras un deploy (rsync/tar) no hace falta reiniciar
 app.get('*', (c) => {

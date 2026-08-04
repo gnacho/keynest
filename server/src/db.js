@@ -36,6 +36,9 @@ const MIGRATIONS = [
   `ALTER TABLE properties ADD COLUMN tedee_lock_id INTEGER`,
   // 10: nivel de notificaciones por usuario (all | important | none)
   `ALTER TABLE users ADD COLUMN notification_level TEXT DEFAULT 'all'`,
+  // 11: display_name + avatar para Mi perfil
+  `ALTER TABLE users ADD COLUMN display_name TEXT DEFAULT '';
+   ALTER TABLE users ADD COLUMN avatar TEXT DEFAULT ''`,
 ]
 
 export function migrate(db) {

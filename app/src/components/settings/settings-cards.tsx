@@ -305,16 +305,30 @@ const NOTIF_LEVELS: { value: NotifLevel; labelKey: string }[] = [
   { value: 'none', labelKey: 'aj.notifLevelNone' },
 ];
 
-/* ---------- Tarjeta Mi sesión: idioma + notificaciones + password + logout ---------- */
+/* ---------- Tarjeta Mi perfil: avatar + nombre + idioma + notifs + contraseña + logout (línea horizontal) ---------- */
 export function SessionCard({ isDemo }: { isDemo: boolean }) {
   const { t: tr } = useTranslation();
   const [showPwd, setShowPwd] = useState(false);
   const [form, setForm] = useState({ current: '', next: '', repeat: '' });
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
-  const [lang, setLang] = useState<AppLanguage>(() => cachedUser()?.language ?? cachedLanguagePref());
-  const [notifLevel, setNotifLevel] = useState<NotifLevel>(() => cachedUser()?.notification_level ?? 'all');
+  const user = cachedUser();
+  const [displayName, setDisplayName] = useState(user?.display_name ?? '');
+  const [email, setEmail] = useState(user?.email ?? '');
+  const [editingName, setEditingName] = useState(false);
+  const [editingEmail, setEditingEmail] = useState(false);
+  const [lang, setLang] = useState<AppLanguage>(() => user?.language ?? cachedLanguagePref());
+  const [notifLevel, setNotifLevel] = useState<NotifLevel>(() => user?.notification_level ?? 'all');
   const { soporte, estado, activar, desactivar } = usePush();
+
+  const saveProfile = async (field: 'displayName' | 'email', value: string) => {
+    try {
+      await api('/api/auth/profile', {
+        method: 'PUT',
+        body: JSON.stringify(field === 'displayName' ? { displayName: value } : { email: value }),
+      });
+    } catch { /* toast error */ }
+  };
 
   const changeLang = (v: AppLanguage) => {
     setLang(v);
@@ -330,19 +344,10 @@ export function SessionCard({ isDemo }: { isDemo: boolean }) {
     void saveNotificationLevel(v).catch(() => setNotifLevel(notifLevel));
   };
 
-  const inputCls =
-    'h-10 w-full rounded-xl border bg-[var(--surface)] px-3 text-sm outline-none focus:ring-2 focus:ring-[#6366F1]/40';
-
   const changePassword = async () => {
     setError('');
-    if (form.next.length < 6) {
-      setError(tr('aj.passErrCorta'));
-      return;
-    }
-    if (form.next !== form.repeat) {
-      setError(tr('aj.passErrCoincide'));
-      return;
-    }
+    if (form.next.length < 6) { setError(tr('aj.passErrCorta')); return; }
+    if (form.next !== form.repeat) { setError(tr('aj.passErrCoincide')); return; }
     setBusy(true);
     try {
       await api('/api/auth/password', {
@@ -354,228 +359,158 @@ export function SessionCard({ isDemo }: { isDemo: boolean }) {
       toast.success(tr('aj.passCambiada'));
     } catch (err) {
       setError(err instanceof Error && err.message.includes('actual') ? tr('aj.passErrActual') : tr('aj.passErrGeneral'));
-    } finally {
-      setBusy(false);
-    }
+    } finally { setBusy(false); }
   };
 
+  const avatarSrc = user?.avatar || null;
+  const initials = (displayName || user?.username || '?').charAt(0).toUpperCase();
+
   return (
-    <Card title={tr('aj.miSesion')}>
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <p className="text-sm font-semibold">{tr('aj.idioma')}</p>
-          <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
-            {tr('aj.idiomaDesc')}
-          </p>
+    <Card title={tr('aj.miPerfil')}>
+      {/* Línea horizontal: avatar + nombre/email + acciones */}
+      <div className="flex flex-wrap items-center gap-3">
+        {/* Avatar */}
+        <div className="relative h-12 w-12 shrink-0 overflow-hidden rounded-full" style={{ backgroundColor: 'var(--accent-soft, #e3f0e9)' }}>
+          {avatarSrc ? (
+            <img src={avatarSrc} alt="" className="h-full w-full object-cover" />
+          ) : (
+            <div className="flex h-full w-full items-center justify-center text-lg font-bold" style={{ color: 'var(--accent, #2f7d5f)' }}>
+              {initials}
+            </div>
+          )}
         </div>
-        <Select value={lang} onValueChange={(v) => changeLang(v as AppLanguage)}>
-          <SelectTrigger
-            aria-label={tr('aj.idioma')}
-            className="h-10 w-[190px] rounded-xl border-[var(--border)] bg-[var(--surface)] shadow-none"
-          >
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent className="rounded-xl border-[var(--border)] bg-[var(--surface)]">
-            <SelectItem value="auto">🌐 {tr('aj.idiomaAuto')}</SelectItem>
-            {LANGUAGES.map((l) => (
-              <SelectItem key={l.code} value={l.code}>
-                {l.flag} {l.nativeName}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
 
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <p className="text-sm font-semibold">{tr('aj.notifLevel')}</p>
-          <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
-            {tr('aj.notifLevelDesc')}
-          </p>
-        </div>
-        <div
-          role="radiogroup"
-          aria-label={tr('aj.notifLevel')}
-          className="flex items-center gap-1 rounded-xl border p-1"
-          style={{ borderColor: 'var(--border)', backgroundColor: 'var(--surface-2)' }}
-        >
-          {NOTIF_LEVELS.map((opt) => {
-            const active = notifLevel === opt.value;
-            return (
-              <button
-                key={opt.value}
-                type="button"
-                role="radio"
-                aria-checked={active}
-                onClick={() => changeNotifLevel(opt.value)}
-                className={cn(
-                  'flex h-8 items-center rounded-lg px-3 text-xs font-semibold transition-colors duration-150',
-                  active ? 'text-white' : 'text-[var(--text-muted)] hover:text-[var(--text)]',
-                )}
-                style={active ? { backgroundImage: 'linear-gradient(135deg,#6366F1,#8B5CF6)' } : undefined}
-              >
-                {tr(opt.labelKey)}
-              </button>
-            );
-          })}
-        </div>
-      </div>
-
-      {soporte === 'requiere-https' ? (
-        <p className="rounded-xl border px-3.5 py-2.5 text-[13px] leading-snug" style={{ borderColor: 'rgb(245 158 11 / 0.3)', backgroundColor: 'rgb(245 158 11 / 0.08)', color: '#D97706' }}>
-          {tr('aj.notifRequiereHttps')}
-        </p>
-      ) : soporte === 'ok' && !isDemo ? (
-        <div className="flex flex-wrap items-center gap-2.5">
-          {estado.suscrito ? (
-            <button
-              type="button"
-              onClick={() => void desactivar()}
-              disabled={estado.cargando}
-              className="flex h-10 items-center gap-2 rounded-xl border px-4 text-sm font-semibold transition-colors duration-150 hover:bg-[var(--surface-2)] disabled:opacity-50"
-              style={{ borderColor: 'var(--border)', color: 'var(--text)' }}
-            >
-              {tr('aj.notifDesactivar')}
-            </button>
+        {/* Nombre + Email */}
+        <div className="flex min-w-[120px] flex-col">
+          {editingName ? (
+            <input
+              value={displayName}
+              onChange={(e) => setDisplayName(e.target.value)}
+              onBlur={() => { setEditingName(false); void saveProfile('displayName', displayName); }}
+              onKeyDown={(e) => { if (e.key === 'Enter') { setEditingName(false); void saveProfile('displayName', displayName); } }}
+              className="rounded border px-1 text-sm font-semibold outline-none"
+              style={{ borderColor: 'var(--border)' }}
+              autoFocus
+              placeholder={tr('aj.nombrePlaceholder')}
+            />
           ) : (
             <button
               type="button"
-              onClick={() => void activar()}
-              disabled={estado.cargando}
-              className="flex h-10 items-center gap-2 rounded-xl border px-4 text-sm font-semibold transition-colors duration-150 disabled:opacity-50"
-              style={{
-                borderColor: 'rgb(99 102 241 / 0.4)',
-                backgroundColor: 'rgb(99 102 241 / 0.1)',
-                color: '#6366F1',
-              }}
+              onClick={() => setEditingName(true)}
+              className="text-left text-sm font-semibold hover:underline"
+              title={tr('aj.editarNombre')}
             >
-              {tr('aj.notifActivar')}
+              {displayName || user?.username || '—'}
             </button>
           )}
-          {estado.suscrito && (
-            <span className="flex items-center gap-1.5 text-[13px]" style={{ color: '#059669' }}>
-              <Check className="h-3.5 w-3.5" strokeWidth={2.2} />
-              {tr('aj.notifActivadas')}
-            </span>
+          {editingEmail ? (
+            <input
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              onBlur={() => { setEditingEmail(false); void saveProfile('email', email); }}
+              onKeyDown={(e) => { if (e.key === 'Enter') { setEditingEmail(false); void saveProfile('email', email); } }}
+              className="rounded border px-1 text-xs outline-none"
+              style={{ borderColor: 'var(--border)', color: 'var(--text-muted)' }}
+              autoFocus
+              placeholder={tr('aj.emailPlaceholder')}
+            />
+          ) : (
+            <button
+              type="button"
+              onClick={() => setEditingEmail(true)}
+              className="text-left text-xs hover:underline"
+              style={{ color: 'var(--text-muted)' }}
+              title={tr('aj.editarEmail')}
+            >
+              {email || tr('aj.emailVacio')}
+            </button>
           )}
-          {estado.permiso === 'denied' && (
-            <p className="rounded-xl border px-3.5 py-2.5 text-[13px]" style={{ borderColor: 'rgb(244 63 94 / 0.3)', backgroundColor: 'rgb(244 63 94 / 0.08)', color: '#F43F5E' }}>
-              {tr('aj.notifPermisoDenegado')}
-            </p>
-          )}
+          <span className="text-[10px]" style={{ color: 'var(--text-faint)' }}>
+            @{user?.username}
+          </span>
         </div>
-      ) : null}
 
-      <div className="flex flex-wrap gap-2.5 border-t pt-4" style={{ borderColor: 'var(--border)' }}>
+        {/* Idioma */}
+        <Select value={lang} onValueChange={(v) => changeLang(v as AppLanguage)}>
+          <SelectTrigger aria-label={tr('aj.idioma')} className="h-9 w-auto min-w-[80px] rounded-lg border text-xs" style={{ borderColor: 'var(--border)', backgroundColor: 'var(--surface)' }}>
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent className="rounded-xl border-[var(--border)] bg-[var(--surface)]">
+            <SelectItem value="auto">🌐 Auto</SelectItem>
+            {LANGUAGES.map((l) => (
+              <SelectItem key={l.code} value={l.code}>{l.flag} {l.nativeName}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+
+        {/* Notificaciones */}
+        <Select value={notifLevel} onValueChange={(v) => changeNotifLevel(v as NotifLevel)}>
+          <SelectTrigger aria-label={tr('aj.notifLevel')} className="h-9 w-auto min-w-[80px] rounded-lg border text-xs" style={{ borderColor: 'var(--border)', backgroundColor: 'var(--surface)' }}>
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent className="rounded-xl border-[var(--border)] bg-[var(--surface)]">
+            {NOTIF_LEVELS.map((opt) => (
+              <SelectItem key={opt.value} value={opt.value}>{tr(opt.labelKey)}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+
+        {/* Contraseña */}
+        <button
+          type="button"
+          onClick={() => setShowPwd(!showPwd)}
+          className="flex h-9 items-center gap-1.5 rounded-lg border px-3 text-xs font-semibold transition-colors hover:bg-[var(--surface-2)]"
+          style={{ borderColor: 'var(--border)', color: 'var(--text-muted)' }}
+        >
+          <KeyRound className="h-3.5 w-3.5" />
+          <span className="hidden sm:inline">{tr('aj.cambiarPassword')}</span>
+        </button>
+
+        {/* Logout */}
         {!isDemo && (
           <button
             type="button"
-            aria-expanded={showPwd}
-            onClick={() => {
-              setShowPwd((v) => !v);
-              setError('');
-            }}
-            className="flex h-10 items-center gap-2 rounded-xl border px-4 text-sm font-semibold transition-colors duration-150 hover:bg-[var(--surface-2)]"
-            style={{ borderColor: 'var(--border)', color: 'var(--text)' }}
+            onClick={() => { void logout(); }}
+            className="flex h-9 items-center gap-1.5 rounded-lg border px-3 text-xs font-semibold transition-colors hover:bg-red-50 dark:hover:bg-red-950/20"
+            style={{ borderColor: 'var(--danger-border, #fca5a5)', color: 'var(--danger, #ef4444)' }}
           >
-            <KeyRound className="h-4 w-4" strokeWidth={1.75} style={{ color: 'var(--text-muted)' }} />
-            {tr('aj.cambiarPassword')}
+            <LogOut className="h-3.5 w-3.5" />
+            <span className="hidden sm:inline">{tr('aj.cerrarSesion')}</span>
           </button>
         )}
-        <button
-          type="button"
-          onClick={() => void logout()}
-          className="flex h-10 items-center gap-2 rounded-xl border px-4 text-sm font-semibold transition-colors duration-150"
-          style={{
-            borderColor: 'rgb(244 63 94 / 0.3)',
-            backgroundColor: 'rgb(244 63 94 / 0.08)',
-            color: '#F43F5E',
-          }}
-        >
-          <LogOut className="h-4 w-4" strokeWidth={1.75} />
-          {isDemo ? tr('aj.salirDemo') : tr('aj.cerrarSesion')}
-        </button>
       </div>
 
-      <AnimatePresence initial={false}>
-        {showPwd && !isDemo && (
-          <motion.form
-            initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: 'auto' }}
-            exit={{ opacity: 0, height: 0 }}
-            transition={{ duration: 0.2 }}
-            className="flex flex-col gap-3 overflow-hidden"
-            onSubmit={(e) => {
-              e.preventDefault();
-              void changePassword();
-            }}
-          >
-            <label className="flex flex-col gap-1.5">
-              <span className="text-xs font-semibold" style={{ color: 'var(--text-muted)' }}>
-                {tr('aj.passActual')}
-              </span>
-              <input
-                type="password"
-                autoComplete="current-password"
-                value={form.current}
-                onChange={(e) => setForm((f) => ({ ...f, current: e.target.value }))}
-                className={inputCls}
-                style={{ borderColor: 'var(--border)' }}
-              />
-            </label>
-            <div className="grid gap-3 sm:grid-cols-2">
-              <label className="flex flex-col gap-1.5">
-                <span className="text-xs font-semibold" style={{ color: 'var(--text-muted)' }}>
-                  {tr('aj.passNueva')}
-                </span>
-                <input
-                  type="password"
-                  autoComplete="new-password"
-                  value={form.next}
-                  onChange={(e) => setForm((f) => ({ ...f, next: e.target.value }))}
-                  className={inputCls}
-                  style={{ borderColor: 'var(--border)' }}
-                />
-              </label>
-              <label className="flex flex-col gap-1.5">
-                <span className="text-xs font-semibold" style={{ color: 'var(--text-muted)' }}>
-                  {tr('aj.passRepetir')}
-                </span>
-                <input
-                  type="password"
-                  autoComplete="new-password"
-                  value={form.repeat}
-                  onChange={(e) => setForm((f) => ({ ...f, repeat: e.target.value }))}
-                  className={inputCls}
-                  style={{ borderColor: 'var(--border)' }}
-                />
-              </label>
+      {/* Form contraseña desplegable */}
+      <AnimatePresence>
+        {showPwd && (
+          <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} transition={{ duration: 0.2 }} className="overflow-hidden">
+            <div className="flex flex-col gap-2 rounded-xl border p-3" style={{ borderColor: 'var(--border)', backgroundColor: 'var(--surface-2)' }}>
+              <input type="password" placeholder={tr('aj.passActual')} value={form.current} onChange={(e) => setForm({ ...form, current: e.target.value })} className="h-9 rounded-lg border px-3 text-sm outline-none" style={{ borderColor: 'var(--border)' }} autoComplete="current-password" />
+              <input type="password" placeholder={tr('aj.passNueva')} value={form.next} onChange={(e) => setForm({ ...form, next: e.target.value })} className="h-9 rounded-lg border px-3 text-sm outline-none" style={{ borderColor: 'var(--border)' }} autoComplete="new-password" />
+              <input type="password" placeholder={tr('aj.passRepetir')} value={form.repeat} onChange={(e) => setForm({ ...form, repeat: e.target.value })} className="h-9 rounded-lg border px-3 text-sm outline-none" style={{ borderColor: 'var(--border)' }} autoComplete="new-password" />
+              {error && <p className="text-xs font-medium text-red-500">{error}</p>}
+              <button type="button" disabled={busy} onClick={() => { void changePassword(); }} className="h-9 rounded-lg bg-violet-500 px-4 text-sm font-semibold text-white hover:brightness-110 disabled:opacity-50">{busy ? tr('aj.guardando') : tr('aj.guardar')}</button>
             </div>
-            {error && (
-              <p role="alert" className="rounded-xl border border-rose-300 bg-rose-50 px-3 py-2 text-[13px] font-medium text-rose-600 dark:border-rose-500/40 dark:bg-rose-500/10 dark:text-rose-400">
-                {error}
-              </p>
-            )}
-            <div className="flex gap-2">
-              <button
-                type="submit"
-                disabled={busy || !form.current || !form.next || !form.repeat}
-                className="brand-gradient flex h-10 items-center rounded-xl px-4 text-sm font-semibold text-white transition-all duration-150 hover:brightness-110 active:scale-[0.98] disabled:opacity-50"
-              >
-                {tr('aj.guardar')}
-              </button>
-              <button
-                type="button"
-                onClick={() => setShowPwd(false)}
-                className="flex h-10 items-center rounded-xl border px-4 text-sm font-semibold transition-colors hover:bg-[var(--surface-2)]"
-                style={{ borderColor: 'var(--border)', color: 'var(--text-muted)' }}
-              >
-                {tr('aj.cancelar')}
-              </button>
-            </div>
-          </motion.form>
+          </motion.div>
         )}
       </AnimatePresence>
+
+      {/* Push (si requiere HTTPS o está soportado) */}
+      {soporte === 'requiere-https' ? (
+        <p className="text-xs" style={{ color: 'var(--text-faint)' }}>{tr('aj.pushRequiereHttps')}</p>
+      ) : soporte === 'ok' ? (
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-sm font-semibold">{tr('aj.alertasPush')}</p>
+            <p className="text-xs" style={{ color: 'var(--text-muted)' }}>{estado.suscrito ? tr('aj.pushActivas') : tr('aj.pushInactivas')}</p>
+          </div>
+          {estado.suscrito ? (
+            <button type="button" onClick={() => { void desactivar(); }} disabled={estado.cargando} className="h-8 rounded-lg border px-3 text-xs font-semibold disabled:opacity-50" style={{ borderColor: 'var(--border)' }}>{tr('aj.desactivar')}</button>
+          ) : (
+            <button type="button" onClick={() => { void activar(); }} disabled={estado.cargando} className="h-8 rounded-lg bg-violet-500 px-3 text-xs font-semibold text-white disabled:opacity-50">{tr('aj.activar')}</button>
+          )}
+        </div>
+      ) : null}
     </Card>
   );
 }

@@ -840,5 +840,13 @@
     "save": "Guardar",
     "saving": "Guardando…",
     "free": "Libre"
-  }
+  },
+  "aj.miPerfil": "Mi perfil",
+  "aj.nombrePlaceholder": "Tu nombre",
+  "aj.editarNombre": "Editar nombre",
+  "aj.emailPlaceholder": "tu@email.com",
+  "aj.editarEmail": "Editar email",
+  "aj.emailVacio": "Sin email",
+  "aj.cambiarPassword": "Contraseña",
+  "aj.cerrarSesion": "Salir"
 }

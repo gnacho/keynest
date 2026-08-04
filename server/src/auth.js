@@ -109,7 +109,7 @@ export function currentUser(prodDb, demoDb, c) {
   const s = sessionFromCookie(prodDb, c)
   if (!s) return null
   const dataDb = s.is_demo ? demoDb : prodDb
-  const user = dataDb.prepare('SELECT id, username, email, phone, language, role, lookahead_days, notification_level, created_at FROM users WHERE id = ?').get(s.user_id) || null
+  const user = dataDb.prepare('SELECT id, username, email, phone, language, role, lookahead_days, notification_level, display_name, avatar, created_at FROM users WHERE id = ?').get(s.user_id) || null
   if (!user) return null
   return { ...user, is_demo: Boolean(s.is_demo) }
 }
@@ -199,7 +199,7 @@ export async function createUser(db, { username, password, phone, role }) {
   const id = crypto.randomUUID()
   db.prepare('INSERT INTO users (id, username, password_hash, phone, language, role, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)')
     .run(id, username, hash, phone || null, 'auto', role || 'user', Date.now())
-  return db.prepare('SELECT id, username, email, phone, language, role, lookahead_days, notification_level, created_at FROM users WHERE id = ?').get(id)
+  return db.prepare('SELECT id, username, email, phone, language, role, lookahead_days, notification_level, display_name, avatar, created_at FROM users WHERE id = ?').get(id)
 }
 
 export function updateLanguage(db, userId, language) {
