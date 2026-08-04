@@ -4,13 +4,21 @@ import { getCookie, setCookie, deleteCookie } from 'hono/cookie'
 import { kvGet, kvSet } from './db.js'
 
 const COOKIE_NAME = 'keynest_session'
-const SESSION_TTL_MS = 30 * 24 * 3600 * 1000 // 30d
+const SESSION_TTL_MS = 7 * 24 * 3600 * 1000 // 7d
 
 function hmac(secret, data) {
   return crypto.createHmac('sha256', secret).update(data).digest('hex')
 }
 
+/* session_secret: lee de SESSION_SECRET en entorno; fallback a kv con warning */
+let _sessionSecretWarned = false
 function sessionSecret(db) {
+  const envSecret = process.env.SESSION_SECRET
+  if (envSecret && envSecret.length >= 32) return envSecret
+  if (!_sessionSecretWarned) {
+    console.warn('[auth] SESSION_SECRET no definida en entorno, usando clave en BD (menos seguro)')
+    _sessionSecretWarned = true
+  }
   let s = kvGet(db, 'session_secret')
   if (!s) {
     s = crypto.randomBytes(32).toString('hex')
@@ -38,6 +46,24 @@ function clientIp(c) {
   const req = c.req.raw
   const socket = req?.socket || req?.connection
   return socket?.remoteAddress || 'unknown'
+}
+
+/* Rate limit general para acciones costosas (sync, uploads).
+ * Tabla separada: action + ip, con ventana de 1 minuto y límite configurable. */
+export function rateLimitAction(db, action, c, maxPerMinute = 10) {
+  const ip = clientIp(c)
+  const key = `${action}:${ip}`
+  const now = Date.now()
+  const windowMs = 60 * 1000
+  const row = db.prepare('SELECT * FROM rate_limits WHERE key = ?').get(key)
+  if (!row || row.window_end < now) {
+    db.prepare('INSERT INTO rate_limits (key, count, window_end) VALUES (?, 1, ?) ON CONFLICT(key) DO UPDATE SET count = 1, window_end = excluded.window_end')
+      .run(key, now + windowMs)
+    return false
+  }
+  if (row.count >= maxPerMinute) return true
+  db.prepare('UPDATE rate_limits SET count = count + 1 WHERE key = ?').run(key)
+  return false
 }
 
 export function loginRateLimited(db, c) {
@@ -122,7 +148,7 @@ export function handleDemoLogin(prodDb, c) {
   setCookie(c, COOKIE_NAME, `${id}.${mac}`, {
     httpOnly: true,
     sameSite: 'Lax',
-    secure: c.req.header('x-forwarded-proto') === 'https',
+    secure: true,
     maxAge: SESSION_TTL_MS / 1000,
     path: '/',
   })
@@ -136,11 +162,11 @@ export async function handleLogin(db, c, { username, password, remember }) {
   if (!valid) return null
   const id = createSession(db, user.id, c.req.header('user-agent'))
   const mac = hmac(sessionSecret(db), id)
-  // Recuérdame: cookie 30d. Sin marcar: cookie de sesión (muere al cerrar el navegador)
+  // Recuérdame: cookie 7d. Sin marcar: cookie de sesión (muere al cerrar el navegador)
   setCookie(c, COOKIE_NAME, `${id}.${mac}`, {
     httpOnly: true,
     sameSite: 'Lax',
-    secure: c.req.header('x-forwarded-proto') === 'https',
+    secure: true,
     ...(remember ? { maxAge: SESSION_TTL_MS / 1000 } : {}),
     path: '/',
   })

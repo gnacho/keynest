@@ -16,6 +16,7 @@ import { importAirbnb, parseAirbnbCsv } from './import-airbnb.js'
 import { configurePush, flushNotificationQueue } from './push.js'
 import { registerPushRoutes } from './routes-push.js'
 import * as alerts from './alerts.js'
+import { getBackupConfig, setBackupConfig, runBackup, cleanOldBackups } from './backup.js'
 
 const DEFAULT_CATEGORIES = [
   { key: 'cerradura/pilas', label: 'Cerradura/pilas', icon: 'lock' },
@@ -37,6 +38,7 @@ const envSchema = z.object({
   VAPID_PRIVATE_KEY: z.string().optional(),
   VAPID_SUBJECT: z.string().optional(),
   ENC_KEY: z.string().optional(),
+  SESSION_SECRET: z.string().optional(),
   TRUST_PROXY: z.enum(['true', 'false']).default('false'),
 })
 const env = envSchema.parse(process.env) // fail-fast si falta algo crítico
@@ -125,8 +127,8 @@ app.put('/api/auth/profile', auth.requireAuth(prodDb, demoDb), async (c) => {
   return c.json({ ok: true, user })
 })
 
-/* Cambio de contraseña (formulario app: actual + nueva ≥6) */
-const passwordSchema = z.object({ current: z.string().min(1), next: z.string().min(6) })
+/* Cambio de contraseña (formulario app: actual + nueva ≥10) */
+const passwordSchema = z.object({ current: z.string().min(1), next: z.string().min(10) })
 app.put('/api/auth/password', auth.requireAuth(prodDb, demoDb), async (c) => {
   const body = await c.req.json().catch(() => null)
   const parsed = passwordSchema.safeParse(body)
@@ -136,10 +138,10 @@ app.put('/api/auth/password', auth.requireAuth(prodDb, demoDb), async (c) => {
   return c.json({ ok: true })
 })
 
-/* Alta de usuario gestión (solo admin, password inicial ≥6, rol user|admin) */
+/* Alta de usuario gestión (solo admin, password inicial ≥10, rol user|admin) */
 const newUserSchema = z.object({
   username: z.string().min(1),
-  password: z.string().min(6),
+  password: z.string().min(10),
   phone: z.string().optional(),
   role: z.enum(['user', 'admin']).optional(),
 })
@@ -178,7 +180,7 @@ app.get('/api/users', auth.requireAdmin(prodDb, demoDb), (c) => {
 })
 
 /* Reset de contraseña por admin: destruye las sesiones del usuario */
-const resetPwdSchema = z.object({ password: z.string().min(6) })
+const resetPwdSchema = z.object({ password: z.string().min(10) })
 app.put('/api/users/:id/password', auth.requireAdmin(prodDb, demoDb), async (c) => {
   const body = await c.req.json().catch(() => null)
   const parsed = resetPwdSchema.safeParse(body)
@@ -779,6 +781,7 @@ app.post('/api/t/:token/task', async (c) => {
 })
 
 app.post('/api/t/:token/task/photo', async (c) => {
+  if (auth.rateLimitAction(prodDb, 'photo:token', c, 20)) return c.json({ error: 'demasiadas subidas, espera 1 minuto' }, 429)
   const task = taskByToken(prodDb, c.req.param('token'))
   if (!task) return c.json({ error: 'enlace no válido' }, 404)
   const body = await c.req.parseBody().catch(() => null)
@@ -787,10 +790,12 @@ app.post('/api/t/:token/task/photo', async (c) => {
   const ext = PHOTO_MIME[file.type]
   if (!ext) return c.json({ error: 'formato' }, 400)
   if (file.size > 10 * 1024 * 1024) return c.json({ error: 'grande' }, 400)
+  const buffer = Buffer.from(await file.arrayBuffer())
+  if (!validatePhotoMagic(buffer, ext)) return c.json({ error: 'contenido inválido' }, 400)
   const photosDir = join(config.dataDir, 'photos')
   mkdirSync(photosDir, { recursive: true })
   const filename = `maint-${task.id}-${Date.now()}.${ext}`
-  writeFileSync(join(photosDir, filename), Buffer.from(await file.arrayBuffer()))
+  writeFileSync(join(photosDir, filename), buffer)
   const photos = JSON.parse(task.photos || '[]')
   photos.push(`/photos/${filename}`)
   prodDb.prepare('UPDATE maintenance_tasks SET photos = ? WHERE id = ?').run(JSON.stringify(photos), task.id)
@@ -799,6 +804,7 @@ app.post('/api/t/:token/task/photo', async (c) => {
 })
 
 app.post('/api/t/:token/cleanings/:id/photo', async (c) => {
+  if (auth.rateLimitAction(prodDb, 'photo:token', c, 20)) return c.json({ error: 'demasiadas subidas, espera 1 minuto' }, 429)
   const person = personByToken(prodDb, c.req.param('token'))
   if (!person) return c.json({ error: 'enlace no válido' }, 404)
   const cl = prodDb.prepare('SELECT * FROM cleanings WHERE id = ?').get(c.req.param('id'))
@@ -855,6 +861,19 @@ app.post('/api/t/:token/cleanings/:id', async (c) => {
 
 const PHOTO_MIME = { 'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'webp' }
 
+/* Valida magic bytes del contenido real (no confía solo en file.type) */
+const PHOTO_MAGIC = {
+  jpg: (b) => b[0] === 0xFF && b[1] === 0xD8 && b[2] === 0xFF,
+  png: (b) => b[0] === 0x89 && b[1] === 0x50 && b[2] === 0x4E && b[3] === 0x47,
+  webp: (b) => b[0] === 0x52 && b[1] === 0x49 && b[2] === 0x46 && b[3] === 0x46 && b[8] === 0x57 && b[9] === 0x45 && b[10] === 0x42 && b[11] === 0x50,
+}
+function validatePhotoMagic(buffer, ext) {
+  const check = PHOTO_MAGIC[ext]
+  if (!check) return false
+  if (buffer.length < 12) return false
+  return check(buffer)
+}
+
 /* Subida de foto de limpieza: guarda fichero y lo añade a cleaning.photos */
 async function saveCleaningPhoto(db, cleaningId, file) {
   const cl = db.prepare('SELECT * FROM cleanings WHERE id = ?').get(cleaningId)
@@ -862,10 +881,12 @@ async function saveCleaningPhoto(db, cleaningId, file) {
   const ext = PHOTO_MIME[file.type]
   if (!ext) return { error: 'formato', status: 400 }
   if (file.size > 10 * 1024 * 1024) return { error: 'grande', status: 400 }
+  const buffer = Buffer.from(await file.arrayBuffer())
+  if (!validatePhotoMagic(buffer, ext)) return { error: 'contenido inválido', status: 400 }
   const photosDir = join(config.dataDir, 'photos')
   mkdirSync(photosDir, { recursive: true })
   const filename = `clean-${cleaningId}-${Date.now()}.${ext}`
-  writeFileSync(join(photosDir, filename), Buffer.from(await file.arrayBuffer()))
+  writeFileSync(join(photosDir, filename), buffer)
   const photos = JSON.parse(cl.photos || '[]')
   photos.push(`/photos/${filename}`)
   db.prepare('UPDATE cleanings SET photos = ? WHERE id = ?').run(JSON.stringify(photos), cleaningId)
@@ -873,6 +894,7 @@ async function saveCleaningPhoto(db, cleaningId, file) {
 }
 
 guarded.post('/cleanings/:id/photo', async (c) => {
+  if (auth.rateLimitAction(c.get('db'), 'photo:cleaning', c, 20)) return c.json({ error: 'demasiadas subidas, espera 1 minuto' }, 429)
   const db = c.get('db')
   const body = await c.req.parseBody().catch(() => null)
   const file = body?.photo
@@ -884,6 +906,7 @@ guarded.post('/cleanings/:id/photo', async (c) => {
 
 /* Subida de foto del inmueble (multipart, campo 'photo', máx 10 MB) */
 guarded.post('/properties/:id/photo', async (c) => {
+  if (auth.rateLimitAction(c.get('db'), 'photo:property', c, 20)) return c.json({ error: 'demasiadas subidas, espera 1 minuto' }, 429)
   const db = c.get('db')
   const existing = db.prepare('SELECT * FROM properties WHERE id = ?').get(c.req.param('id'))
   if (!existing) return c.json({ error: 'no encontrado' }, 404)
@@ -893,11 +916,13 @@ guarded.post('/properties/:id/photo', async (c) => {
   const ext = PHOTO_MIME[file.type]
   if (!ext) return c.json({ error: 'formato' }, 400)
   if (file.size > 10 * 1024 * 1024) return c.json({ error: 'grande' }, 400)
+  const buffer = Buffer.from(await file.arrayBuffer())
+  if (!validatePhotoMagic(buffer, ext)) return c.json({ error: 'contenido inválido' }, 400)
 
   const photosDir = join(config.dataDir, 'photos')
   mkdirSync(photosDir, { recursive: true })
   const filename = `${existing.id}-${Date.now()}.${ext}`
-  writeFileSync(join(photosDir, filename), Buffer.from(await file.arrayBuffer()))
+  writeFileSync(join(photosDir, filename), buffer)
 
   // Borra la foto anterior si era nuestra (/photos/...)
   if (existing.photo?.startsWith('/photos/')) {
@@ -914,6 +939,7 @@ let syncing = false
 const onSyncNews = (prop, items) => alerts.notifyReservasNuevas(prodDb, prop, items)
 guarded.post('/sync', async (c) => {
   if (c.get('user').is_demo) return c.json({ ok: true, results: [] })
+  if (auth.rateLimitAction(prodDb, 'sync', c, 5)) return c.json({ error: 'demasiadas sincronizaciones, espera 1 minuto' }, 429)
   if (syncing) return c.json({ error: 'ya hay una sincronización en curso' }, 409)
   syncing = true
   try {
@@ -925,6 +951,33 @@ guarded.post('/sync', async (c) => {
 })
 
 guarded.get('/sync/status', (c) => c.json(syncStatus(c.get('db'))))
+
+/* ------------------------------------------- Backups automáticos (solo admin) */
+const backupConfigSchema = z.object({
+  enabled: z.boolean().optional(),
+  retentionDays: z.coerce.number().int().min(1).max(90).optional(),
+})
+guarded.get('/config/backup', (c) => {
+  if (c.get('user').role !== 'admin') return c.json({ error: 'solo admin' }, 403)
+  return c.json(getBackupConfig(prodDb))
+})
+guarded.put('/config/backup', async (c) => {
+  if (c.get('user').role !== 'admin') return c.json({ error: 'solo admin' }, 403)
+  const body = await c.req.json().catch(() => null)
+  const parsed = backupConfigSchema.safeParse(body)
+  if (!parsed.success) return c.json({ error: 'formato inválido' }, 400)
+  const config = setBackupConfig(prodDb, parsed.data)
+  aud(c, 'update', 'config', 'backup', JSON.stringify(parsed.data))
+  return c.json({ ok: true, config })
+})
+guarded.post('/backup/run', (c) => {
+  if (c.get('user').role !== 'admin') return c.json({ error: 'solo admin' }, 403)
+  const result = runBackup(prodDb, config.dataDir)
+  if (result.error) return c.json({ error: result.error }, 400)
+  cleanOldBackups(config.dataDir, 'keynest.db', getBackupConfig(prodDb).retentionDays)
+  aud(c, 'create', 'backup', '', result.path)
+  return c.json({ ok: true, path: result.path })
+})
 
 app.route('/api', guarded)
 
@@ -965,6 +1018,19 @@ setTimeout(() => tedeeChecker.check().catch((e) => console.error('[keynest] tede
 setInterval(() => tedeeChecker.check().catch((e) => console.error('[keynest] tedee check error:', e.message)), 5 * 60 * 1000)
 alerts.scheduleDaily(9, () => alerts.checkReservasHoy(prodDb), 'reservas-hoy')
 alerts.scheduleDaily(12, () => alerts.checkLimpiezas(prodDb), 'limpiezas-pendientes')
+
+/* Backup diario a las 03:00 si está habilitado */
+alerts.scheduleDaily(3, () => {
+  const cfg = getBackupConfig(prodDb)
+  if (!cfg.enabled) return
+  const result = runBackup(prodDb, config.dataDir)
+  if (result.ok) {
+    cleanOldBackups(config.dataDir, 'keynest.db', cfg.retentionDays)
+    console.log(`[backup] creado: ${result.path}`)
+  } else {
+    console.error('[backup] error:', result.error)
+  }
+}, 'backup-diario')
 
 serve({ fetch: app.fetch, port: config.port }, (info) => {
   console.log(`[keynest] escuchando en :${info.port} (static: ${config.staticDir}, data: ${config.dataDir})`)

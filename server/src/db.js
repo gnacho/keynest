@@ -97,6 +97,11 @@ export function openDb(dataDir, filename = 'keynest.db') {
       attempts INTEGER DEFAULT 0,
       locked_until INTEGER DEFAULT 0
     );
+    CREATE TABLE IF NOT EXISTS rate_limits (
+      key TEXT PRIMARY KEY,
+      count INTEGER DEFAULT 0,
+      window_end INTEGER NOT NULL
+    );
     CREATE TABLE IF NOT EXISTS kv (
       key TEXT PRIMARY KEY,
       value TEXT
