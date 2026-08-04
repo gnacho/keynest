@@ -29,8 +29,15 @@ export async function ensureBootstrapAdmin(db, config) {
   console.log(`[auth] admin bootstrap creado: ${config.authUser}`)
 }
 
+/* IP del cliente: socket real por defecto; XFF solo si TRUST_PROXY=true (detrás de proxy inverso) */
 function clientIp(c) {
-  return c.req.header('x-forwarded-for')?.split(',')[0].trim() || 'unknown'
+  if (process.env.TRUST_PROXY === 'true') {
+    const xff = c.req.header('x-forwarded-for')
+    if (xff) return xff.split(',')[0].trim()
+  }
+  const req = c.req.raw
+  const socket = req?.socket || req?.connection
+  return socket?.remoteAddress || 'unknown'
 }
 
 export function loginRateLimited(db, c) {

@@ -36,6 +36,8 @@ const envSchema = z.object({
   VAPID_PUBLIC_KEY: z.string().optional(),
   VAPID_PRIVATE_KEY: z.string().optional(),
   VAPID_SUBJECT: z.string().optional(),
+  ENC_KEY: z.string().optional(),
+  TRUST_PROXY: z.enum(['true', 'false']).default('false'),
 })
 const env = envSchema.parse(process.env) // fail-fast si falta algo crítico
 const config = {
@@ -933,7 +935,7 @@ app.get('/health', (c) => {
 
 /* ------------------------------------------------------------- estático SPA */
 app.use('/assets/*', serveStatic({ root: config.staticDir }))
-app.use('/photos/*', serveStatic({ root: config.dataDir }))
+app.use('/photos/*', serveStatic({ root: join(config.dataDir, 'photos') }))
 app.use('/*', serveStatic({ root: config.staticDir }))
 // index.html se lee EN CADA PETICIÓN: tras un deploy (rsync/tar) no hace falta reiniciar
 app.get('*', (c) => {
