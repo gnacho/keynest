@@ -210,6 +210,34 @@ function renderStrip() {
   });
 }
 
+/* ---------- Lightbox (visor ampliado) ---------- */
+function openLightbox() {
+  const lb = document.getElementById('lightbox');
+  const img = document.getElementById('lbImg');
+  const s = SHOTS[STATE.shot];
+  img.src = shotUrl(s, STATE.lang, STATE.theme);
+  img.alt = t(s.alt);
+  lb.hidden = false;
+  document.body.style.overflow = 'hidden';
+  document.getElementById('lbClose').focus();
+}
+
+function closeLightbox() {
+  const lb = document.getElementById('lightbox');
+  lb.hidden = true;
+  document.body.style.overflow = '';
+  document.getElementById('shotStage').focus();
+}
+
+function lbNavStep(delta) {
+  STATE.shot = (STATE.shot + delta + SHOTS.length) % SHOTS.length;
+  const s = SHOTS[STATE.shot];
+  const img = document.getElementById('lbImg');
+  img.src = shotUrl(s, STATE.lang, STATE.theme);
+  img.alt = t(s.alt);
+  renderShots();
+}
+
 /* ---------- Copiar ---------- */
 function copyCommand() {
   const text = t('install.code');
@@ -267,10 +295,23 @@ function init() {
     STATE.shot = (STATE.shot + 1) % SHOTS.length;
     renderShots();
   });
+  document.getElementById('shotStage').addEventListener('click', openLightbox);
+  document.getElementById('shotStage').addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openLightbox(); }
+  });
+  document.getElementById('lbClose').addEventListener('click', closeLightbox);
+  document.getElementById('lbPrev').addEventListener('click', () => lbNavStep(-1));
+  document.getElementById('lbNext').addEventListener('click', () => lbNavStep(1));
+  document.getElementById('lightbox').addEventListener('click', (e) => {
+    if (e.target === document.getElementById('lightbox')) closeLightbox();
+  });
   document.addEventListener('keydown', (e) => {
     if (e.target.tagName === 'SELECT' || e.target.tagName === 'INPUT') return;
-    if (e.key === 'ArrowLeft') { STATE.shot = (STATE.shot - 1 + SHOTS.length) % SHOTS.length; renderShots(); }
-    if (e.key === 'ArrowRight') { STATE.shot = (STATE.shot + 1) % SHOTS.length; renderShots(); }
+    const lb = document.getElementById('lightbox');
+    const inLb = !lb.hidden;
+    if (e.key === 'Escape' && inLb) { closeLightbox(); return; }
+    if (e.key === 'ArrowLeft') { if (inLb) lbNavStep(-1); else { STATE.shot = (STATE.shot - 1 + SHOTS.length) % SHOTS.length; renderShots(); } }
+    if (e.key === 'ArrowRight') { if (inLb) lbNavStep(1); else { STATE.shot = (STATE.shot + 1) % SHOTS.length; renderShots(); } }
   });
 
   applyTheme();

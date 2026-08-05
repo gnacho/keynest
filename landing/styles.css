@@ -202,6 +202,38 @@ body {
   border: 1px solid var(--border); background: var(--surface); box-shadow: var(--shadow);
 }
 .slider-stage img { display: block; width: 100%; height: auto; }
+#shotStage { cursor: zoom-in; transition: border-color var(--dur) var(--ease); }
+#shotStage:hover { border-color: var(--accent); }
+#shotStage:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+/* ---------- Lightbox (visor ampliado) ---------- */
+.lightbox {
+  position: fixed; inset: 0; z-index: 200;
+  display: flex; align-items: center; justify-content: center;
+  background: rgb(4 8 16 / 0.92); backdrop-filter: blur(6px);
+}
+.lightbox[hidden] { display: none; }
+.lightbox img {
+  max-width: min(92vw, 1500px); max-height: 86vh; width: auto; height: auto;
+  border-radius: 12px; box-shadow: 0 24px 64px rgb(0 0 0 / 0.5);
+}
+.lightbox-close {
+  position: absolute; top: 20px; right: 20px; width: 44px; height: 44px;
+  font-size: 24px; color: #fff; background: rgb(255 255 255 / 0.12);
+  border: 1px solid rgb(255 255 255 / 0.25); border-radius: 12px;
+}
+.lightbox-close:hover { background: rgb(255 255 255 / 0.22); color: #fff; border-color: #fff; }
+.lightbox-nav {
+  position: absolute; top: 50%; transform: translateY(-50%);
+  width: 48px; height: 48px; font-size: 26px;
+  color: #fff; background: rgb(255 255 255 / 0.12);
+  border: 1px solid rgb(255 255 255 / 0.25); border-radius: 12px;
+}
+.lightbox-nav:hover { background: rgb(255 255 255 / 0.22); color: #fff; border-color: #fff; }
+.lightbox-prev { left: 20px; }
+.lightbox-next { right: 20px; }
+.lightbox .icon-btn:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
+
 .slider-actions { display: flex; align-items: center; justify-content: center; gap: 16px; margin-top: 20px; }
 .slider-btn { width: 42px; height: 42px; font-size: 22px; line-height: 1; }
 .slider-thumbs { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; }
@@ -275,8 +307,8 @@ footer { border-top: 1px solid var(--border); padding: 56px 0 48px; background: 
 .footer-col h4 { font-size: 12px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-faint); margin-bottom: 4px; }
 .footer-col a { color: var(--text-muted); text-decoration: none; font-size: 14px; }
 .footer-col a:hover { color: var(--accent); }
+.footer-col .footer-demo-link { color: var(--accent); font-weight: 600; }
 .footer-license { font-size: 13px; color: var(--text-faint); }
-.footer-demo { font-size: 12px; color: var(--text-faint); }
 
 /* ---------- Responsive ---------- */
 @media (max-width: 900px) {
