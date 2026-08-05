@@ -117,25 +117,39 @@ export default function ReservationDetail({ reservation: r }: { reservation: Res
       {/* Importe manual + notas */}
       <div className="flex flex-col gap-2">
         <SectionTitle>{t('res.importeManual')}</SectionTitle>
-        <input
-          value={amountStr}
-          onChange={(e) => setAmountStr(e.target.value)}
-          inputMode="decimal"
-          placeholder="0,00"
-          aria-label={t('res.importeManual')}
-          className="tnum h-9 w-full rounded-xl border bg-[var(--surface)] px-3 text-sm outline-none focus:ring-2 focus:ring-[#6366F1]/40"
-          style={{ borderColor: 'var(--border)' }}
-        />
+        {data.isDemo ? (
+          <p className="tnum h-9 w-full rounded-xl border bg-[var(--surface)] px-3 text-sm leading-9"
+             style={{ borderColor: 'var(--border)' }}>
+            {amountStr || '—'}
+          </p>
+        ) : (
+          <input
+            value={amountStr}
+            onChange={(e) => setAmountStr(e.target.value)}
+            inputMode="decimal"
+            placeholder="0,00"
+            aria-label={t('res.importeManual')}
+            className="tnum h-9 w-full rounded-xl border bg-[var(--surface)] px-3 text-sm outline-none focus:ring-2 focus:ring-[#6366F1]/40"
+            style={{ borderColor: 'var(--border)' }}
+          />
+        )}
         <SectionTitle>{t('res.notasReserva')}</SectionTitle>
-        <textarea
-          value={notesStr}
-          onChange={(e) => setNotesStr(e.target.value)}
-          rows={3}
-          placeholder={t('res.notasReservaPlaceholder')}
-          className="w-full resize-none rounded-xl border bg-[var(--surface)] px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-[#6366F1]/40"
-          style={{ borderColor: 'var(--border)' }}
-        />
-        {dirty && (
+        {data.isDemo ? (
+          <p className="w-full rounded-xl border bg-[var(--surface)] px-3 py-2 text-sm"
+             style={{ borderColor: 'var(--border)' }}>
+            {notesStr || '—'}
+          </p>
+        ) : (
+          <textarea
+            value={notesStr}
+            onChange={(e) => setNotesStr(e.target.value)}
+            rows={3}
+            placeholder={t('res.notasReservaPlaceholder')}
+            className="w-full resize-none rounded-xl border bg-[var(--surface)] px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-[#6366F1]/40"
+            style={{ borderColor: 'var(--border)' }}
+          />
+        )}
+        {!data.isDemo && dirty && (
           <button
             type="button"
             disabled={saving}
@@ -173,7 +187,7 @@ export default function ReservationDetail({ reservation: r }: { reservation: Res
             <p className="flex-1 text-[13px]" style={{ color: 'var(--text-muted)' }}>
               {t('res.sinLimpieza')}
             </p>
-            {r.checkOut.getTime() >= startOfDay(new Date()).getTime() && (
+            {!data.isDemo && r.checkOut.getTime() >= startOfDay(new Date()).getTime() && (
               <button
                 type="button"
                 disabled={creating}

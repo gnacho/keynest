@@ -128,7 +128,7 @@ export default function Mantenimiento() {
   const renderDraggableCard = (t: MaintenanceTask, animateEntry: boolean) => (
     <div
       key={t.id}
-      draggable
+      draggable={!data.isDemo}
       onDragStart={(e) => {
         e.dataTransfer.setData('text/plain', t.id);
         e.dataTransfer.effectAllowed = 'move';
@@ -136,7 +136,7 @@ export default function Mantenimiento() {
       }}
       onDragEnd={endDrag}
       className={cn(
-        'cursor-grab active:cursor-grabbing',
+        data.isDemo ? '' : 'cursor-grab active:cursor-grabbing',
         draggingId === t.id && 'opacity-40',
       )}
     >
@@ -146,6 +146,7 @@ export default function Mantenimiento() {
 
   const handleDrop = (e: DragEvent, col: (typeof COLUMNS)[number]) => {
     e.preventDefault();
+    if (data.isDemo) return;
     const id = e.dataTransfer.getData('text/plain');
     const task = all.find((x) => x.id === id);
     endDrag();
@@ -167,15 +168,17 @@ export default function Mantenimiento() {
             {tr('mant.tareas', { count: all.length })} · {tr('mant.urgentes', { count: urgentes })}
           </p>
         </div>
-        <button
-          type="button"
-          onClick={() => setNewOpen(true)}
-          className="flex h-10 shrink-0 items-center gap-1.5 rounded-xl bg-rose-500 px-4 text-sm font-semibold text-white transition-all duration-150 hover:brightness-110 active:scale-[0.98]"
-        >
-          <Plus className="h-4 w-4" />
-          <span className="hidden sm:inline">{tr('mant.nuevaTarea')}</span>
-          <span className="sm:hidden">{tr('mant.nueva')}</span>
-        </button>
+        {!data.isDemo && (
+          <button
+            type="button"
+            onClick={() => setNewOpen(true)}
+            className="flex h-10 shrink-0 items-center gap-1.5 rounded-xl bg-rose-500 px-4 text-sm font-semibold text-white transition-all duration-150 hover:brightness-110 active:scale-[0.98]"
+          >
+            <Plus className="h-4 w-4" />
+            <span className="hidden sm:inline">{tr('mant.nuevaTarea')}</span>
+            <span className="sm:hidden">{tr('mant.nueva')}</span>
+          </button>
+        )}
       </div>
 
       {/* ============================== FilterBar + chips de categoría + urgentes */}

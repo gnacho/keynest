@@ -171,6 +171,8 @@ interface BootstrapData {
   categories: MaintCategory[];
   config?: { checkInTime?: string; checkOutTime?: string; batteryThreshold?: number; autoCleaning?: boolean; lookaheadDays?: number };
   sync: Record<string, { ok: boolean; at: number; count?: number; error?: string }>;
+  demo?: boolean;
+  demoEnabled?: boolean;
 }
 
 function mapCleaning(row: ApiCleaning): Cleaning {
@@ -203,6 +205,7 @@ function mapCleaning(row: ApiCleaning): Cleaning {
 export default function DataProvider({ children }: { children: ReactNode }) {
   const [version, setVersion] = useState(0);
   const [loading, setLoading] = useState(() => isAuthed());
+  const [isDemo, setIsDemo] = useState(false);
   const bump = () => setVersion((v) => v + 1);
 
   const properties = useRef<Property[]>([]);
@@ -245,6 +248,7 @@ export default function DataProvider({ children }: { children: ReactNode }) {
         lookaheadDays: data.config?.lookaheadDays ?? 7,
       };
       syncMap.current = data.sync ?? {};
+      setIsDemo(Boolean(data.demo));
       bump();
     } catch {
       /* 401 → evento global; otros errores se reintentan en el próximo refresh */
@@ -332,6 +336,7 @@ export default function DataProvider({ children }: { children: ReactNode }) {
       version,
       bump,
       loading,
+      isDemo,
       refresh,
       addProperty: async (input) => {
         const res = await api<{ property: ApiProperty }>('/api/properties', {
@@ -681,7 +686,7 @@ export default function DataProvider({ children }: { children: ReactNode }) {
         bump();
       },
     };
-  }, [version, loading, refresh, saveProperty]);
+  }, [version, loading, refresh, saveProperty, isDemo]);
 
   return (
     <DataContext.Provider value={api2}>

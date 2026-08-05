@@ -648,24 +648,28 @@ export default function Ajustes() {
           {tab === 'inmuebles' && (
             <div className="flex flex-col gap-4">
               <div className="flex flex-wrap items-center justify-end gap-2">
-                <button
-                  type="button"
-                  onClick={() => void handleSync()}
-                  disabled={syncing}
-                  className="flex h-10 items-center gap-1.5 rounded-xl border px-4 text-sm font-semibold transition-colors duration-150 hover:bg-[var(--surface-2)] disabled:opacity-50"
-                  style={{ borderColor: 'var(--border)', color: 'var(--text-muted)' }}
-                >
-                  <RefreshCw className={cn('h-4 w-4', syncing && 'animate-spin')} />
-                  {syncing ? tr('aj.sincronizando') : tr('aj.sincronizar')}
-                </button>
-                <button
-                  type="button"
-                  onClick={openNewProp}
-                  className="brand-gradient flex h-10 items-center gap-1.5 rounded-xl px-4 text-sm font-semibold text-white transition-all duration-150 hover:brightness-110 active:scale-[0.98]"
-                >
-                  <Plus className="h-4 w-4" />
-                  {tr('aj.nuevoInmueble')}
-                </button>
+                {!isDemoUser && (
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => void handleSync()}
+                      disabled={syncing}
+                      className="flex h-10 items-center gap-1.5 rounded-xl border px-4 text-sm font-semibold transition-colors duration-150 hover:bg-[var(--surface-2)] disabled:opacity-50"
+                      style={{ borderColor: 'var(--border)', color: 'var(--text-muted)' }}
+                    >
+                      <RefreshCw className={cn('h-4 w-4', syncing && 'animate-spin')} />
+                      {syncing ? tr('aj.sincronizando') : tr('aj.sincronizar')}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={openNewProp}
+                      className="brand-gradient flex h-10 items-center gap-1.5 rounded-xl px-4 text-sm font-semibold text-white transition-all duration-150 hover:brightness-110 active:scale-[0.98]"
+                    >
+                      <Plus className="h-4 w-4" />
+                      {tr('aj.nuevoInmueble')}
+                    </button>
+                  </>
+                )}
               </div>
             <motion.div variants={containerV} initial="hidden" animate="show" className="grid gap-4 lg:grid-cols-2">
               {properties.map((p) => {
@@ -698,19 +702,21 @@ export default function Ajustes() {
                         <span className={cn('h-1.5 w-1.5 rounded-full', occ.occupied ? 'bg-white' : 'bg-slate-300')} />
                         {occ.occupied ? tr('aj.ocupado') : occ.freeSince ? tr('aj.libreDesde', { date: fmtDateShort(occ.freeSince) }) : tr('aj.libre')}
                       </span>
-                      <button
-                        type="button"
-                        aria-label={tr('aj.editar', { name })}
-                        onClick={() => openEditProp(p.id)}
-                        className="absolute right-3 top-3 flex h-9 w-9 items-center justify-center rounded-full border backdrop-blur-md transition-transform duration-200 hover:rotate-90"
-                        style={{
-                          backgroundColor: 'color-mix(in srgb, var(--surface) 90%, transparent)',
-                          borderColor: 'var(--border)',
-                          color: 'var(--text-muted)',
-                        }}
-                      >
-                        <Settings2 className="h-4 w-4" />
-                      </button>
+                      {!isDemoUser && (
+                        <button
+                          type="button"
+                          aria-label={tr('aj.editar', { name })}
+                          onClick={() => openEditProp(p.id)}
+                          className="absolute right-3 top-3 flex h-9 w-9 items-center justify-center rounded-full border backdrop-blur-md transition-transform duration-200 hover:rotate-90"
+                          style={{
+                            backgroundColor: 'color-mix(in srgb, var(--surface) 90%, transparent)',
+                            borderColor: 'var(--border)',
+                            color: 'var(--text-muted)',
+                          }}
+                        >
+                          <Settings2 className="h-4 w-4" />
+                        </button>
+                      )}
                       <div className="absolute bottom-2.5 left-3 right-3">
                         <p className="font-display text-[17px] font-semibold leading-5 text-white">{name}</p>
                       </div>
@@ -806,24 +812,28 @@ export default function Ajustes() {
                                   {p.specialty}
                                 </p>
                               </div>
-                              <button
-                                type="button"
-                                aria-label={tr('aj.editarA', { name: p.name })}
-                                onClick={() => openEditPerson(p)}
-                                className="flex h-8 w-8 items-center justify-center rounded-lg transition-colors hover:bg-[var(--surface-2)]"
-                                style={{ color: 'var(--text-muted)' }}
-                              >
-                                <Pencil className="h-4 w-4" />
-                              </button>
-                              <button
-                                type="button"
-                                aria-label={tr('aj.eliminarA', { name: p.name })}
-                                onClick={() => setDeletePerson(p)}
-                                className="flex h-8 w-8 items-center justify-center rounded-lg transition-colors hover:bg-[var(--ro-chip-bg)]"
-                                style={{ color: '#F43F5E' }}
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </button>
+                              {!isDemoUser && (
+                                <>
+                                  <button
+                                    type="button"
+                                    aria-label={tr('aj.editarA', { name: p.name })}
+                                    onClick={() => openEditPerson(p)}
+                                    className="flex h-8 w-8 items-center justify-center rounded-lg transition-colors hover:bg-[var(--surface-2)]"
+                                    style={{ color: 'var(--text-muted)' }}
+                                  >
+                                    <Pencil className="h-4 w-4" />
+                                  </button>
+                                  <button
+                                    type="button"
+                                    aria-label={tr('aj.eliminarA', { name: p.name })}
+                                    onClick={() => setDeletePerson(p)}
+                                    className="flex h-8 w-8 items-center justify-center rounded-lg transition-colors hover:bg-[var(--ro-chip-bg)]"
+                                    style={{ color: '#F43F5E' }}
+                                  >
+                                    <Trash2 className="h-4 w-4" />
+                                  </button>
+                                </>
+                              )}
                             </div>
                             <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 text-[13px]">
                               <a
@@ -858,36 +868,40 @@ export default function Ajustes() {
                             {p.role === 'limpieza' && (
                             <div className="flex items-center justify-between gap-2 border-t pt-2.5" style={{ borderColor: 'var(--border)' }}>
                               <div className="flex items-center gap-2">
-                                {personLinks[p.id] ? (
-                                  <button
-                                    type="button"
-                                    onClick={() => void copyPersonLink(p)}
-                                    aria-label={tr('aj.copiarEnlace')}
-                                    title={tr('aj.copiarEnlace')}
-                                    className="flex h-8 w-8 items-center justify-center rounded-xl text-violet-500 transition-colors hover:bg-[var(--vi-chip-bg)]"
-                                  >
-                                    {copiedPerson === p.id ? <Check className="h-4 w-4" /> : <Link2 className="h-4 w-4" />}
-                                  </button>
-                                ) : p.hasToken ? (
-                                  <button
-                                    type="button"
-                                    onClick={() => void genPersonLink(p)}
-                                    aria-label={tr('aj.regenerar')}
-                                    title={tr('aj.regenerar')}
-                                    className="flex h-8 w-8 items-center justify-center rounded-xl text-violet-500 transition-colors hover:bg-[var(--vi-chip-bg)]"
-                                  >
-                                    <RefreshCw className="h-4 w-4" />
-                                  </button>
-                                ) : (
-                                  <button
-                                    type="button"
-                                    onClick={() => void genPersonLink(p)}
-                                    aria-label={tr('aj.activarEnlace')}
-                                    title={tr('aj.activarEnlace')}
-                                    className="flex h-8 w-8 items-center justify-center rounded-xl text-violet-500 transition-colors hover:bg-[var(--vi-chip-bg)]"
-                                  >
-                                    <Link2 className="h-4 w-4" />
-                                  </button>
+                                {!isDemoUser && (
+                                  <>
+                                    {personLinks[p.id] ? (
+                                      <button
+                                        type="button"
+                                        onClick={() => void copyPersonLink(p)}
+                                        aria-label={tr('aj.copiarEnlace')}
+                                        title={tr('aj.copiarEnlace')}
+                                        className="flex h-8 w-8 items-center justify-center rounded-xl text-violet-500 transition-colors hover:bg-[var(--vi-chip-bg)]"
+                                      >
+                                        {copiedPerson === p.id ? <Check className="h-4 w-4" /> : <Link2 className="h-4 w-4" />}
+                                      </button>
+                                    ) : p.hasToken ? (
+                                      <button
+                                        type="button"
+                                        onClick={() => void genPersonLink(p)}
+                                        aria-label={tr('aj.regenerar')}
+                                        title={tr('aj.regenerar')}
+                                        className="flex h-8 w-8 items-center justify-center rounded-xl text-violet-500 transition-colors hover:bg-[var(--vi-chip-bg)]"
+                                      >
+                                        <RefreshCw className="h-4 w-4" />
+                                      </button>
+                                    ) : (
+                                      <button
+                                        type="button"
+                                        onClick={() => void genPersonLink(p)}
+                                        aria-label={tr('aj.activarEnlace')}
+                                        title={tr('aj.activarEnlace')}
+                                        className="flex h-8 w-8 items-center justify-center rounded-xl text-violet-500 transition-colors hover:bg-[var(--vi-chip-bg)]"
+                                      >
+                                        <Link2 className="h-4 w-4" />
+                                      </button>
+                                    )}
+                                  </>
                                 )}
                                 <span
                                   className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold"
@@ -903,36 +917,39 @@ export default function Ajustes() {
                                   {p.hasToken ? tr('aj.enlaceActivo') : tr('aj.sinEnlace')}
                                 </span>
                               </div>
-                              <button
-                                type="button"
-                                onClick={() => void revokePersonLink(p)}
-                                aria-label={tr('aj.revocar')}
-                                title={tr('aj.revocar')}
-                                disabled={!p.hasToken}
-                                className="flex h-8 w-8 items-center justify-center rounded-xl text-rose-500 transition-colors hover:bg-[var(--ro-chip-bg)] disabled:cursor-not-allowed disabled:opacity-35"
-                              >
-                                <Ban className="h-4 w-4" />
-                              </button>
+                              {!isDemoUser && (
+                                <button
+                                  type="button"
+                                  onClick={() => void revokePersonLink(p)}
+                                  aria-label={tr('aj.revocar')}
+                                  title={tr('aj.revocar')}
+                                  disabled={!p.hasToken}
+                                  className="flex h-8 w-8 items-center justify-center rounded-xl text-rose-500 transition-colors hover:bg-[var(--ro-chip-bg)] disabled:cursor-not-allowed disabled:opacity-35"
+                                >
+                                  <Ban className="h-4 w-4" />
+                                </button>
+                              )}
                             </div>
                             )}
                           </motion.div>
                         );
                       })}
-                      {/* Tarjeta fantasma añadir */}
-                      <motion.button
-                        variants={itemV}
-                        type="button"
-                        onClick={() => {
-                          setNewPersonRole(role);
-                          setPersonForm({ name: '', phone: '', hourlyRate: 10, specialty: '' });
-                          setAddPersonOpen(true);
-                        }}
-                        className="flex min-h-[104px] flex-col items-center justify-center gap-1.5 rounded-2xl border-2 border-dashed p-4 transition-colors duration-150 hover:bg-[var(--surface-2)]"
-                        style={{ borderColor: 'var(--border)', color: 'var(--text-faint)' }}
-                      >
-                        <UserRoundPlus className="h-6 w-6" strokeWidth={1.8} />
-                        <span className="text-sm font-semibold">{tr('aj.anadirPersona')}</span>
-                      </motion.button>
+                      {!isDemoUser && (
+                        <motion.button
+                          variants={itemV}
+                          type="button"
+                          onClick={() => {
+                            setNewPersonRole(role);
+                            setPersonForm({ name: '', phone: '', hourlyRate: 10, specialty: '' });
+                            setAddPersonOpen(true);
+                          }}
+                          className="flex min-h-[104px] flex-col items-center justify-center gap-1.5 rounded-2xl border-2 border-dashed p-4 transition-colors duration-150 hover:bg-[var(--surface-2)]"
+                          style={{ borderColor: 'var(--border)', color: 'var(--text-faint)' }}
+                        >
+                          <UserRoundPlus className="h-6 w-6" strokeWidth={1.8} />
+                          <span className="text-sm font-semibold">{tr('aj.anadirPersona')}</span>
+                        </motion.button>
+                      )}
                     </motion.div>
                   </section>
                 );
@@ -975,15 +992,17 @@ export default function Ajustes() {
                         >
                           {tr('aj.gasto', { count })}
                         </span>
-                        <label className="flex items-center gap-2">
-                          <span className="text-xs font-medium" style={{ color: 'var(--text-muted)' }}>
-                            {tr('aj.recurrente')}
-                          </span>
-                          <Switch
-                            checked={c.recurrent}
-                            onCheckedChange={(v) => updateTypeConfig(c.key, { recurrent: v })}
-                          />
-                        </label>
+                        {!isDemoUser && (
+                          <label className="flex items-center gap-2">
+                            <span className="text-xs font-medium" style={{ color: 'var(--text-muted)' }}>
+                              {tr('aj.recurrente')}
+                            </span>
+                            <Switch
+                              checked={c.recurrent}
+                              onCheckedChange={(v) => updateTypeConfig(c.key, { recurrent: v })}
+                            />
+                          </label>
+                        )}
                       </div>
                       <AnimatePresence initial={false}>
                         {c.recurrent && (
@@ -1002,16 +1021,18 @@ export default function Ajustes() {
                                 <input
                                   type="text"
                                   inputMode="decimal"
+                                  readOnly={isDemoUser}
                                   value={String(c.fixedAmount).replace('.', ',')}
                                   onChange={(e) => {
                                     const v = Number(e.target.value.replace(',', '.'));
                                     if (Number.isFinite(v)) updateTypeConfig(c.key, { fixedAmount: v });
                                   }}
-                                  className="h-9 w-28 rounded-xl border bg-[var(--surface)] px-3 text-sm outline-none focus:ring-2 focus:ring-[#6366F1]/40"
+                                  className="h-9 w-28 rounded-xl border bg-[var(--surface)] px-3 text-sm outline-none focus:ring-2 focus:ring-[#6366F1]/40 disabled:opacity-50"
                                   style={{ borderColor: 'var(--border)' }}
                                 />
                               </label>
                               <Select
+                                disabled={isDemoUser}
                                 value={c.scope}
                                 onValueChange={(v) => updateTypeConfig(c.key, { scope: v as 'inmueble' | 'global' })}
                               >
@@ -1031,16 +1052,18 @@ export default function Ajustes() {
                   );
                 })}
 
-                <motion.button
-                  variants={itemV}
-                  type="button"
-                  onClick={() => setNewTypeOpen(true)}
-                  className="flex items-center justify-center gap-2 rounded-2xl border-2 border-dashed px-4 py-3.5 text-sm font-semibold transition-colors duration-150 hover:bg-[var(--surface-2)]"
-                  style={{ borderColor: 'var(--border)', color: 'var(--text-faint)' }}
-                >
-                  <Plus className="h-4 w-4" />
-                  {tr('aj.nuevoTipo')}
-                </motion.button>
+                {!isDemoUser && (
+                  <motion.button
+                    variants={itemV}
+                    type="button"
+                    onClick={() => setNewTypeOpen(true)}
+                    className="flex items-center justify-center gap-2 rounded-2xl border-2 border-dashed px-4 py-3.5 text-sm font-semibold transition-colors duration-150 hover:bg-[var(--surface-2)]"
+                    style={{ borderColor: 'var(--border)', color: 'var(--text-faint)' }}
+                  >
+                    <Plus className="h-4 w-4" />
+                    {tr('aj.nuevoTipo')}
+                  </motion.button>
+                )}
               </motion.div>
             </div>
           )}
@@ -1059,57 +1082,66 @@ export default function Ajustes() {
                       <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl" style={{ backgroundColor: 'var(--ro-chip-bg)' }}>
                         <Icon className="h-4 w-4 text-rose-500" />
                       </span>
-                      <input
-                        value={c.label}
-                        onChange={(e) => updateCat(c.key, { label: e.target.value })}
-                        placeholder={tr('aj.etiqueta')}
-                        className={cn(inputCls, 'h-9 flex-1')}
-                        style={inputStyle}
-                      />
-                      <Select value={c.icon} onValueChange={(v) => updateCat(c.key, { icon: v })}>
-                        <SelectTrigger className="h-9 w-[130px] rounded-xl border-[var(--border)] bg-[var(--surface)] text-sm shadow-none">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent className="rounded-xl border-[var(--border)] bg-[var(--surface)]">
-                          {Object.entries(CAT_ICONS).map(([name, Ico]) => (
-                            <SelectItem key={name} value={name}>
-                              <span className="flex items-center gap-2">
-                                <Ico className="h-3.5 w-3.5" />
-                                {name}
-                              </span>
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <button
-                        type="button"
-                        onClick={() => removeCat(c.key)}
-                        aria-label={tr('aj.eliminar')}
-                        className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg transition-colors hover:bg-[var(--ro-chip-bg)]"
-                        style={{ color: '#F43F5E' }}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </button>
+                      <span className="min-w-0 flex-1 truncate text-sm font-semibold">{c.label}</span>
+                      {!isDemoUser && (
+                        <>
+                          <input
+                            value={c.label}
+                            onChange={(e) => updateCat(c.key, { label: e.target.value })}
+                            placeholder={tr('aj.etiqueta')}
+                            className={cn(inputCls, 'h-9 flex-1')}
+                            style={inputStyle}
+                          />
+                          <Select value={c.icon} onValueChange={(v) => updateCat(c.key, { icon: v })}>
+                            <SelectTrigger className="h-9 w-[130px] rounded-xl border-[var(--border)] bg-[var(--surface)] text-sm shadow-none">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent className="rounded-xl border-[var(--border)] bg-[var(--surface)]">
+                              {Object.entries(CAT_ICONS).map(([name, Ico]) => (
+                                <SelectItem key={name} value={name}>
+                                  <span className="flex items-center gap-2">
+                                    <Ico className="h-3.5 w-3.5" />
+                                    {name}
+                                  </span>
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <button
+                            type="button"
+                            onClick={() => removeCat(c.key)}
+                            aria-label={tr('aj.eliminar')}
+                            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg transition-colors hover:bg-[var(--ro-chip-bg)]"
+                            style={{ color: '#F43F5E' }}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </button>
+                        </>
+                      )}
                     </motion.div>
                   );
                 })}
-                <motion.button
-                  variants={itemV}
-                  type="button"
-                  onClick={addCat}
-                  className="flex items-center justify-center gap-2 rounded-2xl border-2 border-dashed px-4 py-3 text-sm font-semibold transition-colors duration-150 hover:bg-[var(--surface-2)]"
-                  style={{ borderColor: 'var(--border)', color: 'var(--text-faint)' }}
-                >
-                  <Plus className="h-4 w-4" />
-                  {tr('aj.nuevaCategoria')}
-                </motion.button>
-                <button
-                  type="button"
-                  onClick={() => void saveCats()}
-                  className="brand-gradient mt-1 flex h-11 items-center justify-center rounded-xl text-sm font-semibold text-white transition-all duration-150 hover:brightness-110 active:scale-[0.98]"
-                >
-                  {tr('aj.guardar')}
-                </button>
+                {!isDemoUser && (
+                  <>
+                    <motion.button
+                      variants={itemV}
+                      type="button"
+                      onClick={addCat}
+                      className="flex items-center justify-center gap-2 rounded-2xl border-2 border-dashed px-4 py-3 text-sm font-semibold transition-colors duration-150 hover:bg-[var(--surface-2)]"
+                      style={{ borderColor: 'var(--border)', color: 'var(--text-faint)' }}
+                    >
+                      <Plus className="h-4 w-4" />
+                      {tr('aj.nuevaCategoria')}
+                    </motion.button>
+                    <button
+                      type="button"
+                      onClick={() => void saveCats()}
+                      className="brand-gradient mt-1 flex h-11 items-center justify-center rounded-xl text-sm font-semibold text-white transition-all duration-150 hover:brightness-110 active:scale-[0.98]"
+                    >
+                      {tr('aj.guardar')}
+                    </button>
+                  </>
+                )}
               </motion.div>
             </div>
           )}

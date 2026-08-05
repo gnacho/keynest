@@ -357,29 +357,33 @@ export default function Reservas() {
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <button
-            type="button"
-            onClick={onSync}
-            className="flex h-9 items-center gap-1.5 rounded-xl border px-3.5 text-sm font-semibold transition-colors duration-150 hover:bg-[var(--surface-2)]"
-            style={{ borderColor: 'var(--border)', backgroundColor: 'var(--surface)' }}
-          >
-            <motion.span
-              animate={{ rotate: syncing ? 360 : 0 }}
-              transition={{ duration: 0.6, ease: 'easeInOut' }}
-              className="flex"
-            >
-              <RefreshCw className="h-4 w-4" />
-            </motion.span>
-            {syncing ? t('res.sincronizando') : t('res.sincronizar')}
-          </button>
-          <button
-            type="button"
-            onClick={() => setDialogOpen(true)}
-            className="brand-gradient flex h-9 items-center gap-1.5 rounded-xl px-3.5 text-sm font-semibold text-white"
-          >
-            <Plus className="h-4 w-4" />
-            {t('res.nuevaReserva')}
-          </button>
+          {!data.isDemo && (
+            <>
+              <button
+                type="button"
+                onClick={onSync}
+                className="flex h-9 items-center gap-1.5 rounded-xl border px-3.5 text-sm font-semibold transition-colors duration-150 hover:bg-[var(--surface-2)]"
+                style={{ borderColor: 'var(--border)', backgroundColor: 'var(--surface)' }}
+              >
+                <motion.span
+                  animate={{ rotate: syncing ? 360 : 0 }}
+                  transition={{ duration: 0.6, ease: 'easeInOut' }}
+                  className="flex"
+                >
+                  <RefreshCw className="h-4 w-4" />
+                </motion.span>
+                {syncing ? t('res.sincronizando') : t('res.sincronizar')}
+              </button>
+              <button
+                type="button"
+                onClick={() => setDialogOpen(true)}
+                className="brand-gradient flex h-9 items-center gap-1.5 rounded-xl px-3.5 text-sm font-semibold text-white"
+              >
+                <Plus className="h-4 w-4" />
+                {t('res.nuevaReserva')}
+              </button>
+            </>
+          )}
         </div>
       </div>
 

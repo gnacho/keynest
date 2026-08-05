@@ -4,11 +4,12 @@
 
 - **Artefacto**: landing page de marketing de producto self-hosted (estática, sin
   build, HTML+CSS+JS puro, como easyzfs/landing y netpulse/web).
-- **Producto**: Keynest, gestor de alquileres de media estancia para pequeños
-  propietarios (2 a 4 pisos familiares). Reservas sincronizadas desde Airbnb por
-  iCal, limpiezas generadas de los check-outs con checklist y enlaces token para
-  el personal, mantenimiento en kanban, cerraduras Tedee y rentabilidad por
-  inmueble. Un servicio Node + SQLite, self-hosted, sin nube, sin suscripción.
+- **Producto**: Keynest, gestor de alquileres de media estancia para carteras
+  familiares sin límite de pisos (la app no pone tope). Reservas sincronizadas
+  desde Airbnb por iCal, limpiezas generadas de los check-outs con checklist y
+  enlaces token para el personal, mantenimiento en kanban, cerraduras Tedee y
+  rentabilidad por inmueble. Un servicio Node + SQLite, self-hosted, sin nube,
+  sin suscripción.
 - **Audiencia**: pequeños propietarios que hoy se apañan con Excel y WhatsApp.
   Gente normal, no gestores profesionales ni empresas de turismo. Ven la app en
   el móvil; la instalan en un mini-PC o LXC.
@@ -21,8 +22,8 @@
 - **Desenfadado** → copy con chispa y humor ligero, emojis NO (solo iconos),
   frases cortas, jerga de la casa ("la cartera familiar", "sin Excel que
   llore").
-- **Cercano** → no vender humo: "para 2 pisos, no para 300". Familia, no
-  corporación.
+- **Cercano** → no vender humo: "para la cartera familiar, no para 300".
+  Familia, no corporación.
 - **Ligero** → visual limpio, blanco, mucho aire. La app pesa ~30 MB y corre en
   cualquier mini-PC; la landing debe respirar igual.
 - **Rigor funcional** → el acento real de la página está en las

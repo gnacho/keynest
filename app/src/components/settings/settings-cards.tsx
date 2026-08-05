@@ -213,6 +213,7 @@ function LookaheadRow() {
   const { t: tr } = useTranslation();
   const { getSettings, saveSettings } = useData();
   const [days, setDays] = useState(() => getSettings().lookaheadDays);
+  const isDemo = Boolean(cachedUser()?.is_demo);
   return (
     <div className="flex flex-wrap items-center justify-between gap-3">
       <div>
@@ -222,22 +223,26 @@ function LookaheadRow() {
         </p>
       </div>
       <div className="flex items-center gap-2">
-        <input
-          type="number"
-          min={1}
-          max={30}
-          value={days}
-          onChange={(e) => {
-            const v = Number(e.target.value);
-            if (Number.isFinite(v) && v >= 1 && v <= 30) {
-              setDays(v);
-              void saveSettings({ lookaheadDays: v });
-            }
-          }}
-          aria-label={tr('aj.diasAviso')}
-          className="h-9 w-20 rounded-xl border bg-[var(--surface)] px-3 text-center text-sm outline-none focus:ring-2 focus:ring-[#6366F1]/40"
-          style={{ borderColor: 'var(--border)' }}
-        />
+        {isDemo ? (
+          <span className="font-display tnum w-20 text-center text-sm font-semibold">{days}</span>
+        ) : (
+          <input
+            type="number"
+            min={1}
+            max={30}
+            value={days}
+            onChange={(e) => {
+              const v = Number(e.target.value);
+              if (Number.isFinite(v) && v >= 1 && v <= 30) {
+                setDays(v);
+                void saveSettings({ lookaheadDays: v });
+              }
+            }}
+            aria-label={tr('aj.diasAviso')}
+            className="h-9 w-20 rounded-xl border bg-[var(--surface)] px-3 text-center text-sm outline-none focus:ring-2 focus:ring-[#6366F1]/40"
+            style={{ borderColor: 'var(--border)' }}
+          />
+        )}
         <span className="text-xs" style={{ color: 'var(--text-faint)' }}>
           {tr('aj.dias')}
         </span>
@@ -444,6 +449,8 @@ export function SessionCard({ isDemo }: { isDemo: boolean }) {
                 <X className="h-4 w-4" />
               </button>
             </div>
+          ) : isDemo ? (
+            <p className="truncate text-base font-semibold leading-tight">{displayName}</p>
           ) : (
             <button type="button" onClick={() => setEditingName(true)} title={tr('aj.editarNombre')} className="group flex min-w-0 items-center gap-1.5 text-left">
               <span className="truncate text-base font-semibold leading-tight">{displayName}</span>
@@ -475,6 +482,17 @@ export function SessionCard({ isDemo }: { isDemo: boolean }) {
                 <X className="h-3.5 w-3.5" />
               </button>
             </div>
+          ) : isDemo ? (
+            <p className="mt-0.5 flex items-center gap-1 text-xs" style={{ color: 'var(--text-muted)' }}>
+              {user?.email ? (
+                <>
+                  <Mail className="h-3.5 w-3.5 shrink-0" style={{ color: '#F59E0B' }} aria-hidden="true" />
+                  <span className="truncate">{user.email}</span>
+                </>
+              ) : (
+                <span>{tr('aj.emailVacio')}</span>
+              )}
+            </p>
           ) : (
             <button
               type="button"
@@ -500,17 +518,19 @@ export function SessionCard({ isDemo }: { isDemo: boolean }) {
         </div>
 
         {/* Idioma */}
-        <Select value={lang} onValueChange={(v) => changeLang(v as AppLanguage)}>
-          <SelectTrigger aria-label={tr('aj.idioma')} className="h-9 w-[120px] shrink-0 rounded-lg border text-xs" style={{ borderColor: 'var(--border)', backgroundColor: 'var(--surface)' }}>
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent className="rounded-xl border-[var(--border)] bg-[var(--surface)]">
-            <SelectItem value="auto">🌐 Auto</SelectItem>
-            {LANGUAGES.map((l) => (
-              <SelectItem key={l.code} value={l.code}>{l.flag} {l.nativeName}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        {!isDemo && (
+          <Select value={lang} onValueChange={(v) => changeLang(v as AppLanguage)}>
+            <SelectTrigger aria-label={tr('aj.idioma')} className="h-9 w-[120px] shrink-0 rounded-lg border text-xs" style={{ borderColor: 'var(--border)', backgroundColor: 'var(--surface)' }}>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent className="rounded-xl border-[var(--border)] bg-[var(--surface)]">
+              <SelectItem value="auto">🌐 Auto</SelectItem>
+              {LANGUAGES.map((l) => (
+                <SelectItem key={l.code} value={l.code}>{l.flag} {l.nativeName}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        )}
 
         {/* Contraseña */}
         {!isDemo && (
@@ -528,17 +548,19 @@ export function SessionCard({ isDemo }: { isDemo: boolean }) {
         )}
 
         {/* Notificaciones */}
-        <button
-          type="button"
-          aria-expanded={showNotif}
-          onClick={() => setShowNotif((v) => !v)}
-          className={actionBtnCls}
-          title={tr('aj.notificaciones')}
-          style={{ borderColor: 'var(--border)', color: 'var(--text-muted)' }}
-        >
-          <Bell className="h-4 w-4" aria-hidden="true" />
-          <span className={actionTextCls}>{tr('aj.notificaciones')}</span>
-        </button>
+        {!isDemo && (
+          <button
+            type="button"
+            aria-expanded={showNotif}
+            onClick={() => setShowNotif((v) => !v)}
+            className={actionBtnCls}
+            title={tr('aj.notificaciones')}
+            style={{ borderColor: 'var(--border)', color: 'var(--text-muted)' }}
+          >
+            <Bell className="h-4 w-4" aria-hidden="true" />
+            <span className={actionTextCls}>{tr('aj.notificaciones')}</span>
+          </button>
+        )}
 
         {/* Logout — SIEMPRE a la derecha, texto visible incluso en móvil, rojo */}
         <button
