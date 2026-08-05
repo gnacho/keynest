@@ -73,6 +73,28 @@ import { cn } from '@/lib/utils';
 
 const EASE_OUT_QUART: [number, number, number, number] = [0.25, 1, 0.5, 1];
 
+/* Enlaces de acceso por token de personas: persistidos en localStorage porque el
+   servidor guarda solo el hash del token (nunca el token en claro). Sin esto, tras
+   recargar la página el enlace no se puede volver a ver ni copiar. */
+const PERSON_LINKS_KEY = 'keynest-person-links';
+
+function loadStoredPersonLinks(): Record<string, string> {
+  try {
+    const raw = localStorage.getItem(PERSON_LINKS_KEY);
+    return raw ? (JSON.parse(raw) as Record<string, string>) : {};
+  } catch {
+    return {};
+  }
+}
+
+function storePersonLinks(links: Record<string, string>) {
+  try {
+    localStorage.setItem(PERSON_LINKS_KEY, JSON.stringify(links));
+  } catch {
+    /* sin persistencia disponible: sigue el flujo actual */
+  }
+}
+
 const containerV: Variants = {
   hidden: {},
   show: { transition: { staggerChildren: 0.07 } },
@@ -168,7 +190,7 @@ export default function Ajustes() {
 
   /* ---- Personas: BD real vía provider ---- */
   const people = data.getPeople();
-  const [personLinks, setPersonLinks] = useState<Record<string, string>>({});
+  const [personLinks, setPersonLinks] = useState<Record<string, string>>(() => loadStoredPersonLinks());
   const [copiedPerson, setCopiedPerson] = useState<string | null>(null);
   const [editPerson, setEditPerson] = useState<Person | null>(null);
   const [personForm, setPersonForm] = useState({ name: '', phone: '', hourlyRate: 0, specialty: '' });
@@ -477,7 +499,11 @@ export default function Ajustes() {
     const path = await data.generatePersonToken(p.id);
     if (path) {
       const url = `${window.location.origin}${path}`;
-      setPersonLinks((prev) => ({ ...prev, [p.id]: url }));
+      setPersonLinks((prev) => {
+        const next = { ...prev, [p.id]: url };
+        storePersonLinks(next);
+        return next;
+      });
       const ok = await copyText(url);
       toast.success(ok ? tr('aj.enlaceCopiado') : tr('aj.enlaceGenerado2'));
     }
@@ -499,6 +525,7 @@ export default function Ajustes() {
     setPersonLinks((prev) => {
       const next = { ...prev };
       delete next[p.id];
+      storePersonLinks(next);
       return next;
     });
     toast.success(tr('aj.enlaceRevocado'));
@@ -823,9 +850,21 @@ export default function Ajustes() {
                               ) : personLinks[p.id] ? (
                                 <div className="flex flex-col gap-1.5">
                                   <div className="flex items-center gap-2 rounded-xl border px-2.5 py-1.5" style={{ borderColor: 'var(--border)', backgroundColor: 'var(--surface-2)' }}>
-                                    <Link2 className="h-3.5 w-3.5 shrink-0 text-violet-500" />
+                                    <button
+                                      type="button"
+                                      onClick={() => void copyPersonLink(p)}
+                                      aria-label={tr('aj.copiarEnlace')}
+                                      title={tr('aj.copiarEnlace')}
+                                      className="shrink-0 rounded-md p-0.5 text-violet-500 transition-colors hover:bg-[var(--vi-chip-bg)]"
+                                    >
+                                      <Link2 className="h-3.5 w-3.5" />
+                                    </button>
                                     <span className="tnum min-w-0 flex-1 truncate text-[11px] font-medium" style={{ color: 'var(--text-muted)' }}>
                                       {personLinks[p.id]}
+                                    </span>
+                                    <span className="inline-flex shrink-0 items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold text-emerald-500" style={{ backgroundColor: 'rgba(16,185,129,0.12)' }}>
+                                      <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+                                      {tr('aj.enlaceActivo')}
                                     </span>
                                   </div>
                                   <div className="flex gap-1.5">
