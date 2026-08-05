@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html lang="es" data-theme="light">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Keynest — Adiós, Excel y WhatsApp. Hola, Keynest.</title>
+  <meta name="description" content="Keynest es la gestión de alquileres de media estancia para pequeños propietarios: reservas de Airbnb, limpiezas, mantenimiento, cerraduras Tedee y rentabilidad. Self-hosted, sin nube y sin suscripción." />
+  <meta name="theme-color" content="#ffffff" />
+  <link rel="canonical" href="https://keynest.cloudless.club/" />
+  <link rel="alternate" hreflang="es" href="https://keynest.cloudless.club/" />
+  <link rel="alternate" hreflang="en" href="https://keynest.cloudless.club/?hl=en" />
+  <link rel="alternate" hreflang="x-default" href="https://keynest.cloudless.club/" />
+  <meta property="og:type" content="website" />
+  <meta property="og:site_name" content="Keynest" />
+  <meta property="og:title" content="Keynest — Adiós, Excel y WhatsApp. Hola, Keynest." />
+  <meta property="og:description" content="Gestión de alquileres de media estancia para pequeños propietarios: reservas de Airbnb, limpiezas, mantenimiento, cerraduras y rentabilidad. Self-hosted, sin nube y sin suscripción." />
+  <meta property="og:url" content="https://keynest.cloudless.club/" />
+  <meta property="og:image" content="https://keynest.cloudless.club/og.png" />
+  <meta property="og:image:width" content="1200" />
+  <meta property="og:image:height" content="630" />
+  <meta property="og:locale" content="es_ES" />
+  <meta property="og:locale:alternate" content="en_US" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="Keynest — Adiós, Excel y WhatsApp. Hola, Keynest." />
+  <meta name="twitter:description" content="Gestión de alquileres de media estancia para pequeños propietarios. Self-hosted, sin nube y sin suscripción." />
+  <meta name="twitter:image" content="https://keynest.cloudless.club/og.png" />
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 96 96'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop offset='0' stop-color='%236366F1'/%3E%3Cstop offset='1' stop-color='%238B5CF6'/%3E%3C/linearGradient%3E%3C/defs%3E%3Cpath d='M20 46 L48 22 L76 46' fill='none' stroke='url(%23g)' stroke-width='5' stroke-linecap='round' stroke-linejoin='round'/%3E%3Cpath d='M28 40 V70 M68 40 V70' fill='none' stroke='url(%23g)' stroke-width='5' stroke-linecap='round'/%3E%3Ccircle cx='48' cy='52' r='9' fill='none' stroke='url(%23g)' stroke-width='5'/%3E%3Cpath d='M48 61 V80 M48 72 H58 M48 80 H55' fill='none' stroke='url(%23g)' stroke-width='5' stroke-linecap='round'/%3E%3C/svg%3E" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css?v=1" />
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "WebSite",
+        "name": "Keynest",
+        "url": "https://keynest.cloudless.club/",
+        "description": "Gestión de alquileres de media estancia para pequeños propietarios, self-hosted.",
+        "inLanguage": "es"
+      },
+      {
+        "@type": "SoftwareApplication",
+        "name": "Keynest",
+        "applicationCategory": "BusinessApplication",
+        "operatingSystem": "Linux",
+        "url": "https://github.com/gnacho/keynest",
+        "license": "https://www.gnu.org/licenses/agpl-3.0.html",
+        "description": "Reservas de Airbnb, limpiezas, mantenimiento, cerraduras Tedee y rentabilidad para pequeños propietarios. Self-hosted, sin nube y sin suscripción.",
+        "offers": { "@type": "Offer", "price": "0", "priceCurrency": "EUR" },
+        "isAccessibleForFree": true
+      },
+      {
+        "@type": "FAQPage",
+        "mainEntity": [
+          {
+            "@type": "Question",
+            "name": "¿Qué es Keynest?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Keynest es un gestor de alquileres de media estancia para pequeños propietarios: sincroniza las reservas de Airbnb por iCal, genera las limpiezas de cada salida, lleva el mantenimiento y la rentabilidad por piso."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "¿Cuánto cuesta Keynest?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Nada. Es software libre bajo licencia AGPL-3.0, sin planes ni comisiones. Lo instalas en tu propio servidor y es tuyo para siempre."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "¿Qué necesito para instalarlo?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Un Linux con systemd (x86_64 o arm64), unos 300 MB de disco y 400 MB de RAM. El instalador trae el runtime de Node y la app ya compilados, no hace falta compilar nada."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "¿Se sincroniza con Airbnb?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Sí. Keynest sincroniza las reservas de cada piso desde Airbnb por iCal cada 15 minutos y de forma manual cuando quieras."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "¿En qué se diferencia de Smoobu, Lodgify, Hostaway, Beds24 o Guesty?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Esas son plataformas en la nube con suscripción mensual pensadas para operadores con muchos inmuebles. Keynest es self-hosted, gratis y está hecho para carteras pequeñas: dos, tres, quizá cinco pisos."
+            }
+          }
+        ]
+      }
+    ]
+  }
+  </script>
+</head>
+<body>
+  <a class="skip-link" href="#main" data-i18n="misc.skip">Saltar al contenido</a>
+  <nav class="nav"><div class="container nav-inner">
+    <a class="nav-logo" href="#" aria-label="Keynest">
+      <svg viewBox="0 0 96 96" width="26" height="26" aria-hidden="true">
+        <defs><linearGradient id="lg" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0" stop-color="#6366F1"/><stop offset="1" stop-color="#8B5CF6"/>
+        </linearGradient></defs>
+        <path d="M20 46 L48 22 L76 46" fill="none" stroke="url(#lg)" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M28 40 V70 M68 40 V70" fill="none" stroke="url(#lg)" stroke-width="5" stroke-linecap="round"/>
+        <circle cx="48" cy="52" r="9" fill="none" stroke="url(#lg)" stroke-width="5"/>
+        <path d="M48 61 V80 M48 72 H58 M48 80 H55" fill="none" stroke="url(#lg)" stroke-width="5" stroke-linecap="round"/>
+      </svg>
+      <span class="font-display">Keynest</span>
+    </a>
+    <div class="nav-links">
+      <a href="#features" data-i18n="nav.features">Funciones</a>
+      <a href="#compare" data-i18n="nav.compare">Comparativa</a>
+      <a href="#install" data-i18n="nav.install">Instalar</a>
+      <a href="https://github.com/gnacho/keynest" target="_blank" rel="noopener" data-i18n="nav.github">GitHub</a>
+    </div>
+    <div class="nav-actions">
+      <select id="langSelect" aria-label="Language">
+        <option value="es">ES</option>
+        <option value="en">EN</option>
+      </select>
+      <button id="themeBtn" class="icon-btn" aria-label="Cambiar tema" type="button">
+        <svg id="themeIcon" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z"/></svg>
+      </button>
+      <a class="nav-cta" href="#install" data-i18n="hero.cta1">Instalar</a>
+    </div>
+  </div></nav>
+
+  <main id="main">
+    <header class="hero"><div class="container">
+      <span class="eyebrow" data-i18n="hero.eyebrow">Gestión de alquileres de media estancia</span>
+      <h1 class="font-display"><span data-i18n="hero.t1">Adiós, Excel y WhatsApp.</span><br /><span class="text-accent" data-i18n="hero.t2">Hola, Keynest.</span></h1>
+      <p class="hero-sub" data-i18n="hero.sub">Sincroniza tus reservas de Airbnb, genera la limpieza de cada salida, lleva el mantenimiento y controla cuánto gana cada piso. Todo en una app que se instala en tu propio servidor, sin nube y sin suscripción.</p>
+      <div class="hero-actions">
+        <a class="btn-primary" href="https://demo.keynest.cloudless.club" target="_blank" rel="noopener" data-i18n="hero.cta3">Probar la demo</a>
+        <a class="btn-ghost" href="#install" data-i18n="hero.cta1">Instalar</a>
+        <a class="btn-ghost" href="https://github.com/gnacho/keynest" target="_blank" rel="noopener" data-i18n="hero.cta2">Ver en GitHub</a>
+      </div>
+      <div class="hero-facts" aria-hidden="true">
+        <span class="chip" data-i18n="hero.f1">Sin nube</span>
+        <span class="chip" data-i18n="hero.f2">Sin suscripción</span>
+        <span class="chip" data-i18n="hero.f3">Libre (AGPL-3.0)</span>
+        <span class="chip" data-i18n="hero.f4">Cuantos pisos quieras</span>
+        <span class="chip" data-i18n="hero.f5">Airbnb vía iCal</span>
+      </div>
+      <div class="stay-bar" aria-hidden="true">
+        <span class="stay-seg stay-in"></span>
+        <span class="stay-seg stay-mid"></span>
+        <span class="stay-seg stay-out"></span>
+      </div>
+      <div class="demo-strip" id="heroStrip"></div>
+    </div></header>
+
+    <section class="block" id="principles"><div class="container">
+      <h2 class="font-display" data-i18n="principles.title">Construido sobre tres principios</h2>
+      <p class="lead" data-i18n="principles.lead">No son eslóganes. Condicionan cada decisión de diseño y de código.</p>
+      <div class="principles">
+        <article class="principle">
+          <h3 class="font-display" data-i18n="principles.p1t">Tus datos, en tu casa</h3>
+          <p data-i18n="principles.p1">Keynest es un servicio Node con una base SQLite que corre donde tú digas: un mini-PC, una LXC, un servidor. Los datos de tus pisos no pasan por la nube de nadie, y una copia de seguridad es copiar un fichero.</p>
+        </article>
+        <article class="principle">
+          <h3 class="font-display" data-i18n="principles.p2t">Gratis siempre</h3>
+          <p data-i18n="principles.p2">Código abierto bajo AGPL-3.0, sin planes ni comisiones. No pagas por piso, ni por usuario, ni por función. Si te funciona, úsalo; si no, se queda donde estaba.</p>
+        </article>
+        <article class="principle">
+          <h3 class="font-display" data-i18n="principles.p3t">Pensado para carteras de verdad</h3>
+          <p data-i18n="principles.p3">Las herramientas del mercado están hechas para operadores con decenas de inmuebles. Keynest nace de una cartera familiar y crece contigo: da igual cuántos pisos tengas, no hay límite ni coste por propiedad.</p>
+        </article>
+      </div>
+    </div></section>
+
+    <section class="block" id="features"><div class="container">
+      <h2 class="font-display" data-i18n="features.title">Todo el ciclo de una estancia</h2>
+      <p class="lead" data-i18n="features.lead">Cada apartado de la app cubre una pieza del trabajo que hoy haces a mano.</p>
+      <div class="features">
+        <div class="featrow">
+          <span class="feat-ico" style="--dot:#2563EB">✓</span>
+          <div><h3 class="font-display" data-i18n="features.f1t">Resumen</h3><p data-i18n="features.f1">El estado de tu cartera de un vistazo: ocupación, próximas entradas y salidas, limpiezas pendientes y la rentabilidad del mes.</p></div>
+        </div>
+        <div class="featrow">
+          <span class="feat-ico" style="--dot:#2563EB">✓</span>
+          <div><h3 class="font-display" data-i18n="features.f2t">Calendario</h3><p data-i18n="features.f2">Reservas sincronizadas desde Airbnb por iCal cada 15 minutos, con un color para cada momento: verde al entrar, azul durante la estancia, naranja al salir.</p></div>
+        </div>
+        <div class="featrow">
+          <span class="feat-ico" style="--dot:#2563EB">✓</span>
+          <div><h3 class="font-display" data-i18n="features.f3t">Reservas</h3><p data-i18n="features.f3">Lista completa con huésped, fechas y estado. Apunta el importe y las notas a mano, sin exportaciones ni tablas intermedias.</p></div>
+        </div>
+        <div class="featrow">
+          <span class="feat-ico" style="--dot:#7C3AED">✓</span>
+          <div><h3 class="font-display" data-i18n="features.f4t">Limpieza</h3><p data-i18n="features.f4">Cada salida genera su limpieza con la checklist de ese piso. Asigna hasta dos personas, envíales un enlace sin cuenta, recibe las fotos y calcula el coste en horas por tarifa.</p></div>
+        </div>
+        <div class="featrow">
+          <span class="feat-ico" style="--dot:#E11D48">✓</span>
+          <div><h3 class="font-display" data-i18n="features.f5t">Mantenimiento</h3><p data-i18n="features.f5">Tareas en kanban con categorías y prioridad. Lo urgente salta cuando el piso queda libre, para no perder ni un día de alquiler.</p></div>
+        </div>
+        <div class="featrow">
+          <span class="feat-ico" style="--dot:#059669">✓</span>
+          <div><h3 class="font-display" data-i18n="features.f6t">Cerraduras</h3><p data-i18n="features.f6">Registro de accesos de tus cerraduras Tedee: quién entró, cuándo y en qué piso, más la batería y el estado de cada una.</p></div>
+        </div>
+        <div class="featrow">
+          <span class="feat-ico" style="--dot:#B45309">✓</span>
+          <div><h3 class="font-display" data-i18n="features.f7t">Rentabilidad</h3><p data-i18n="features.f7">Ingresos contra gastos por piso y por mes, con comparativa con el periodo anterior y tipos de gasto recurrentes que se suman solos.</p></div>
+        </div>
+        <div class="featrow">
+          <span class="feat-ico" style="--dot:#6366F1">✓</span>
+          <div><h3 class="font-display" data-i18n="features.f8t">Ajustes</h3><p data-i18n="features.f8">Multiusuario con roles, interfaz en español e inglés, copias de seguridad automáticas y alertas al móvil. Y un modo demo para probarlo todo sin tocar datos reales.</p></div>
+        </div>
+      </div>
+    </div></section>
+
+    <section class="block" id="shots"><div class="container">
+      <h2 class="font-display" data-i18n="shots.title">Un vistazo a la interfaz</h2>
+      <p class="lead" data-i18n="shots.sub">Capturas reales de la app en modo demo.</p>
+      <div class="slider">
+        <div class="slider-stage" id="shotStage" role="button" tabindex="0" aria-label="Ampliar captura">
+          <img id="shotImg" src="" alt="" />
+        </div>
+        <div class="slider-actions">
+          <button id="shotPrev" class="icon-btn slider-btn" type="button" aria-label="Anterior">‹</button>
+          <div class="slider-thumbs" id="shotThumbs"></div>
+          <button id="shotNext" class="icon-btn slider-btn" type="button" aria-label="Siguiente">›</button>
+        </div>
+      </div>
+
+      <div id="lightbox" class="lightbox" role="dialog" aria-modal="true" aria-label="Visor de capturas" hidden>
+        <button id="lbClose" class="lightbox-close icon-btn" type="button" aria-label="Cerrar">×</button>
+        <button id="lbPrev" class="lightbox-nav lightbox-prev icon-btn" type="button" aria-label="Anterior">‹</button>
+        <img id="lbImg" src="" alt="" />
+        <button id="lbNext" class="lightbox-nav lightbox-next icon-btn" type="button" aria-label="Siguiente">›</button>
+      </div>
+    </div></section>
+
+    <section class="block" id="compare"><div class="container">
+      <h2 class="font-display" data-i18n="compare.title">La categoría que faltaba</h2>
+      <p class="lead" data-i18n="compare.lead">Gestión de alquileres para carteras pequeñas, en tu servidor y sin suscripción. Datos contrastados contra las fuentes públicas de cada producto el 5 de agosto de 2026.</p>
+      <p class="compare-legend" data-i18n="compare.legend">✓ nativo  ·  ◐ parcial  ·  ✗ no lo tiene  ·  — no aplica</p>
+      <div class="compare-tables" id="compareTables"></div>
+      <div class="honest">
+        <h3 class="font-display" data-i18n="compare.honestT">El lado honesto</h3>
+        <p data-i18n="compare.honest">Keynest no es un canal de venta. No conecta Booking.com ni Vrbo, no tiene motor de reservas propio, no cobra al huésped ni gestiona mensajes y reseñas. Si vendes por varios portales o cobras directo, estas herramientas cloud son más completas. Keynest es para la cartera familiar que vive de Airbnb y quiere el día a día resuelto, con los datos en casa y el coste en cero.</p>
+      </div>
+    </div></section>
+
+    <section class="block" id="install"><div class="container">
+      <h2 class="font-display" data-i18n="install.title">Instalación en un minuto</h2>
+      <p class="lead" data-i18n="install.sub">Un solo comando. Descarga, verifica y deja todo listo.</p>
+      <div class="install-card">
+        <div class="codebox">
+          <code>curl -fsSL https://raw.githubusercontent.com/gnacho/keynest/main/install.sh | sh</code>
+        </div>
+        <div class="code-actions">
+          <button id="copyBtn" class="btn-primary" type="button" data-i18n="install.copy">Copiar comando</button>
+          <span id="copyFeedback" class="copy-feedback" role="status"></span>
+        </div>
+      </div>
+      <div class="req-list">
+        <div class="req-item" data-i18n="install.r1">Linux con systemd (x86_64 o arm64)</div>
+        <div class="req-item" data-i18n="install.r2">Unos 300 MB de disco y 400 MB de RAM</div>
+        <div class="req-item" data-i18n="install.r3">Sin compilador: el instalador trae el runtime y la app ya compilados</div>
+        <div class="req-item" data-i18n="install.r4">Se actualiza reejecutando el mismo comando</div>
+      </div>
+      <p class="install-note" data-i18n="install.note">El instalador es shell legible: échale un ojo antes. Te crea un usuario propio, protege la configuración y te muestra la contraseña de administrador una sola vez.</p>
+    </div></section>
+
+    <section class="block" id="about"><div class="container">
+      <div class="about-card">
+        <h2 class="font-display" data-i18n="about.title">Por qué existe</h2>
+        <p data-i18n="about.p1">Keynest es una historia de familia. Un primo se casó, sus dos pisos pasaron a alquiler de media estancia, y más tarde se sumó un tercero heredado. Lo que empezó como "dos pisos, con una hoja de cálculo sobra" acabó en tardes enteras de Excel, hilos de WhatsApp cruzados y limpiezas coordinadas de memoria. Las apps del mercado estaban hechas para operadores turísticos: sobredimensionadas para tres pisos, caras y con los datos en la nube de otro. Así que construimos la que faltaba.</p>
+        <p data-i18n="about.p2">Con colaboraciones o apoyo quizás podría crecer más rápido, pero no puedo prometer nada. Es un proyecto personal, libre y gratuito, que corre 24/7 gestionando esos alquileres de verdad. Cada versión se prueba ahí primero.</p>
+        <a class="btn-ghost" href="https://ko-fi.com/gnacho" target="_blank" rel="noopener" data-i18n="about.kofi">Apoyar en Ko-fi</a>
+      </div>
+    </div></section>
+  </main>
+
+  <footer>
+    <div class="container footer-inner">
+      <p class="footer-tag" data-i18n="footer.tagline">Tus pisos de alquiler, bajo control. Sin nube, sin suscripción.</p>
+      <div class="footer-cols">
+        <div class="footer-col">
+          <h4 data-i18n="footer.project">Proyecto</h4>
+          <a href="#" data-i18n="footer.home">Inicio</a>
+          <a href="#features" data-i18n="footer.features">Funciones</a>
+          <a href="#compare" data-i18n="footer.compare">Comparativa</a>
+          <a href="#install" data-i18n="footer.install">Instalar</a>
+        </div>
+        <div class="footer-col">
+          <h4 data-i18n="footer.community">Comunidad</h4>
+          <a href="https://demo.keynest.cloudless.club" target="_blank" rel="noopener" class="footer-demo-link" data-i18n="footer.demoLive">Probar la demo en vivo</a>
+          <a href="https://github.com/gnacho/keynest" target="_blank" rel="noopener" data-i18n="footer.github">Código en GitHub</a>
+          <a href="https://ko-fi.com/gnacho" target="_blank" rel="noopener" data-i18n="footer.koFi">Apoyar en Ko-fi</a>
+        </div>
+      </div>
+      <p class="footer-license" data-i18n="footer.license">Keynest se publica bajo licencia AGPL-3.0.</p>
+    </div>
+  </footer>
+  <script src="i18n.js?v=1"></script>
+  <script src="app.js?v=1"></script>
+</body>
+</html>

@@ -21,5 +21,8 @@ data/*.db
 .idea/
 *.swp
 
+# Worktrees
+.worktrees/
+
 # Logs
 *.log
