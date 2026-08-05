@@ -1,0 +1,11 @@
+[Unit]
+Description=Keynest — aplicar actualización semanal (releases estables + checksums)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/opt/keynest/keynest-update.sh
+# Es un auto-update de la app: corre como root porque necesita systemctl restart
+# y chown -R keynest. Nada de eso toca datos (SQLite está en /var/lib/keynest).
+TimeoutStartSec=300
