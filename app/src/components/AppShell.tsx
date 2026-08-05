@@ -36,9 +36,11 @@ interface NavItem {
 
 /* Items de dominio; Ajustes NO va en el nav principal del sidebar: va abajo,
    junto al ThemeToggle (webapp-shell). En móvil entra en la bottom-nav directa. */
-/* NAV_ITEMS es la fuente única (webapp-shell): las rutas OCULTAS siguen
-   existiendo (URL directa, enlaces del dashboard), solo no se muestran en la
-   navegación. Cambiar HIDDEN_ROUTES para recuperarlas. */
+/* NAV_ITEMS es la fuente única (webapp-shell). En DESKTOP (sidebar + raíl) se
+   muestran TODOS los de dominio; en MÓVIL la bottom-nav muestra solo los 4
+   esenciales (Resumen/Limpieza/Rentabilidad/Ajustes) — Calendario/Reservas/
+   Mantenimiento quedan ocultos en móvil pero siguen accesibles por URL directa
+   y enlaces del dashboard (y visibles en desktop). */
 const NAV_ITEMS: NavItem[] = [
   { to: '/', labelKey: 'resumen', icon: LayoutDashboard },
   { to: '/calendario', labelKey: 'calendario', icon: CalendarDays },
@@ -48,13 +50,15 @@ const NAV_ITEMS: NavItem[] = [
   { to: '/rentabilidad', labelKey: 'rentabilidad', icon: TrendingUp },
 ];
 
+/* Desktop: todos los de dominio */
+const DESKTOP_NAV: NavItem[] = NAV_ITEMS;
+
+/* Móvil (bottom-nav): solo los esenciales + Ajustes */
 const HIDDEN_ROUTES = ['/calendario', '/reservas', '/mantenimiento'];
 const VISIBLE_NAV: NavItem[] = NAV_ITEMS.filter((i) => !HIDDEN_ROUTES.includes(i.to));
 
 const SETTINGS_ITEM: NavItem = { to: '/ajustes', labelKey: 'ajustes', icon: Settings };
 
-/* Bottom-nav móvil: los 4 items directos (Resumen/Limpieza/Rentabilidad/Ajustes),
-   sin botón "Más" — solo hay 3 de dominio + Ajustes (decisión usuario 6-Ago-2026). */
 const BOTTOM_ITEMS: NavItem[] = [...VISIBLE_NAV, SETTINGS_ITEM];
 
 const TITLE_KEYS: Record<string, string> = {
@@ -238,11 +242,11 @@ export default function AppShell({ children }: { children: ReactNode }) {
 
           {collapsed ? (
             <nav className="flex flex-1 flex-col items-center gap-1 overflow-y-auto px-3 py-2">
-              {[...VISIBLE_NAV, SETTINGS_ITEM].map(renderIconItem)}
+              {[...DESKTOP_NAV, SETTINGS_ITEM].map(renderIconItem)}
             </nav>
           ) : (
             <nav className="flex flex-1 flex-col gap-1 overflow-y-auto px-3 py-2">
-              {VISIBLE_NAV.map(renderNavItem)}
+              {DESKTOP_NAV.map(renderNavItem)}
             </nav>
           )}
 
@@ -299,7 +303,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
             <LogoMark size={26} />
           </Link>
           <nav className="mt-3 flex flex-1 flex-col items-center gap-1 overflow-y-auto">
-            {[...VISIBLE_NAV, SETTINGS_ITEM].map(renderIconItem)}
+            {[...DESKTOP_NAV, SETTINGS_ITEM].map(renderIconItem)}
           </nav>
           <ThemeToggle />
         </aside>
