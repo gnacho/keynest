@@ -642,6 +642,7 @@
     "nombreObligatorio": "El nombre es obligatorio",
     "activarEnlace": "Activar enlace de acceso",
     "enlaceActivo": "Enlace activo",
+    "sinEnlace": "Sin enlace",
     "enlaceCopiado": "Enlace copiado al portapapeles",
     "enlaceGenerado2": "Enlace generado (cópialo ahora, no se volverá a mostrar)",
     "enlaceRevocado": "Enlace revocado",

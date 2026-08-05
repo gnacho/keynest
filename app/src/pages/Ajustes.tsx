@@ -10,7 +10,6 @@ import {
   CalendarDays,
   Check,
   ChevronDown,
-  Copy,
   DoorOpen,
   Euro,
   FileText,
@@ -854,80 +853,66 @@ export default function Ajustes() {
                               </span>
                             </div>
                             {/* Enlace de acceso por token: SOLO personal de limpieza;
-                                los proveedores usan token por orden de trabajo */}
+                                los proveedores usan token por orden de trabajo.
+                                Compacto: iconos con tooltip, sin URL ni botones de texto. */}
                             {p.role === 'limpieza' && (
-                            <div className="flex flex-col gap-2 border-t pt-2.5" style={{ borderColor: 'var(--border)' }}>
-                              {p.hasToken && !personLinks[p.id] ? (
-                                <div className="flex items-center gap-2">
-                                  <span className="flex flex-1 items-center gap-1.5 text-[11px] font-medium text-emerald-500">
-                                    <Check className="h-3.5 w-3.5" />
-                                    {tr('aj.enlaceActivo')}
-                                  </span>
+                            <div className="flex items-center justify-between gap-2 border-t pt-2.5" style={{ borderColor: 'var(--border)' }}>
+                              <div className="flex items-center gap-2">
+                                {personLinks[p.id] ? (
+                                  <button
+                                    type="button"
+                                    onClick={() => void copyPersonLink(p)}
+                                    aria-label={tr('aj.copiarEnlace')}
+                                    title={tr('aj.copiarEnlace')}
+                                    className="flex h-8 w-8 items-center justify-center rounded-xl text-violet-500 transition-colors hover:bg-[var(--vi-chip-bg)]"
+                                  >
+                                    {copiedPerson === p.id ? <Check className="h-4 w-4" /> : <Link2 className="h-4 w-4" />}
+                                  </button>
+                                ) : p.hasToken ? (
                                   <button
                                     type="button"
                                     onClick={() => void genPersonLink(p)}
-                                    className="rounded-lg px-2 py-1 text-[11px] font-semibold transition-colors hover:bg-[var(--surface-2)]"
-                                    style={{ color: 'var(--text-muted)' }}
+                                    aria-label={tr('aj.regenerar')}
+                                    title={tr('aj.regenerar')}
+                                    className="flex h-8 w-8 items-center justify-center rounded-xl text-violet-500 transition-colors hover:bg-[var(--vi-chip-bg)]"
                                   >
-                                    {tr('aj.regenerar')}
+                                    <RefreshCw className="h-4 w-4" />
                                   </button>
+                                ) : (
                                   <button
                                     type="button"
-                                    onClick={() => void revokePersonLink(p)}
-                                    className="rounded-lg px-2 py-1 text-[11px] font-semibold text-rose-500 transition-colors hover:bg-[var(--ro-chip-bg)]"
+                                    onClick={() => void genPersonLink(p)}
+                                    aria-label={tr('aj.activarEnlace')}
+                                    title={tr('aj.activarEnlace')}
+                                    className="flex h-8 w-8 items-center justify-center rounded-xl text-violet-500 transition-colors hover:bg-[var(--vi-chip-bg)]"
                                   >
-                                    {tr('aj.revocar')}
+                                    <Link2 className="h-4 w-4" />
                                   </button>
-                                </div>
-                              ) : personLinks[p.id] ? (
-                                <div className="flex flex-col gap-1.5">
-                                  <div className="flex items-center gap-2 rounded-xl border px-2.5 py-1.5" style={{ borderColor: 'var(--border)', backgroundColor: 'var(--surface-2)' }}>
-                                    <button
-                                      type="button"
-                                      onClick={() => void copyPersonLink(p)}
-                                      aria-label={tr('aj.copiarEnlace')}
-                                      title={tr('aj.copiarEnlace')}
-                                      className="shrink-0 rounded-md p-0.5 text-violet-500 transition-colors hover:bg-[var(--vi-chip-bg)]"
-                                    >
-                                      <Link2 className="h-3.5 w-3.5" />
-                                    </button>
-                                    <span className="tnum min-w-0 flex-1 truncate text-[11px] font-medium" style={{ color: 'var(--text-muted)' }}>
-                                      {personLinks[p.id]}
-                                    </span>
-                                    <span className="inline-flex shrink-0 items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold text-emerald-500" style={{ backgroundColor: 'rgba(16,185,129,0.12)' }}>
-                                      <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
-                                      {tr('aj.enlaceActivo')}
-                                    </span>
-                                  </div>
-                                  <div className="flex gap-1.5">
-                                    <button
-                                      type="button"
-                                      onClick={() => void copyPersonLink(p)}
-                                      className="flex h-7 flex-1 items-center justify-center gap-1 rounded-lg bg-violet-500 text-[11px] font-semibold text-white transition-all hover:brightness-110"
-                                    >
-                                      {copiedPerson === p.id ? <Check className="h-3 w-3" /> : <Copy className="h-3 w-3" />}
-                                      {copiedPerson === p.id ? tr('aj.copiado') : tr('aj.copiarEnlace')}
-                                    </button>
-                                    <button
-                                      type="button"
-                                      onClick={() => void revokePersonLink(p)}
-                                      className="flex h-7 items-center rounded-lg border px-2 text-[11px] font-semibold text-rose-500 transition-colors hover:bg-[var(--ro-chip-bg)]"
-                                      style={{ borderColor: 'var(--border)' }}
-                                    >
-                                      {tr('aj.revocar')}
-                                    </button>
-                                  </div>
-                                </div>
-                              ) : (
-                                <button
-                                  type="button"
-                                  onClick={() => void genPersonLink(p)}
-                                  className="flex h-8 items-center justify-center gap-1.5 rounded-xl border border-dashed border-violet-400 text-[11px] font-semibold text-violet-500 transition-colors hover:bg-[var(--vi-chip-bg)]"
+                                )}
+                                <span
+                                  className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold"
+                                  style={{
+                                    color: p.hasToken ? '#10B981' : 'var(--text-faint)',
+                                    backgroundColor: p.hasToken ? 'rgba(16,185,129,0.12)' : 'transparent',
+                                  }}
                                 >
-                                  <Link2 className="h-3.5 w-3.5" />
-                                  {tr('aj.activarEnlace')}
-                                </button>
-                              )}
+                                  <span
+                                    className="h-1.5 w-1.5 rounded-full"
+                                    style={{ backgroundColor: p.hasToken ? '#10B981' : 'var(--text-faint)' }}
+                                  />
+                                  {p.hasToken ? tr('aj.enlaceActivo') : tr('aj.sinEnlace')}
+                                </span>
+                              </div>
+                              <button
+                                type="button"
+                                onClick={() => void revokePersonLink(p)}
+                                aria-label={tr('aj.revocar')}
+                                title={tr('aj.revocar')}
+                                disabled={!p.hasToken}
+                                className="flex h-8 w-8 items-center justify-center rounded-xl text-rose-500 transition-colors hover:bg-[var(--ro-chip-bg)] disabled:cursor-not-allowed disabled:opacity-35"
+                              >
+                                <Ban className="h-4 w-4" />
+                              </button>
                             </div>
                             )}
                           </motion.div>
