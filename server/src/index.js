@@ -151,34 +151,6 @@ app.put('/api/auth/password', auth.requireAuth(prodDb, demoDb), async (c) => {
   return c.json({ ok: true })
 })
 
-/* Subida de avatar de perfil (multipart, campo 'avatar', máx 2 MB, crop 1:1) */
-guarded.post('/avatar', async (c) => {
-  if (auth.rateLimitAction(c.get('db'), 'avatar:user', c, 10)) return c.json({ error: 'demasiadas subidas' }, 429)
-  const body = await c.req.parseBody().catch(() => null)
-  const file = body?.avatar
-  if (!file || !(file instanceof File)) return c.json({ error: 'falta el fichero (campo avatar)' }, 400)
-  const ext = PHOTO_MIME[file.type]
-  if (!ext) return c.json({ error: 'formato no válido (jpg/png/webp)' }, 400)
-  if (file.size > 2 * 1024 * 1024) return c.json({ error: 'máximo 2 MB' }, 400)
-  const buffer = Buffer.from(await file.arrayBuffer())
-  if (!validatePhotoMagic(buffer, ext)) return c.json({ error: 'contenido inválido' }, 400)
-
-  const avatarsDir = join(config.dataDir, 'avatars')
-  mkdirSync(avatarsDir, { recursive: true })
-  const userId = c.get('user').id
-  const filename = `${userId}.${ext}`
-  writeFileSync(join(avatarsDir, filename), buffer)
-
-  // Borra el avatar anterior si era de otro formato
-  for (const e of ['jpg', 'png', 'webp']) {
-    if (e !== ext) { try { unlinkSync(join(avatarsDir, `${userId}.${e}`)) } catch { /* noop */ } }
-  }
-  const avatarPath = `/avatars/${filename}`
-  c.get('db').prepare('UPDATE users SET avatar = ? WHERE id = ?').run(avatarPath, userId)
-  const user = { ...c.get('user'), avatar: avatarPath }
-  return c.json({ ok: true, user })
-})
-
 /* Alta de usuario gestión (solo admin, password inicial ≥10, rol user|admin) */
 const newUserSchema = z.object({
   username: z.string().min(1),
@@ -933,6 +905,34 @@ async function saveCleaningPhoto(db, cleaningId, file) {
   db.prepare('UPDATE cleanings SET photos = ? WHERE id = ?').run(JSON.stringify(photos), cleaningId)
   return { cleaning: db.prepare('SELECT * FROM cleanings WHERE id = ?').get(cleaningId) }
 }
+
+/* Subida de avatar de perfil (multipart, campo 'avatar', máx 2 MB, crop 1:1) */
+guarded.post('/avatar', async (c) => {
+  if (auth.rateLimitAction(c.get('db'), 'avatar:user', c, 10)) return c.json({ error: 'demasiadas subidas' }, 429)
+  const body = await c.req.parseBody().catch(() => null)
+  const file = body?.avatar
+  if (!file || !(file instanceof File)) return c.json({ error: 'falta el fichero (campo avatar)' }, 400)
+  const ext = PHOTO_MIME[file.type]
+  if (!ext) return c.json({ error: 'formato no válido (jpg/png/webp)' }, 400)
+  if (file.size > 2 * 1024 * 1024) return c.json({ error: 'máximo 2 MB' }, 400)
+  const buffer = Buffer.from(await file.arrayBuffer())
+  if (!validatePhotoMagic(buffer, ext)) return c.json({ error: 'contenido inválido' }, 400)
+
+  const avatarsDir = join(config.dataDir, 'avatars')
+  mkdirSync(avatarsDir, { recursive: true })
+  const userId = c.get('user').id
+  const filename = `${userId}.${ext}`
+  writeFileSync(join(avatarsDir, filename), buffer)
+
+  // Borra el avatar anterior si era de otro formato
+  for (const e of ['jpg', 'png', 'webp']) {
+    if (e !== ext) { try { unlinkSync(join(avatarsDir, `${userId}.${e}`)) } catch { /* noop */ } }
+  }
+  const avatarPath = `/avatars/${filename}`
+  c.get('db').prepare('UPDATE users SET avatar = ? WHERE id = ?').run(avatarPath, userId)
+  const user = { ...c.get('user'), avatar: avatarPath }
+  return c.json({ ok: true, user })
+})
 
 guarded.post('/cleanings/:id/photo', async (c) => {
   if (auth.rateLimitAction(c.get('db'), 'photo:cleaning', c, 20)) return c.json({ error: 'demasiadas subidas, espera 1 minuto' }, 429)
