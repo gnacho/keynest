@@ -39,6 +39,10 @@ const MIGRATIONS = [
   // 11: display_name + avatar para Mi perfil
   `ALTER TABLE users ADD COLUMN display_name TEXT DEFAULT '';
    ALTER TABLE users ADD COLUMN avatar TEXT DEFAULT ''`,
+  // 12: token en claro CIFRADO (ENC_KEY) para poder recuperar/volver a copiar
+  //     el enlace de acceso. El hash sigue siendo el que valida en /api/t/:token.
+  `ALTER TABLE people ADD COLUMN token_cipher TEXT;
+   ALTER TABLE maintenance_tasks ADD COLUMN token_cipher TEXT`,
 ]
 
 export function migrate(db) {

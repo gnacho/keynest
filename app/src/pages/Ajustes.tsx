@@ -198,6 +198,38 @@ export default function Ajustes() {
   const [addPersonOpen, setAddPersonOpen] = useState(false);
   const [newPersonRole, setNewPersonRole] = useState<PersonRole>('limpieza');
 
+  /* Recupera de la BD el enlace activo de cada persona (token_cipher cifrado en server,
+     GET /api/people/:id/token). Fuente de verdad = server; localStorage solo caché inicial. */
+  const fetchedLinksRef = useRef<Set<string>>(new Set());
+  useEffect(() => {
+    const pending = people.filter((p) => p.hasToken && !fetchedLinksRef.current.has(p.id));
+    pending.forEach((p) => {
+      fetchedLinksRef.current.add(p.id);
+      void data
+        .getPersonLink(p.id)
+        .then((path) => {
+          setPersonLinks((prev) => {
+            if (path) {
+              const next = { ...prev, [p.id]: path };
+              storePersonLinks(next);
+              return next;
+            }
+            if (prev[p.id]) {
+              const next = { ...prev };
+              delete next[p.id];
+              storePersonLinks(next);
+              return next;
+            }
+            return prev;
+          });
+        })
+        .catch(() => {
+          fetchedLinksRef.current.delete(p.id);
+        });
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [data.version]);
+
   const [checklistText, setChecklistText] = useState('');
   const [instructionsText, setInstructionsText] = useState('');
 
