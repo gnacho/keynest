@@ -161,9 +161,6 @@ export default function Mantenimiento() {
       {/* ============================== Topbar */}
       <div className="flex items-start justify-between gap-3">
         <div>
-          <h1 className="font-display text-2xl font-semibold tracking-[-0.02em] lg:text-[28px]">
-            {tr('mant.titulo')}
-          </h1>
           <p className="mt-0.5 text-[13px]" style={{ color: 'var(--text-muted)' }}>
             {tr('mant.tareas', { count: all.length })} · {tr('mant.urgentes', { count: urgentes })}
           </p>

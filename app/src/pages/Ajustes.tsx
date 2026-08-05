@@ -597,7 +597,6 @@ export default function Ajustes() {
 
       {/* ============================== Topbar */}
       <div>
-        <h1 className="font-display text-2xl font-semibold tracking-[-0.02em] lg:text-[28px]">{tr('nav.ajustes')}</h1>
         <p className="mt-0.5 text-[13px]" style={{ color: 'var(--text-muted)' }}>
           {tr('aj.maestrosDesc')}
         </p>
@@ -1149,10 +1148,87 @@ export default function Ajustes() {
           {/* ================================================= TAB PREFERENCIAS */}
           {tab === 'preferencias' && (
             <div className="flex flex-col gap-4">
-              <div className="grid items-start gap-4 2xl:grid-cols-2">
+              {/* Fila 1: [Apariencia | Operativa (solo admin)] — canon webapp-shell 6-Ago-2026 */}
+              <div className={cn('grid items-start gap-4', isAdmin && '2xl:grid-cols-2')}>
                 <AppearanceCard />
-                <SessionCard isDemo={isDemoUser} />
+                {isAdmin && (
+                  <Card title={tr('aj.operativa')} desc={tr('aj.operativaDesc')}>
+                    <div className="flex flex-col divide-y" style={{ borderColor: 'var(--border)' }}>
+                      {/* Horarios */}
+                      <div className="flex min-h-14 flex-wrap items-center justify-between gap-3 py-3" style={{ borderColor: 'var(--border)' }}>
+                        <div>
+                          <p className="text-sm font-semibold">{tr('aj.horarios')}</p>
+                          <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
+                            {tr('aj.horariosDesc')}
+                          </p>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <input
+                            type="time"
+                            value={checkInTime}
+                            onChange={(e) => { setCheckInTime(e.target.value); savePref({ checkInTime: e.target.value }); }}
+                            className={cn(inputCls, 'h-9 w-[104px]')}
+                            style={inputStyle}
+                            aria-label={tr('aj.horaEntrada')}
+                          />
+                          <span className="text-xs" style={{ color: 'var(--text-faint)' }}>
+                            /
+                          </span>
+                          <input
+                            type="time"
+                            value={checkOutTime}
+                            onChange={(e) => { setCheckOutTime(e.target.value); savePref({ checkOutTime: e.target.value }); }}
+                            className={cn(inputCls, 'h-9 w-[104px]')}
+                            style={inputStyle}
+                            aria-label={tr('aj.horaSalida')}
+                          />
+                        </div>
+                      </div>
+
+                      {/* Limpieza automática */}
+                      <div className="flex min-h-14 items-center justify-between gap-3 py-3" style={{ borderColor: 'var(--border)' }}>
+                        <div>
+                          <p className="text-sm font-semibold">{tr('aj.limpiezaAuto')}</p>
+                          <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
+                            {tr('aj.limpiezaAutoDesc')}
+                          </p>
+                        </div>
+                        <Switch
+                          checked={autoCleaning}
+                          onCheckedChange={(v) => { setAutoCleaning(v); savePref({ autoCleaning: v }); }}
+                          className="data-[state=checked]:bg-[#8B5CF6]"
+                        />
+                      </div>
+
+                      {/* Umbral batería */}
+                      <div className="flex min-h-14 flex-wrap items-center justify-between gap-3 py-3" style={{ borderColor: 'var(--border)' }}>
+                        <div>
+                          <p className="text-sm font-semibold">{tr('aj.umbralBateria')}</p>
+                          <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
+                            {tr('aj.umbralBateriaDesc')}
+                          </p>
+                        </div>
+                        <div className="flex w-48 items-center gap-3">
+                          <Slider
+                            value={batteryThreshold}
+                            onValueChange={(v) => { setBatteryThreshold(v); savePref({ batteryThreshold: v[0] }); }}
+                            min={10}
+                            max={50}
+                            step={5}
+                            className="flex-1"
+                          />
+                          <span className="font-display tnum w-12 text-right text-[15px] font-semibold">
+                            {batteryThreshold[0]} %
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  </Card>
+                )}
               </div>
+
+              {/* Fila 2: Mi perfil a ancho completo, debajo de Apariencia (canon 6-Ago-2026) */}
+              <SessionCard isDemo={isDemoUser} />
 
               {/* ============================== ZONA ADMIN (solo administradores)
                   Cabecera de ZONA (no es una tarjeta) con tinte ámbar sutil según
@@ -1286,117 +1362,35 @@ export default function Ajustes() {
                     </div>
                   )}
 
-                  {/* Dominio: Operativa | Tedee ; Import a ancho completo */}
+                  {/* Dominio: Tedee | Import (Operativa subió al lado de Apariencia) */}
                   <div className="grid items-start gap-4 2xl:grid-cols-2">
-                  {/* Operativa: preferencias de dominio (solo admin, globales) */}
-                  <Card title={tr('aj.operativa')} desc={tr('aj.operativaDesc')}>
-                <div className="flex flex-col divide-y" style={{ borderColor: 'var(--border)' }}>
-                  {/* Horarios */}
-                  <div className="flex min-h-14 flex-wrap items-center justify-between gap-3 py-3" style={{ borderColor: 'var(--border)' }}>
-                    <div>
-                      <p className="text-sm font-semibold">{tr('aj.horarios')}</p>
-                      <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
-                        {tr('aj.horariosDesc')}
-                      </p>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <input
-                        type="time"
-                        value={checkInTime}
-                        onChange={(e) => { setCheckInTime(e.target.value); savePref({ checkInTime: e.target.value }); }}
-                        className={cn(inputCls, 'h-9 w-[104px]')}
-                        style={inputStyle}
-                        aria-label={tr('aj.horaEntrada')}
-                      />
-                      <span className="text-xs" style={{ color: 'var(--text-faint)' }}>
-                        /
-                      </span>
-                      <input
-                        type="time"
-                        value={checkOutTime}
-                        onChange={(e) => { setCheckOutTime(e.target.value); savePref({ checkOutTime: e.target.value }); }}
-                        className={cn(inputCls, 'h-9 w-[104px]')}
-                        style={inputStyle}
-                        aria-label={tr('aj.horaSalida')}
-                      />
-                    </div>
-                  </div>
-
-                  {/* Limpieza automática */}
-                  <div className="flex min-h-14 items-center justify-between gap-3 py-3" style={{ borderColor: 'var(--border)' }}>
-                    <div>
-                      <p className="text-sm font-semibold">{tr('aj.limpiezaAuto')}</p>
-                      <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
-                        {tr('aj.limpiezaAutoDesc')}
-                      </p>
-                    </div>
-                    <Switch
-                      checked={autoCleaning}
-                      onCheckedChange={(v) => { setAutoCleaning(v); savePref({ autoCleaning: v }); }}
-                      className="data-[state=checked]:bg-[#8B5CF6]"
-                    />
-                  </div>
-
-                  {/* Umbral batería */}
-                  <div className="flex min-h-14 flex-wrap items-center justify-between gap-3 py-3" style={{ borderColor: 'var(--border)' }}>
-                    <div>
-                      <p className="text-sm font-semibold">{tr('aj.umbralBateria')}</p>
-                      <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
-                        {tr('aj.umbralBateriaDesc')}
-                      </p>
-                    </div>
-                    <div className="flex w-48 items-center gap-3">
-                      <Slider
-                        value={batteryThreshold}
-                        onValueChange={(v) => { setBatteryThreshold(v); savePref({ batteryThreshold: v[0] }); }}
-                        min={10}
-                        max={50}
-                        step={5}
-                        className="flex-1"
-                      />
-                      <span className="font-display tnum w-12 text-right text-[15px] font-semibold">
-                        {batteryThreshold[0]} %
-                      </span>
-                    </div>
-                  </div>
-                </div>
-                  </Card>
-
-                  {/* Conexión Tedee: estado de salud sin campos visibles;
-                      la tuerca permite cambiar la API (muy poco habitual) con re-test */}
+                  {/* Conexión Tedee: una fila compacta; cuando está configurada solo
+                      muestra el botón de editar (la tuerca) y una burbuja de estado */}
                   <Card title={tr('aj.tedeeApi')} desc={tr('aj.tedeeApiDesc')}>
-                  {/* Estado de salud */}
                   <div className="flex items-center gap-2.5">
                     {tedeeState.state === 'checking' && (
-                      <span className="flex items-center gap-2 text-[13px] font-medium" style={{ color: 'var(--text-muted)' }}>
-                        <RefreshCw className="h-4 w-4 animate-spin" />
+                      <span className="inline-flex items-center gap-2 rounded-full border px-2.5 py-1 text-xs font-semibold" style={{ borderColor: 'var(--border)', color: 'var(--text-muted)' }}>
+                        <RefreshCw className="h-3.5 w-3.5 animate-spin" />
                         {tr('aj.tedeeComprobando')}
                       </span>
                     )}
                     {tedeeState.state === 'ok' && (
-                      <span className="flex min-w-0 flex-1 items-start gap-2">
-                        <span className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-emerald-500" />
-                        <span className="text-[13px]">
-                          <span className="font-semibold text-emerald-500">{tr('aj.tedeeConectada')}</span>
-                          {tedeeState.locks && tedeeState.locks.length > 0 && (
-                            <span style={{ color: 'var(--text-muted)' }}>
-                              {' · '}
-                              {tr('aj.tedeeCerraduras', { count: tedeeState.locks.length })}
-                              {': '}
-                              {tedeeState.locks.map((l) => `${l.name} (${l.battery}%)`).join(', ')}
-                            </span>
-                          )}
-                        </span>
+                      <span className="inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-semibold text-emerald-500" style={{ borderColor: 'rgb(16 185 129 / 0.3)', backgroundColor: 'rgb(16 185 129 / 0.1)' }}>
+                        <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+                        {tr('aj.tedeeConectada')}
+                        {tedeeState.locks && tedeeState.locks.length > 0 && (
+                          <> · {tr('aj.tedeeCerraduras', { count: tedeeState.locks.length })}</>
+                        )}
                       </span>
                     )}
                     {tedeeState.state === 'error' && (
-                      <span className="flex items-center gap-1.5 text-[13px] font-medium text-rose-500">
-                        <Ban className="h-4 w-4" />
+                      <span className="inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-semibold text-rose-500" style={{ borderColor: 'rgb(244 63 94 / 0.3)', backgroundColor: 'rgb(244 63 94 / 0.1)' }}>
+                        <Ban className="h-3.5 w-3.5" />
                         {tedeeState.text}
                       </span>
                     )}
                     {tedeeState.state === 'idle' && !tedeeConfigured && (
-                      <span className="text-[13px]" style={{ color: 'var(--text-muted)' }}>
+                      <span className="inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-semibold" style={{ borderColor: 'var(--border)', color: 'var(--text-muted)' }}>
                         {tr('aj.tedeeSinConfigurar')}
                       </span>
                     )}
@@ -1405,8 +1399,8 @@ export default function Ajustes() {
                       aria-label={tr('aj.tedeeCambiar')}
                       title={tr('aj.tedeeCambiar')}
                       onClick={() => setTedeeEditOpen((v) => !v)}
-                      className="ml-auto flex h-8 w-8 shrink-0 items-center justify-center rounded-lg transition-colors hover:bg-[var(--surface-2)]"
-                      style={{ color: 'var(--text-faint)' }}
+                      className="ml-auto flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border transition-colors hover:bg-[var(--surface-2)]"
+                      style={{ borderColor: 'var(--border)', color: 'var(--text-faint)' }}
                     >
                       <Settings2 className="h-4 w-4" />
                     </button>
@@ -1452,10 +1446,8 @@ export default function Ajustes() {
 
                   {/* Actualizaciones + modo demo (ahora en la AdminBar) */}
 
-                  {/* Importar CSV de Airbnb */}
-                  <div className="2xl:col-span-2">
-                    <ImportAirbnbCard />
-                  </div>
+                  {/* Importar CSV de Airbnb (al lado de Tedee en la misma fila) */}
+                  <ImportAirbnbCard />
                   </div>
                 </div>
               )}

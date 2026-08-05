@@ -351,7 +351,6 @@ export default function Reservas() {
       {/* Topbar */}
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h1 className="font-display text-2xl font-semibold tracking-[-0.02em]">{t('res.titulo')}</h1>
           <p className="text-[13px] font-medium" style={{ color: 'var(--text-muted)' }}>
             {t('res.reservas', { count: base.length })} · {t('res.activasAhora', { count: activasAhora })}
           </p>
