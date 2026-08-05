@@ -9,9 +9,11 @@ import {
   Building2,
   CalendarDays,
   Check,
+  ChevronDown,
   Copy,
   DoorOpen,
   Euro,
+  FileText,
   Info,
   Link2,
   MapPin,
@@ -52,6 +54,7 @@ import {
 } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
 import { Slider } from '@/components/ui/slider';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useTranslation } from 'react-i18next';
 import { EXPENSE_META, EXPENSE_TYPES, TYPE_SWATCHES } from '@/components/fin/expenseMeta';
 import { useData } from '@/data/useData';
@@ -216,6 +219,7 @@ export default function Ajustes() {
   const [demoOn, setDemoOn] = useState(true);
   const [updateInfo, setUpdateInfo] = useState<{ current: string; latest: string | null; available: boolean } | null>(null);
   const [applying, setApplying] = useState(false);
+  const [openPanel, setOpenPanel] = useState<'backup' | 'users' | 'audit' | null>(null);
   const isAdmin = cachedUser()?.role === 'admin';
   const isDemoUser = Boolean(cachedUser()?.is_demo);
 
@@ -1074,8 +1078,123 @@ export default function Ajustes() {
                     </div>
                   </header>
 
-                  {/* Grid de 2 columnas en vista amplia: [Operativa | Tedee]
-                      [Actualizaciones | Importar Airbnb]; Usuarios a ancho completo */}
+                  {/* AdminBar canónica: Actualizaciones → Respaldos → Usuarios →
+                      Auditoría; Modo demo a la derecha. Paneles debajo. */}
+                  <div className="flex flex-wrap items-start gap-3">
+                    <div className="flex h-9 items-center gap-2 shrink-0">
+                      <ShieldCheck className="h-5 w-5" style={{ color: 'rgb(var(--warn-rgb))' }} />
+                      <h3 className="font-display text-[15px] font-semibold tracking-[-0.01em]">{tr('aj.administracion')}</h3>
+                    </div>
+                    <div className="hidden h-6 w-px sm:block" style={{ backgroundColor: 'var(--border)' }} />
+
+                    {/* 1. Comprobar actualizaciones (widget inline) */}
+                    <div className="flex flex-col gap-1">
+                      {updateInfo === null ? (
+                        <span className="text-xs" style={{ color: 'var(--text-faint)' }}>…</span>
+                      ) : updateInfo.available ? (
+                        <button
+                          type="button"
+                          disabled={applying}
+                          onClick={() => void applyUpdate()}
+                          className="inline-flex h-9 items-center gap-1.5 rounded-xl border px-3 text-xs font-semibold transition-colors disabled:opacity-50"
+                          style={{ borderColor: 'var(--warn-rgb)', color: 'rgb(var(--warn-rgb))', backgroundColor: 'rgb(var(--warn-rgb) / 0.10)' }}
+                        >
+                          <RefreshCw className={cn('h-3.5 w-3.5', applying && 'animate-spin')} />
+                          {applying ? tr('aj.actualizando') : tr('aj.actualizarAhora')}
+                        </button>
+                      ) : (
+                        <span className="inline-flex h-9 items-center gap-1.5 text-xs font-medium text-emerald-500">
+                          <Check className="h-3.5 w-3.5" />
+                          {tr('aj.appActualizada')}
+                        </span>
+                      )}
+                    </div>
+
+                    {/* 2. Respaldos (desplegable) */}
+                    <button
+                      type="button"
+                      aria-expanded={openPanel === 'backup'}
+                      onClick={() => setOpenPanel(openPanel === 'backup' ? null : 'backup')}
+                      className={cn(
+                        'inline-flex h-9 items-center gap-1.5 rounded-xl border px-3 text-[13px] font-medium transition-colors shrink-0',
+                        openPanel === 'backup'
+                          ? 'font-semibold'
+                          : '',
+                      )}
+                      style={{
+                        borderColor: openPanel === 'backup' ? 'rgb(var(--warn-rgb))' : 'var(--border)',
+                        color: openPanel === 'backup' ? 'rgb(var(--warn-rgb))' : 'var(--text-muted)',
+                        backgroundColor: openPanel === 'backup' ? 'rgb(var(--warn-rgb) / 0.08)' : 'var(--surface-2)',
+                      }}
+                    >
+                      <RefreshCw className="h-4 w-4 shrink-0" />
+                      <span className="hidden sm:inline">{tr('aj.backup')}</span>
+                      <ChevronDown className={cn('h-3.5 w-3.5 shrink-0 transition-transform', openPanel === 'backup' && 'rotate-180')} />
+                    </button>
+
+                    {/* 3. Usuarios (desplegable) */}
+                    <button
+                      type="button"
+                      aria-expanded={openPanel === 'users'}
+                      onClick={() => setOpenPanel(openPanel === 'users' ? null : 'users')}
+                      className={cn(
+                        'inline-flex h-9 items-center gap-1.5 rounded-xl border px-3 text-[13px] font-medium transition-colors shrink-0',
+                      )}
+                      style={{
+                        borderColor: openPanel === 'users' ? 'rgb(var(--warn-rgb))' : 'var(--border)',
+                        color: openPanel === 'users' ? 'rgb(var(--warn-rgb))' : 'var(--text-muted)',
+                        backgroundColor: openPanel === 'users' ? 'rgb(var(--warn-rgb) / 0.08)' : 'var(--surface-2)',
+                      }}
+                    >
+                      <Users className="h-4 w-4 shrink-0" />
+                      <span className="hidden sm:inline">{tr('aj.usuarios')}</span>
+                      <ChevronDown className={cn('h-3.5 w-3.5 shrink-0 transition-transform', openPanel === 'users' && 'rotate-180')} />
+                    </button>
+
+                    {/* 4. Auditoría (desplegable) */}
+                    <button
+                      type="button"
+                      aria-expanded={openPanel === 'audit'}
+                      onClick={() => setOpenPanel(openPanel === 'audit' ? null : 'audit')}
+                      className="inline-flex h-9 items-center gap-1.5 rounded-xl border px-3 text-[13px] font-medium transition-colors shrink-0"
+                      style={{
+                        borderColor: openPanel === 'audit' ? 'rgb(var(--warn-rgb))' : 'var(--border)',
+                        color: openPanel === 'audit' ? 'rgb(var(--warn-rgb))' : 'var(--text-muted)',
+                        backgroundColor: openPanel === 'audit' ? 'rgb(var(--warn-rgb) / 0.08)' : 'var(--surface-2)',
+                      }}
+                    >
+                      <FileText className="h-4 w-4 shrink-0" />
+                      <span className="hidden sm:inline">{tr('aj.audit')}</span>
+                      <ChevronDown className={cn('h-3.5 w-3.5 shrink-0 transition-transform', openPanel === 'audit' && 'rotate-180')} />
+                    </button>
+
+                    {/* Modo demo a la derecha */}
+                    <div className="ml-auto flex h-9 items-center gap-2">
+                      <span className="hidden text-[13px] font-medium sm:inline" style={{ color: 'var(--text-muted)' }}>
+                        {tr('aj.modoDemo')}
+                      </span>
+                      <Switch checked={demoOn} onCheckedChange={toggleDemo} />
+                    </div>
+                  </div>
+
+                  {/* Paneles desplegables de la AdminBar */}
+                  {openPanel === 'backup' && (
+                    <div className="mt-4 border-t pt-4" style={{ borderColor: 'var(--border)' }}>
+                      <BackupCard />
+                    </div>
+                  )}
+                  {openPanel === 'users' && (
+                    <div className="mt-4 border-t pt-4" style={{ borderColor: 'var(--border)' }}>
+                      <UsersManager />
+                    </div>
+                  )}
+                  {openPanel === 'audit' && (
+                    <div className="mt-4 border-t pt-4" style={{ borderColor: 'var(--border)' }}>
+                      <AuditPanel />
+                    </div>
+                  )}
+
+                  {/* Dominio: Operativa | Tedee ; Import a ancho completo */}
                   <div className="grid items-start gap-4 2xl:grid-cols-2">
                   {/* Operativa: preferencias de dominio (solo admin, globales) */}
                   <Card title={tr('aj.operativa')} desc={tr('aj.operativaDesc')}>
@@ -1239,55 +1358,11 @@ export default function Ajustes() {
                   )}
                   </Card>
 
-                  {/* Actualizaciones + modo demo */}
-                  <Card title={tr('aj.administracion')}>
-                  <div className="flex min-h-10 flex-wrap items-center justify-between gap-3">
-                    <div>
-                      <p className="text-sm font-semibold">{tr('aj.actualizaciones')}</p>
-                      <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
-                        {tr('aj.actualizacionesDesc')}
-                      </p>
-                    </div>
-                    {updateInfo === null ? (
-                      <span className="text-xs" style={{ color: 'var(--text-faint)' }}>…</span>
-                    ) : updateInfo.available ? (
-                      <button
-                        type="button"
-                        disabled={applying}
-                        onClick={() => void applyUpdate()}
-                        className="brand-gradient flex h-9 items-center gap-1.5 rounded-xl px-4 text-xs font-semibold text-white disabled:opacity-50"
-                      >
-                        <RefreshCw className={cn('h-3.5 w-3.5', applying && 'animate-spin')} />
-                        {applying ? tr('aj.actualizando') : tr('aj.actualizarAhora')}
-                      </button>
-                    ) : (
-                      <span className="flex items-center gap-1.5 text-xs font-medium text-emerald-500">
-                        <Check className="h-3.5 w-3.5" />
-                        {tr('aj.appActualizada')}
-                      </span>
-                    )}
-                  </div>
-                  <div className="flex min-h-10 items-center justify-between gap-3 border-t pt-4" style={{ borderColor: 'var(--border)' }}>
-                    <div>
-                      <p className="text-sm font-semibold">{tr('aj.modoDemo')}</p>
-                      <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
-                        {tr('aj.modoDemoDesc')}
-                      </p>
-                    </div>
-                    <Switch checked={demoOn} onCheckedChange={toggleDemo} />
-                  </div>
-                  </Card>
-
-                  {/* Backups automáticos */}
-                  <BackupCard />
+                  {/* Actualizaciones + modo demo (ahora en la AdminBar) */}
 
                   {/* Importar CSV de Airbnb */}
-                  <ImportAirbnbCard />
-
-                  {/* Usuarios: tabla alta → ancho completo también en vista amplia
-                      (excepción de la regla de ½ ancho, webapp-shell) */}
                   <div className="2xl:col-span-2">
-                    <UsersManager />
+                    <ImportAirbnbCard />
                   </div>
                   </div>
                 </div>
@@ -1687,6 +1762,65 @@ export default function Ajustes() {
         }}
       />
 
+    </div>
+  );
+}
+
+/* ---------- Auditoría (AdminBar): consume GET /api/audit (solo admin) ---------- */
+interface AuditRow {
+  id: number;
+  user_id: string | null;
+  action: string;
+  entity: string;
+  entity_id: string | null;
+  detail: string | null;
+  at: number;
+}
+
+function AuditPanel() {
+  const { t: tr } = useTranslation();
+  const [rows, setRows] = useState<AuditRow[]>([]);
+  const [busy, setBusy] = useState(true);
+
+  useEffect(() => {
+    api<{ entries?: AuditRow[] }>('/api/audit')
+      .then((d) => setRows(d.entries ?? []))
+      .catch(() => setRows([]))
+      .finally(() => setBusy(false));
+  }, []);
+
+  if (busy) return <p className="text-xs" style={{ color: 'var(--text-muted)' }}>…</p>;
+
+  if (rows.length === 0) {
+    return <p className="text-xs" style={{ color: 'var(--text-muted)' }}>{tr('aj.auditEmpty')}</p>;
+  }
+
+  return (
+    <div className="overflow-x-auto">
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead>{tr('aj.auditWhen')}</TableHead>
+            <TableHead>{tr('aj.auditUser')}</TableHead>
+            <TableHead>{tr('aj.auditAction')}</TableHead>
+            <TableHead>{tr('aj.auditEntity')}</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {rows.map((r) => (
+            <TableRow key={r.id}>
+              <TableCell className="whitespace-nowrap text-[13px]" style={{ color: 'var(--text-muted)' }}>
+                {fmtDateShort(new Date(r.at))}
+              </TableCell>
+              <TableCell className="text-[13px]">{r.user_id ?? '—'}</TableCell>
+              <TableCell className="text-[13px]">{r.action}</TableCell>
+              <TableCell className="text-[13px]" style={{ color: 'var(--text-muted)' }}>
+                {r.entity}
+              </TableCell>
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
     </div>
   );
 }
