@@ -267,6 +267,48 @@ export default function DataProvider({ children }: { children: ReactNode }) {
     return () => window.removeEventListener('keynest-authed', onAuthed);
   }, [refresh]);
 
+  /* SSE (contrato api-stack): eventos nombrados <dominio>.changed → refetch
+     con debounce; sync.resync (reconexión con eventos perdidos) → refetch
+     inmediato. EventSource reintenta solo y manda Last-Event-ID. */
+  const sseTimer = useRef<number | null>(null);
+  useEffect(() => {
+    if (!isAuthed()) return;
+    let es: EventSource | null = null;
+    let disposed = false;
+
+    const scheduleRefresh = () => {
+      if (disposed) return;
+      if (sseTimer.current !== null) window.clearTimeout(sseTimer.current);
+      sseTimer.current = window.setTimeout(() => {
+        sseTimer.current = null;
+        void refresh();
+      }, 250);
+    };
+
+    es = new EventSource('/api/events');
+    es.addEventListener('property.changed', scheduleRefresh);
+    es.addEventListener('reservation.changed', scheduleRefresh);
+    es.addEventListener('cleaning.changed', scheduleRefresh);
+    es.addEventListener('maintenance.changed', scheduleRefresh);
+    es.addEventListener('person.changed', scheduleRefresh);
+    es.addEventListener('user.changed', scheduleRefresh);
+    es.addEventListener('settings.changed', scheduleRefresh);
+    es.addEventListener('sync.resync', () => {
+      if (disposed) return;
+      void refresh();
+    });
+
+    const onUnauthorized = () => { es?.close(); es = null; };
+    window.addEventListener('keynest-unauthorized', onUnauthorized);
+
+    return () => {
+      disposed = true;
+      if (sseTimer.current !== null) window.clearTimeout(sseTimer.current);
+      window.removeEventListener('keynest-unauthorized', onUnauthorized);
+      es?.close();
+    };
+  }, [refresh]);
+
   const saveProperty = useCallback(
     async (id: string, input: PropertyInput) => {
       const res = await api<{ property: ApiProperty }>(`/api/properties/${id}`, {
