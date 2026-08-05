@@ -76,6 +76,21 @@ app.use('*', async (c, next) => {
   await next()
 })
 
+/* ---------------------------------------------- demo de solo lectura
+   La demo publicada es un escaparate: con sesión demo (is_demo) se rechaza
+   TODA mutación (POST/PUT/DELETE/PATCH). Solo se permiten las rutas de
+   sesión (entrar/salir/estado), para que "Salir del modo demo" funcione. */
+const DEMO_READONLY_EXEMPT = ['/api/auth/login', '/api/auth/logout', '/api/auth/demo', '/api/auth/me', '/api/auth/demo-status']
+
+app.use('/api/*', async (c, next) => {
+  const method = c.req.method
+  if (method !== 'POST' && method !== 'PUT' && method !== 'DELETE' && method !== 'PATCH') return next()
+  if (DEMO_READONLY_EXEMPT.some((p) => c.req.path.startsWith(p))) return next()
+  const user = auth.currentUser(prodDb, demoDb, c)
+  if (user?.is_demo) return c.json({ error: 'la demo es de solo lectura', code: 'readonly' }, 403)
+  return next()
+})
+
 /* ------------------------------------------------------------------ auth API */
 const loginSchema = z.object({ username: z.string().min(1), password: z.string().min(1), remember: z.boolean().optional() })
 
