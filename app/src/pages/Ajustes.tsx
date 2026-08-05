@@ -1153,7 +1153,7 @@ export default function Ajustes() {
           {tab === 'preferencias' && (
             <div className="flex flex-col gap-4">
               {/* Fila 1: [Apariencia | Operativa (solo admin)] — canon webapp-shell 6-Ago-2026 */}
-              <div className={cn('grid items-start gap-4', isAdmin && '2xl:grid-cols-2')}>
+              <div className={cn('grid items-start gap-4', isAdmin && 'xl:grid-cols-2')}>
                 <AppearanceCard />
                 {isAdmin && (
                   <Card title={tr('aj.operativa')} desc={tr('aj.operativaDesc')}>
@@ -1367,7 +1367,7 @@ export default function Ajustes() {
                   )}
 
                   {/* Dominio: Tedee | Import (Operativa subió al lado de Apariencia) */}
-                  <div className="grid items-start gap-4 2xl:grid-cols-2">
+                  <div className="grid items-start gap-4 xl:grid-cols-2">
                   {/* Conexión Tedee: una fila compacta; cuando está configurada solo
                       muestra el botón de editar (la tuerca) y una burbuja de estado */}
                   <Card title={tr('aj.tedeeApi')} desc={tr('aj.tedeeApiDesc')}>

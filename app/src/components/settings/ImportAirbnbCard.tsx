@@ -93,34 +93,37 @@ export default function ImportAirbnbCard() {
 
   return (
     <div className="card p-4 md:p-6">
-      {/* Cabecera en UNA línea: texto a la izquierda, botón Seleccionar CSV a la derecha */}
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="min-w-0">
-          <h2 className="font-display text-lg font-semibold tracking-[-0.01em]">{tr('aj.importarCsv')}</h2>
-          <p className="mt-0.5 text-[13px]" style={{ color: 'var(--text-muted)' }}>
-            {tr('aj.importarCsvDesc')}
-          </p>
+      {/* Cabecera: título + botón Seleccionar CSV en la misma línea (botón a la
+          derecha); la descripción va debajo a ancho completo. */}
+      <div>
+        <div className="flex items-center justify-between gap-3">
+          <h2 className="min-w-0 truncate font-display text-lg font-semibold tracking-[-0.01em]">
+            {tr('aj.importarCsv')}
+          </h2>
+          <input
+            ref={fileRef}
+            type="file"
+            accept=".csv,text/csv"
+            className="hidden"
+            onChange={(e) => {
+              void onFile(e.target.files?.[0]);
+              e.target.value = '';
+            }}
+          />
+          <button
+            type="button"
+            disabled={busy}
+            onClick={() => fileRef.current?.click()}
+            className="flex h-10 shrink-0 items-center gap-2 rounded-xl border px-4 text-sm font-semibold transition-colors duration-150 hover:bg-[var(--surface-2)] disabled:opacity-50"
+            style={{ borderColor: 'var(--border)', color: 'var(--text)' }}
+          >
+            {busy ? <RefreshCw className="h-4 w-4 animate-spin" /> : <FileUp className="h-4 w-4" strokeWidth={1.75} />}
+            {tr('aj.seleccionarCsv')}
+          </button>
         </div>
-        <input
-          ref={fileRef}
-          type="file"
-          accept=".csv,text/csv"
-          className="hidden"
-          onChange={(e) => {
-            void onFile(e.target.files?.[0]);
-            e.target.value = '';
-          }}
-        />
-        <button
-          type="button"
-          disabled={busy}
-          onClick={() => fileRef.current?.click()}
-          className="flex h-10 shrink-0 items-center gap-2 rounded-xl border px-4 text-sm font-semibold transition-colors duration-150 hover:bg-[var(--surface-2)] disabled:opacity-50"
-          style={{ borderColor: 'var(--border)', color: 'var(--text)' }}
-        >
-          {busy ? <RefreshCw className="h-4 w-4 animate-spin" /> : <FileUp className="h-4 w-4" strokeWidth={1.75} />}
-          {tr('aj.seleccionarCsv')}
-        </button>
+        <p className="mt-1 text-[13px]" style={{ color: 'var(--text-muted)' }}>
+          {tr('aj.importarCsvDesc')}
+        </p>
       </div>
       {fileName && !done && (
         <p className="mt-2 truncate text-xs" style={{ color: 'var(--text-faint)' }}>
