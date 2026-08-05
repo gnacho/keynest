@@ -22,6 +22,7 @@ import { useTranslation } from 'react-i18next';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import PersonAvatar from '@/components/PersonAvatar';
+import UpdateRibbon from '@/components/UpdateRibbon';
 import { useTheme } from '@/theme/ThemeProvider';
 import { useData } from '@/data/useData';
 import { cachedUser, logout } from '@/lib/auth';
@@ -336,6 +337,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
           style={{ ['--sbw' as string]: collapsed ? '64px' : '232px', transitionDuration: '250ms' }}
         >
           <main className="mx-auto w-full max-w-[1440px] px-4 pb-24 pt-[72px] md:px-8 md:pb-10 md:pt-7">
+            {sessionUser?.role === 'admin' && <UpdateRibbon />}
             {sessionUser?.is_demo && (
               <div
                 role="status"

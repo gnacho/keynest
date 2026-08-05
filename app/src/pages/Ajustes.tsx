@@ -225,6 +225,10 @@ export default function Ajustes() {
 
   const checkUpdate = async () => {
     try {
+      // Throttle semanal (regla app-auto-update): misma clave que el UpdateRibbon.
+      const last = Number(window.localStorage.getItem('keynest-last-update-check') || 0);
+      if (Date.now() - last < 7 * 24 * 60 * 60 * 1000) return;
+      window.localStorage.setItem('keynest-last-update-check', String(Date.now()));
       setUpdateInfo(await api('/api/update/status'));
     } catch { /* noop */ }
   };

@@ -358,6 +358,24 @@ if [ "$DRY_RUN" -eq 0 ]; then
     fi
 fi
 
+# ---------------------------------------------------------- auto-update timer --
+# Auto-update semanal con systemd timer (regla: timer > cron siempre). El script
+# despliega releases estables con sha256 verificado y escribe el marker semver.
+if [ "$DRY_RUN" -eq 1 ]; then
+    info "[dry-run] would install auto-update timer (keynest-update.timer, weekly)"
+else
+    if [ -f "$RELEASE_DIR/deploy/keynest-update.sh" ]; then
+        $SUDO install -m 0755 "$RELEASE_DIR/deploy/keynest-update.sh" "$OPT_DIR/keynest-update.sh"
+        $SUDO cp "$RELEASE_DIR/deploy/keynest-update.service" "/etc/systemd/system/$SERVICE_NAME-update.service"
+        $SUDO cp "$RELEASE_DIR/deploy/keynest-update.timer" "/etc/systemd/system/$SERVICE_NAME-update.timer"
+        $SUDO systemctl daemon-reload
+        $SUDO systemctl enable --now "$SERVICE_NAME-update.timer"
+        ok "auto-update timer instalado (semanal; releases estables + sha256)"
+    else
+        warn "deploy/keynest-update.sh no está en el release — auto-update no instalado"
+    fi
+fi
+
 # ------------------------------------------------------------------ summary --
 printf '\n%s================ %s installed ================%s\n' "$C_G" "$APP_NAME" "$C_0"
 printf 'Version:  %s%s\n' "$VERSION" "$( [ "$UPGRADING" -eq 1 ] && echo ' (upgrade)' || true)"
