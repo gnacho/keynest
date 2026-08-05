@@ -4,6 +4,7 @@ import { hostname, arch as osArch, platform, totalmem, type, release, cpus } fro
 import crypto from 'node:crypto'
 import { serve } from '@hono/node-server'
 import { serveStatic } from '@hono/node-server/serve-static'
+import { streamSSE } from 'hono/streaming'
 import { Hono } from 'hono'
 import { z } from 'zod'
 import * as auth from './auth.js'
@@ -18,6 +19,7 @@ import { configurePush, flushNotificationQueue } from './push.js'
 import { registerPushRoutes } from './routes-push.js'
 import * as alerts from './alerts.js'
 import { getBackupConfig, setBackupConfig, runBackup, cleanOldBackups } from './backup.js'
+import { createHub } from './sse.js'
 
 const DEFAULT_CATEGORIES = [
   { key: 'cerradura/pilas', label: 'Cerradura/pilas', icon: 'lock' },
@@ -89,6 +91,47 @@ app.use('/api/*', async (c, next) => {
   const user = auth.currentUser(prodDb, demoDb, c)
   if (user?.is_demo) return c.json({ error: 'la demo es de solo lectura', code: 'readonly' }, 403)
   return next()
+})
+
+/* ------------------------------------------------ SSE (contrato api-stack)
+   Hub de eventos en tiempo real: las sesiones conectadas reciben
+   <dominio>.changed tras cada mutación y refetchean el bootstrap. Portado de
+   deltos; detalle del contrato en skill api-stack (references/sse-eventos.md). */
+const hub = createHub(process.env.SSE_MAX_CLIENTS ? Number(process.env.SSE_MAX_CLIENTS) : 20)
+
+/* Mapeo ruta → entidad de dominio (prefijo lo más específico primero).
+   Tras una mutación 2xx se emite hub.broadcast(entity) para que el resto de
+   sesiones refresquen. No cubre auth/avatar/update/backup/audit/sync: no
+   cambian el bootstrap de dominio. */
+const SSE_ENTITY_ROUTES = [
+  { match: '/import/airbnb', entity: 'reservations' },
+  { match: '/config/settings', entity: 'settings' },
+  { match: '/config/categories', entity: 'settings' },
+  { match: '/config/tedee', entity: 'settings' },
+  { match: '/config/demo', entity: 'settings' },
+  { match: '/maintenance', entity: 'maintenance' },
+  { match: '/task', entity: 'maintenance' },
+  { match: '/cleanings', entity: 'cleanings' },
+  { match: '/reservations', entity: 'reservations' },
+  { match: '/properties', entity: 'properties' },
+  { match: '/people', entity: 'people' },
+  { match: '/users', entity: 'users' },
+]
+
+/* Middleware: tras una mutación exitosa, broadcast del dominio tocado.
+   Antes de next() para que los handlers (y guarded) corran dentro. */
+app.use('/api/*', async (c, next) => {
+  await next()
+  const method = c.req.method
+  if (method !== 'POST' && method !== 'PUT' && method !== 'DELETE' && method !== 'PATCH') return
+  if (c.res.status >= 400) return
+  const path = c.req.path
+  for (const r of SSE_ENTITY_ROUTES) {
+    if (path.includes(r.match)) {
+      hub.broadcast(r.entity)
+      return
+    }
+  }
 })
 
 /* ------------------------------------------------------------------ auth API */
@@ -321,6 +364,32 @@ app.put('/api/config/demo', auth.requireAdmin(prodDb, demoDb), async (c) => {
 const guarded = new Hono()
 guarded.use('*', auth.requireAuth(prodDb, demoDb))
 registerPushRoutes(guarded)
+
+/* SSE (contrato api-stack): eventos nombrados <dominio>.changed con id
+   monótono, resync vía Last-Event-ID y heartbeat ': ping' cada 20 s (crítico
+   tras Nginx Proxy Manager). Auth por cookie de sesión (EventSource same-origin). */
+guarded.get('/events', (c) => {
+  if (hub.size() >= hub.maxClients) return c.json({ error: 'demasiados clientes SSE' }, 429)
+  c.header('X-Accel-Buffering', 'no') // imprescindible detrás de nginx
+  c.header('Cache-Control', 'no-cache')
+  return streamSSE(c, async (stream) => {
+    hub.add(stream)
+    await hub.hello(stream)
+    // Resync: si el navegador reconecta con Last-Event-ID y perdió eventos,
+    // UN 'sync.resync' le dice que refetchee todo vía REST.
+    await hub.resync(stream, c.req.header('last-event-id'))
+    const heartbeat = setInterval(() => {
+      stream.write(': ping\n\n').catch(() => {})
+    }, 20000)
+    await new Promise((resolve) => {
+      stream.onAbort(() => {
+        clearInterval(heartbeat)
+        hub.remove(stream)
+        resolve()
+      })
+    })
+  })
+})
 
 guarded.get('/bootstrap', (c) => {
   const db = c.get('db')
@@ -1172,5 +1241,5 @@ serve({ fetch: app.fetch, port: config.port }, (info) => {
   console.log(`[keynest] escuchando en :${info.port} (static: ${config.staticDir}, data: ${config.dataDir})`)
 })
 
-process.on('SIGTERM', () => { prodDb.close(); demoDb.close(); process.exit(0) })
-process.on('SIGINT', () => { prodDb.close(); demoDb.close(); process.exit(0) })
+process.on('SIGTERM', () => { hub.shutdown(); prodDb.close(); demoDb.close(); process.exit(0) })
+process.on('SIGINT', () => { hub.shutdown(); prodDb.close(); demoDb.close(); process.exit(0) })

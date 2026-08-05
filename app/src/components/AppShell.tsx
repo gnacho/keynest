@@ -10,7 +10,6 @@ import {
   ChevronsRight,
   LayoutDashboard,
   Moon,
-  MoreHorizontal,
   Settings,
   Sparkles,
   Sun,
@@ -19,7 +18,6 @@ import {
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import PersonAvatar from '@/components/PersonAvatar';
 import UpdateRibbon from '@/components/UpdateRibbon';
@@ -37,10 +35,12 @@ interface NavItem {
 }
 
 /* Items de dominio; Ajustes NO va en el nav principal del sidebar: va abajo,
-   junto al ThemeToggle (webapp-shell). En móvil sí entra en el sheet "Más". */
-/* NAV_ITEMS es la fuente única (webapp-shell): las rutas OCULTAS siguen
-   existiendo (URL directa, enlaces del dashboard), solo no se muestran en la
-   navegación. Cambiar HIDDEN_ROUTES para recuperarlas. */
+   junto al ThemeToggle (webapp-shell). En móvil entra en la bottom-nav directa. */
+/* NAV_ITEMS es la fuente única (webapp-shell). En DESKTOP (sidebar + raíl) se
+   muestran TODOS los de dominio; en MÓVIL la bottom-nav muestra solo los 4
+   esenciales (Resumen/Limpieza/Rentabilidad/Ajustes) — Calendario/Reservas/
+   Mantenimiento quedan ocultos en móvil pero siguen accesibles por URL directa
+   y enlaces del dashboard (y visibles en desktop). */
 const NAV_ITEMS: NavItem[] = [
   { to: '/', labelKey: 'resumen', icon: LayoutDashboard },
   { to: '/calendario', labelKey: 'calendario', icon: CalendarDays },
@@ -50,13 +50,16 @@ const NAV_ITEMS: NavItem[] = [
   { to: '/rentabilidad', labelKey: 'rentabilidad', icon: TrendingUp },
 ];
 
+/* Desktop: todos los de dominio */
+const DESKTOP_NAV: NavItem[] = NAV_ITEMS;
+
+/* Móvil (bottom-nav): solo los esenciales + Ajustes */
 const HIDDEN_ROUTES = ['/calendario', '/reservas', '/mantenimiento'];
 const VISIBLE_NAV: NavItem[] = NAV_ITEMS.filter((i) => !HIDDEN_ROUTES.includes(i.to));
 
 const SETTINGS_ITEM: NavItem = { to: '/ajustes', labelKey: 'ajustes', icon: Settings };
 
-const BOTTOM_ITEMS: NavItem[] = VISIBLE_NAV.slice(0, 4);
-const MORE_ITEMS: NavItem[] = [...VISIBLE_NAV.slice(4), SETTINGS_ITEM];
+const BOTTOM_ITEMS: NavItem[] = [...VISIBLE_NAV, SETTINGS_ITEM];
 
 const TITLE_KEYS: Record<string, string> = {
   '/': 'resumen',
@@ -65,6 +68,7 @@ const TITLE_KEYS: Record<string, string> = {
   '/limpieza': 'limpieza',
   '/mantenimiento': 'mantenimiento',
   '/rentabilidad': 'rentabilidad',
+  '/tedee': 'tedee',
   '/ajustes': 'ajustes',
 };
 
@@ -106,7 +110,6 @@ export default function AppShell({ children }: { children: ReactNode }) {
       return false;
     }
   });
-  const [moreOpen, setMoreOpen] = useState(false);
 
   useEffect(() => {
     try {
@@ -116,22 +119,19 @@ export default function AppShell({ children }: { children: ReactNode }) {
     }
   }, [collapsed]);
 
-  // (El Sheet "Más" se cierra al pulsar cualquiera de sus enlaces)
-
   const pendingCleanings = getPendingCleanings().length;
   const urgentMaintenance = getUrgentMaintenance().length;
 
   const sessionUser = cachedUser();
   const sessionName = sessionUser?.username ?? 'Usuario';
   const sessionInitials = sessionName.slice(0, 2).toUpperCase();
-  const sessionRole = sessionUser?.is_demo ? t('nav.demoBadge') : sessionUser?.role === 'admin' ? 'Admin' : (sessionUser?.role ?? '');
 
   const isActive = (to: string) =>
     to === '/' ? location.pathname === '/' : location.pathname.startsWith(to);
-  const moreActive = MORE_ITEMS.some((i) => isActive(i.to));
   const titleKey = TITLE_KEYS[location.pathname];
   const title = titleKey ? t(`nav.${titleKey}`) : 'Keynest';
-  const isSecondary = MORE_ITEMS.some((i) => i.to === location.pathname);
+  /* Rutas no directas (ocultas del nav): en móvil muestran flecha "Volver" */
+  const isSecondary = HIDDEN_ROUTES.includes(location.pathname);
 
   const badgeFor = (to: string): number => {
     if (to === '/limpieza') return pendingCleanings;
@@ -242,50 +242,55 @@ export default function AppShell({ children }: { children: ReactNode }) {
 
           {collapsed ? (
             <nav className="flex flex-1 flex-col items-center gap-1 overflow-y-auto px-3 py-2">
-              {[...VISIBLE_NAV, SETTINGS_ITEM].map(renderIconItem)}
+              {[...DESKTOP_NAV, SETTINGS_ITEM].map(renderIconItem)}
             </nav>
           ) : (
             <nav className="flex flex-1 flex-col gap-1 overflow-y-auto px-3 py-2">
-              {VISIBLE_NAV.map(renderNavItem)}
+              {DESKTOP_NAV.map(renderNavItem)}
             </nav>
           )}
 
+          {/* Pie canon webapp-shell: [tema | ajustes | colapsar] en una fila.
+              El usuario (avatar+nombre) vive en la topbar, no aquí (5-Ago-2026). */}
           <div className={cn('flex flex-col gap-2 border-t p-3', collapsed && 'items-center')} style={{ borderColor: 'var(--border)' }}>
-            <div className={cn('flex items-center gap-2.5 rounded-xl p-1.5', collapsed && 'justify-center')}>
-              <PersonAvatar name={sessionName} initials={sessionInitials} size={32} />
-              {!collapsed && (
-                <div className="min-w-0 flex-1 leading-tight">
-                  <p className="truncate text-[13px] font-semibold">{sessionName}</p>
-                  <p className="text-[11px]" style={{ color: sessionUser?.is_demo ? '#F59E0B' : 'var(--text-faint)' }}>
-                    {sessionRole}
-                  </p>
-                </div>
-              )}
-              {!collapsed && <ThemeToggle />}
-            </div>
-            {!collapsed && (
-              <NavLink
-                to={SETTINGS_ITEM.to}
-                className={cn(
-                  'relative flex h-9 items-center gap-2.5 rounded-xl px-3 text-sm font-medium transition-colors duration-150',
-                  isActive(SETTINGS_ITEM.to) ? 'text-[var(--text)]' : 'text-[var(--text-muted)] hover:text-[var(--text)]',
-                )}
-                style={isActive(SETTINGS_ITEM.to) ? { backgroundColor: 'var(--surface-2)' } : undefined}
-              >
-                <SETTINGS_ITEM.icon className="h-[18px] w-[18px]" strokeWidth={1.8} />
-                {t('nav.ajustes')}
-              </NavLink>
+            {collapsed ? (
+              <>
+                <ThemeToggle />
+                <button
+                  type="button"
+                  onClick={() => setCollapsed((c) => !c)}
+                  aria-label={t('nav.expandirMenu')}
+                  className="flex h-9 w-9 items-center justify-center rounded-xl border transition-colors duration-150 hover:bg-[var(--surface-2)]"
+                  style={{ borderColor: 'var(--border)', color: 'var(--text-faint)' }}
+                >
+                  <ChevronsRight className="h-4 w-4" />
+                </button>
+              </>
+            ) : (
+              <div className="flex items-center gap-2">
+                <ThemeToggle />
+                <NavLink
+                  to={SETTINGS_ITEM.to}
+                  className={cn(
+                    'relative flex h-9 flex-1 items-center gap-2.5 rounded-xl px-3 text-sm font-medium transition-colors duration-150',
+                    isActive(SETTINGS_ITEM.to) ? 'text-[var(--text)]' : 'text-[var(--text-muted)] hover:text-[var(--text)]',
+                  )}
+                  style={isActive(SETTINGS_ITEM.to) ? { backgroundColor: 'var(--surface-2)' } : undefined}
+                >
+                  <SETTINGS_ITEM.icon className="h-[18px] w-[18px]" strokeWidth={1.8} />
+                  {t('nav.ajustes')}
+                </NavLink>
+                <button
+                  type="button"
+                  onClick={() => setCollapsed((c) => !c)}
+                  aria-label={t('nav.colapsarMenu')}
+                  className="flex h-9 w-9 items-center justify-center rounded-xl border transition-colors duration-150 hover:bg-[var(--surface-2)]"
+                  style={{ borderColor: 'var(--border)', color: 'var(--text-faint)' }}
+                >
+                  <ChevronsLeft className="h-4 w-4" />
+                </button>
+              </div>
             )}
-            <button
-              type="button"
-              onClick={() => setCollapsed((c) => !c)}
-              aria-label={collapsed ? t('nav.expandirMenu') : t('nav.colapsarMenu')}
-              className="flex h-8 items-center justify-center gap-2 rounded-xl text-xs font-semibold transition-colors duration-150 hover:bg-[var(--surface-2)]"
-              style={{ color: 'var(--text-faint)' }}
-            >
-              {collapsed ? <ChevronsRight className="h-4 w-4" /> : <ChevronsLeft className="h-4 w-4" />}
-              {!collapsed && t('nav.colapsar')}
-            </button>
           </div>
         </aside>
 
@@ -298,7 +303,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
             <LogoMark size={26} />
           </Link>
           <nav className="mt-3 flex flex-1 flex-col items-center gap-1 overflow-y-auto">
-            {[...VISIBLE_NAV, SETTINGS_ITEM].map(renderIconItem)}
+            {[...DESKTOP_NAV, SETTINGS_ITEM].map(renderIconItem)}
           </nav>
           <ThemeToggle />
         </aside>
@@ -342,6 +347,20 @@ export default function AppShell({ children }: { children: ReactNode }) {
           className="transition-[margin] ease-out-quart md:pl-16 lg:pl-[var(--sbw)]"
           style={{ ['--sbw' as string]: collapsed ? '64px' : '232px', transitionDuration: '250ms' }}
         >
+          {/* Topbar desktop/tablet (canon webapp-shell): título a la izquierda,
+              usuario (avatar + nombre → /ajustes) a la derecha */}
+          <header className="sticky top-0 z-30 hidden h-14 items-center justify-between border-b px-6 backdrop-blur-md md:flex"
+            style={{ borderColor: 'var(--border)', backgroundColor: 'color-mix(in srgb, var(--surface) 85%, transparent)' }}>
+            <h1 className="font-display text-xl font-semibold tracking-[-0.01em]">{title}</h1>
+            <NavLink
+              to={SETTINGS_ITEM.to}
+              className="flex items-center gap-2.5 rounded-xl p-1.5 transition-colors duration-150 hover:bg-[var(--surface-2)]"
+            >
+              <PersonAvatar name={sessionName} initials={sessionInitials} size={30} />
+              <span className="hidden text-[13px] font-semibold lg:inline">{sessionName}</span>
+            </NavLink>
+          </header>
+
           <main className="mx-auto w-full max-w-[1440px] px-4 pb-24 pt-[72px] md:px-8 md:pb-10 md:pt-7">
             {sessionUser?.role === 'admin' && <UpdateRibbon />}
             {sessionUser?.is_demo && (
@@ -433,72 +452,8 @@ export default function AppShell({ children }: { children: ReactNode }) {
                 </Link>
               );
             })}
-            <button
-              type="button"
-              onClick={() => setMoreOpen(true)}
-              className="relative flex flex-col items-center justify-center gap-0.5"
-            >
-              {moreActive && (
-                <motion.span
-                  layoutId="bottomnav-pill"
-                  transition={reduce ? { duration: 0.15 } : { type: 'spring', stiffness: 500, damping: 40 }}
-                  className="absolute top-1.5 h-8 w-14 rounded-xl"
-                  style={{ backgroundColor: 'rgb(99 102 241 / 0.12)' }}
-                />
-              )}
-              <span className="relative">
-                <MoreHorizontal
-                  className="h-5 w-5"
-                  style={{ color: moreActive ? '#6366F1' : 'var(--text-faint)' }}
-                />
-              </span>
-              <span
-                className="relative text-[10px] font-semibold"
-                style={{ color: moreActive ? '#6366F1' : 'var(--text-faint)' }}
-              >
-                {t('nav.mas')}
-              </span>
-            </button>
           </div>
         </nav>
-
-        {/* ============================== Sheet "Más" */}
-        <Sheet open={moreOpen} onOpenChange={setMoreOpen}>
-          <SheetContent
-            side="bottom"
-            className="rounded-t-3xl border-[var(--border)] bg-[var(--surface)] pb-[calc(24px+env(safe-area-inset-bottom))]"
-          >
-            <SheetHeader className="pb-2 text-left">
-              <SheetTitle className="font-display text-lg font-semibold">{t('nav.mas')}</SheetTitle>
-            </SheetHeader>
-            <div className="grid grid-cols-2 gap-2">
-              {MORE_ITEMS.map((item) => {
-                const active = isActive(item.to);
-                const badge = badgeFor(item.to);
-                return (
-                  <Link
-                    key={item.to}
-                    to={item.to}
-                    onClick={() => setMoreOpen(false)}
-                    className="relative flex items-center gap-3 rounded-2xl border p-4 transition-colors duration-150 hover:bg-[var(--surface-2)]"
-                    style={{
-                      borderColor: active ? '#6366F1' : 'var(--border)',
-                      backgroundColor: active ? 'rgb(99 102 241 / 0.08)' : 'var(--surface)',
-                    }}
-                  >
-                    <item.icon className="h-5 w-5" style={{ color: active ? '#6366F1' : 'var(--text-muted)' }} />
-                    <span className="text-sm font-semibold">{t(`nav.${item.labelKey}`)}</span>
-                    {badge > 0 && (
-                      <span className="ml-auto flex h-5 min-w-5 items-center justify-center rounded-full bg-rose-500 px-1.5 text-[11px] font-semibold text-white">
-                        {badge}
-                      </span>
-                    )}
-                  </Link>
-                );
-              })}
-            </div>
-          </SheetContent>
-        </Sheet>
       </div>
     </TooltipProvider>
   );
