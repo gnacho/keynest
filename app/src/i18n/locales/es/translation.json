@@ -807,7 +807,8 @@
     "activar": "Activar",
     "desactivar": "Desactivar",
     "pushRequiereHttps": "Las notificaciones push necesitan HTTPS (o localhost). Con acceso por IP local (http) están dormidas y se activarán solas cuando la app se sirva por HTTPS.",
-    "guardando": "Guardando…"
+    "guardando": "Guardando…",
+    "rolUsuario": "Usuario"
   },
   "common2": {
     "confirmar": "Confirmar",

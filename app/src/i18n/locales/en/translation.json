@@ -807,7 +807,8 @@
     "activar": "Enable",
     "desactivar": "Disable",
     "pushRequiereHttps": "Push notifications require HTTPS (or localhost). Over local IP access (http) they stay dormant and will activate by themselves once the app is served over HTTPS.",
-    "guardando": "Saving…"
+    "guardando": "Saving…",
+    "rolUsuario": "User"
   },
   "common2": {
     "confirmar": "Confirm",
