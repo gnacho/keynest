@@ -7,7 +7,7 @@ import { useEffect, useState } from 'react';
 import type { ReactNode } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import React from 'react';
-import { Check, Download, Github, KeyRound, LogOut, Moon, MonitorSmartphone, Sun } from 'lucide-react';
+import { Bell, Check, Download, Github, KeyRound, LogOut, Mail, Moon, MonitorSmartphone, Pencil, Sun, User, X } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -305,16 +305,20 @@ const NOTIF_LEVELS: { value: NotifLevel; labelKey: string }[] = [
   { value: 'none', labelKey: 'aj.notifLevelNone' },
 ];
 
-/* ---------- Tarjeta Mi perfil: avatar + nombre + idioma + notifs + contraseña + logout (línea horizontal) ---------- */
+/* ---------- Tarjeta Mi perfil (canónica webapp-shell): avatar + nombre + email + idioma + notifs + contraseña + logout ----------
+   Estructura ProfileCard: línea horizontal SIN flex-wrap; nombre/email editables
+   con input + botones ✓/✕; notificaciones como botón Bell que despliega panel
+   inline; logout SIEMPRE a la derecha con texto visible y encuadrado en rojo. */
 export function SessionCard({ isDemo }: { isDemo: boolean }) {
   const { t: tr } = useTranslation();
   const [showPwd, setShowPwd] = useState(false);
+  const [showNotif, setShowNotif] = useState(false);
   const [form, setForm] = useState({ current: '', next: '', repeat: '' });
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
   const user = cachedUser();
-  const [displayName, setDisplayName] = useState(user?.display_name ?? '');
-  const [email, setEmail] = useState(user?.email ?? '');
+  const [nameDraft, setNameDraft] = useState(user?.display_name ?? '');
+  const [emailDraft, setEmailDraft] = useState(user?.email ?? '');
   const [editingName, setEditingName] = useState(false);
   const [editingEmail, setEditingEmail] = useState(false);
   const [lang, setLang] = useState<AppLanguage>(() => user?.language ?? cachedLanguagePref());
@@ -344,6 +348,36 @@ export function SessionCard({ isDemo }: { isDemo: boolean }) {
     void saveNotificationLevel(v).catch(() => setNotifLevel(notifLevel));
   };
 
+  const saveName = async () => {
+    const value = nameDraft.trim();
+    if (value === (user?.display_name ?? '')) { setEditingName(false); return; }
+    setBusy(true);
+    try {
+      await saveProfile('displayName', value);
+      setEditingName(false);
+    } finally { setBusy(false); }
+  };
+
+  const saveEmail = async () => {
+    const value = emailDraft.trim();
+    if (value === (user?.email ?? '')) { setEditingEmail(false); return; }
+    setBusy(true);
+    try {
+      await saveProfile('email', value);
+      setEditingEmail(false);
+    } finally { setBusy(false); }
+  };
+
+  const cancelName = () => {
+    setNameDraft(user?.display_name ?? '');
+    setEditingName(false);
+  };
+
+  const cancelEmail = () => {
+    setEmailDraft(user?.email ?? '');
+    setEditingEmail(false);
+  };
+
   const changePassword = async () => {
     setError('');
     if (form.next.length < 6) { setError(tr('aj.passErrCorta')); return; }
@@ -363,76 +397,111 @@ export function SessionCard({ isDemo }: { isDemo: boolean }) {
   };
 
   const avatarSrc = user?.avatar || null;
-  const initials = (displayName || user?.username || '?').charAt(0).toUpperCase();
+  const displayName = user?.display_name || user?.username || '—';
+
+  const actionBtnCls =
+    'flex h-9 shrink-0 items-center gap-1.5 rounded-lg border px-3 text-xs font-semibold transition-colors hover:bg-[var(--surface-2)]';
+  const actionTextCls = 'hidden sm:inline';
 
   return (
     <Card title={tr('aj.miPerfil')}>
-      {/* Línea horizontal: avatar + nombre/email + acciones */}
-      <div className="flex flex-wrap items-center gap-3">
+      {/* Línea horizontal sin flex-wrap (canon ProfileCard) */}
+      <div className="flex min-w-0 items-center gap-3 sm:gap-4">
         {/* Avatar */}
-        <div className="relative h-12 w-12 shrink-0 overflow-hidden rounded-full" style={{ backgroundColor: 'var(--accent-soft, #e3f0e9)' }}>
+        <div className="h-11 w-11 shrink-0 overflow-hidden rounded-full" style={{ backgroundColor: 'var(--accent-soft, #e3f0e9)' }}>
           {avatarSrc ? (
             <img src={avatarSrc} alt="" className="h-full w-full object-cover" />
           ) : (
-            <div className="flex h-full w-full items-center justify-center text-lg font-bold" style={{ color: 'var(--accent, #2f7d5f)' }}>
-              {initials}
+            <div className="flex h-full w-full items-center justify-center" style={{ color: 'var(--accent, #2f7d5f)' }}>
+              <User className="h-5 w-5" aria-hidden="true" />
             </div>
           )}
         </div>
 
-        {/* Nombre + Email */}
-        <div className="flex min-w-[120px] flex-col">
+        {/* Nombre + email + rol */}
+        <div className="min-w-0 flex-1">
           {editingName ? (
-            <input
-              value={displayName}
-              onChange={(e) => setDisplayName(e.target.value)}
-              onBlur={() => { setEditingName(false); void saveProfile('displayName', displayName); }}
-              onKeyDown={(e) => { if (e.key === 'Enter') { setEditingName(false); void saveProfile('displayName', displayName); } }}
-              className="rounded border px-1 text-sm font-semibold outline-none"
-              style={{ borderColor: 'var(--border)' }}
-              autoFocus
-              placeholder={tr('aj.nombrePlaceholder')}
-            />
+            <div className="flex items-center gap-1.5">
+              <input
+                type="text"
+                value={nameDraft}
+                onChange={(e) => setNameDraft(e.target.value)}
+                onKeyDown={(e) => { if (e.key === 'Enter') void saveName(); if (e.key === 'Escape') cancelName(); }}
+                disabled={busy}
+                className="h-8 w-full min-w-[120px] rounded-lg border bg-[var(--surface)] px-2 text-sm font-semibold outline-none focus:ring-2 focus:ring-[#6366F1]/40"
+                style={{ borderColor: 'var(--border)' }}
+                placeholder={user?.username}
+                autoFocus
+              />
+              <button type="button" onClick={() => void saveName()} disabled={busy} aria-label={tr('aj.guardar')}
+                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-white transition-colors hover:brightness-110 disabled:opacity-50"
+                style={{ backgroundColor: '#6366F1' }}>
+                <Check className="h-4 w-4" />
+              </button>
+              <button type="button" onClick={cancelName} disabled={busy} aria-label={tr('aj.cancelar')}
+                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border transition-colors hover:bg-[var(--surface-2)]"
+                style={{ borderColor: 'var(--border)', color: 'var(--text-muted)' }}>
+                <X className="h-4 w-4" />
+              </button>
+            </div>
           ) : (
-            <button
-              type="button"
-              onClick={() => setEditingName(true)}
-              className="text-left text-sm font-semibold hover:underline"
-              title={tr('aj.editarNombre')}
-            >
-              {displayName || user?.username || '—'}
+            <button type="button" onClick={() => setEditingName(true)} title={tr('aj.editarNombre')} className="group flex min-w-0 items-center gap-1.5 text-left">
+              <span className="truncate text-base font-semibold leading-tight">{displayName}</span>
+              <Pencil className="h-3.5 w-3.5 shrink-0 opacity-0 transition-opacity group-hover:opacity-100" style={{ color: 'var(--text-muted)' }} aria-hidden="true" />
             </button>
           )}
+
           {editingEmail ? (
-            <input
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              onBlur={() => { setEditingEmail(false); void saveProfile('email', email); }}
-              onKeyDown={(e) => { if (e.key === 'Enter') { setEditingEmail(false); void saveProfile('email', email); } }}
-              className="rounded border px-1 text-xs outline-none"
-              style={{ borderColor: 'var(--border)', color: 'var(--text-muted)' }}
-              autoFocus
-              placeholder={tr('aj.emailPlaceholder')}
-            />
+            <div className="mt-1 flex items-center gap-1.5">
+              <input
+                type="email"
+                value={emailDraft}
+                onChange={(e) => setEmailDraft(e.target.value)}
+                onKeyDown={(e) => { if (e.key === 'Enter') void saveEmail(); if (e.key === 'Escape') cancelEmail(); }}
+                disabled={busy}
+                className="h-7 w-full min-w-[120px] rounded-lg border bg-[var(--surface)] px-2 text-xs outline-none focus:ring-2 focus:ring-[#6366F1]/40"
+                style={{ borderColor: 'var(--border)', color: 'var(--text-muted)' }}
+                placeholder={tr('aj.emailPlaceholder')}
+                autoFocus
+              />
+              <button type="button" onClick={() => void saveEmail()} disabled={busy} aria-label={tr('aj.guardar')}
+                className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-white transition-colors hover:brightness-110 disabled:opacity-50"
+                style={{ backgroundColor: '#6366F1' }}>
+                <Check className="h-3.5 w-3.5" />
+              </button>
+              <button type="button" onClick={cancelEmail} disabled={busy} aria-label={tr('aj.cancelar')}
+                className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border transition-colors hover:bg-[var(--surface-2)]"
+                style={{ borderColor: 'var(--border)', color: 'var(--text-muted)' }}>
+                <X className="h-3.5 w-3.5" />
+              </button>
+            </div>
           ) : (
             <button
               type="button"
               onClick={() => setEditingEmail(true)}
-              className="text-left text-xs hover:underline"
+              title={user?.email || tr('aj.emailVacio')}
+              className="mt-0.5 flex items-center gap-1 text-xs transition-colors hover:underline"
               style={{ color: 'var(--text-muted)' }}
-              title={tr('aj.editarEmail')}
             >
-              {email || tr('aj.emailVacio')}
+              {user?.email ? (
+                <>
+                  <Mail className="h-3.5 w-3.5 shrink-0" style={{ color: '#F59E0B' }} aria-hidden="true" />
+                  <span className="truncate">{user.email}</span>
+                </>
+              ) : (
+                <span>{tr('aj.emailVacio')}</span>
+              )}
             </button>
           )}
-          <span className="text-[10px]" style={{ color: 'var(--text-faint)' }}>
+          <p className="mt-0.5 truncate text-[11px]" style={{ color: 'var(--text-faint)' }}>
             @{user?.username}
-          </span>
+            {user?.role ? ` · ${user.role === 'admin' ? tr('aj.rolAdmin') : tr('aj.rolUsuario')}` : ''}
+          </p>
         </div>
 
         {/* Idioma */}
         <Select value={lang} onValueChange={(v) => changeLang(v as AppLanguage)}>
-          <SelectTrigger aria-label={tr('aj.idioma')} className="h-9 w-auto min-w-[80px] rounded-lg border text-xs" style={{ borderColor: 'var(--border)', backgroundColor: 'var(--surface)' }}>
+          <SelectTrigger aria-label={tr('aj.idioma')} className="h-9 w-[120px] shrink-0 rounded-lg border text-xs" style={{ borderColor: 'var(--border)', backgroundColor: 'var(--surface)' }}>
             <SelectValue />
           </SelectTrigger>
           <SelectContent className="rounded-xl border-[var(--border)] bg-[var(--surface)]">
@@ -443,47 +512,50 @@ export function SessionCard({ isDemo }: { isDemo: boolean }) {
           </SelectContent>
         </Select>
 
-        {/* Notificaciones */}
-        <Select value={notifLevel} onValueChange={(v) => changeNotifLevel(v as NotifLevel)}>
-          <SelectTrigger aria-label={tr('aj.notifLevel')} className="h-9 w-auto min-w-[80px] rounded-lg border text-xs" style={{ borderColor: 'var(--border)', backgroundColor: 'var(--surface)' }}>
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent className="rounded-xl border-[var(--border)] bg-[var(--surface)]">
-            {NOTIF_LEVELS.map((opt) => (
-              <SelectItem key={opt.value} value={opt.value}>{tr(opt.labelKey)}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-
         {/* Contraseña */}
-        <button
-          type="button"
-          onClick={() => setShowPwd(!showPwd)}
-          className="flex h-9 items-center gap-1.5 rounded-lg border px-3 text-xs font-semibold transition-colors hover:bg-[var(--surface-2)]"
-          style={{ borderColor: 'var(--border)', color: 'var(--text-muted)' }}
-        >
-          <KeyRound className="h-3.5 w-3.5" />
-          <span className="hidden sm:inline">{tr('aj.cambiarPassword')}</span>
-        </button>
-
-        {/* Logout */}
         {!isDemo && (
           <button
             type="button"
-            onClick={() => { void logout(); }}
-            className="flex h-9 items-center gap-1.5 rounded-lg border px-3 text-xs font-semibold transition-colors hover:bg-red-50 dark:hover:bg-red-950/20"
-            style={{ borderColor: 'var(--danger-border, #fca5a5)', color: 'var(--danger, #ef4444)' }}
+            aria-expanded={showPwd}
+            onClick={() => setShowPwd((v) => !v)}
+            className={actionBtnCls}
+            title={tr('aj.cambiarPassword')}
+            style={{ borderColor: 'var(--border)', color: 'var(--text-muted)' }}
           >
-            <LogOut className="h-3.5 w-3.5" />
-            <span className="hidden sm:inline">{tr('aj.cerrarSesion')}</span>
+            <KeyRound className="h-4 w-4" aria-hidden="true" />
+            <span className={actionTextCls}>{tr('aj.cambiarPassword')}</span>
           </button>
         )}
+
+        {/* Notificaciones */}
+        <button
+          type="button"
+          aria-expanded={showNotif}
+          onClick={() => setShowNotif((v) => !v)}
+          className={actionBtnCls}
+          title={tr('aj.notificaciones')}
+          style={{ borderColor: 'var(--border)', color: 'var(--text-muted)' }}
+        >
+          <Bell className="h-4 w-4" aria-hidden="true" />
+          <span className={actionTextCls}>{tr('aj.notificaciones')}</span>
+        </button>
+
+        {/* Logout — SIEMPRE a la derecha, texto visible incluso en móvil, rojo */}
+        <button
+          type="button"
+          onClick={() => { void logout(); }}
+          className="ml-auto inline-flex h-9 shrink-0 items-center gap-1.5 rounded-lg border px-3 text-xs font-semibold transition-colors hover:bg-red-50 dark:hover:bg-red-950/20"
+          style={{ borderColor: 'var(--danger-border, #fca5a5)', color: 'var(--danger, #ef4444)', backgroundColor: 'rgb(var(--danger-rgb) / 0.10)' }}
+        >
+          <LogOut className="h-4 w-4" aria-hidden="true" />
+          {isDemo ? tr('aj.salirDemo') : tr('aj.cerrarSesion')}
+        </button>
       </div>
 
       {/* Form contraseña desplegable */}
       <AnimatePresence>
         {showPwd && (
-          <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} transition={{ duration: 0.2 }} className="overflow-hidden">
+          <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} transition={{ duration: 0.2 }} className="mt-4 overflow-hidden border-t pt-4" style={{ borderColor: 'var(--border)' }}>
             <div className="flex flex-col gap-2 rounded-xl border p-3" style={{ borderColor: 'var(--border)', backgroundColor: 'var(--surface-2)' }}>
               <input type="password" placeholder={tr('aj.passActual')} value={form.current} onChange={(e) => setForm({ ...form, current: e.target.value })} className="h-9 rounded-lg border px-3 text-sm outline-none" style={{ borderColor: 'var(--border)' }} autoComplete="current-password" />
               <input type="password" placeholder={tr('aj.passNueva')} value={form.next} onChange={(e) => setForm({ ...form, next: e.target.value })} className="h-9 rounded-lg border px-3 text-sm outline-none" style={{ borderColor: 'var(--border)' }} autoComplete="new-password" />
@@ -495,22 +567,49 @@ export function SessionCard({ isDemo }: { isDemo: boolean }) {
         )}
       </AnimatePresence>
 
-      {/* Push (si requiere HTTPS o está soportado) */}
-      {soporte === 'requiere-https' ? (
-        <p className="text-xs" style={{ color: 'var(--text-faint)' }}>{tr('aj.pushRequiereHttps')}</p>
-      ) : soporte === 'ok' ? (
-        <div className="flex items-center justify-between">
-          <div>
-            <p className="text-sm font-semibold">{tr('aj.alertasPush')}</p>
-            <p className="text-xs" style={{ color: 'var(--text-muted)' }}>{estado.suscrito ? tr('aj.pushActivas') : tr('aj.pushInactivas')}</p>
-          </div>
-          {estado.suscrito ? (
-            <button type="button" onClick={() => { void desactivar(); }} disabled={estado.cargando} className="h-8 rounded-lg border px-3 text-xs font-semibold disabled:opacity-50" style={{ borderColor: 'var(--border)' }}>{tr('aj.desactivar')}</button>
-          ) : (
-            <button type="button" onClick={() => { void activar(); }} disabled={estado.cargando} className="h-8 rounded-lg bg-violet-500 px-3 text-xs font-semibold text-white disabled:opacity-50">{tr('aj.activar')}</button>
-          )}
-        </div>
-      ) : null}
+      {/* Panel notificaciones desplegable: nivel + push */}
+      <AnimatePresence>
+        {showNotif && (
+          <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} transition={{ duration: 0.2 }} className="mt-4 overflow-hidden border-t pt-4" style={{ borderColor: 'var(--border)' }}>
+            <div className="flex flex-col gap-3 rounded-xl border p-3" style={{ borderColor: 'var(--border)', backgroundColor: 'var(--surface-2)' }}>
+              {/* Nivel de alertas */}
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div>
+                  <p className="text-sm font-semibold">{tr('aj.notifLevel')}</p>
+                  <p className="text-xs" style={{ color: 'var(--text-muted)' }}>{tr('aj.notifLevelDesc')}</p>
+                </div>
+                <Select value={notifLevel} onValueChange={(v) => changeNotifLevel(v as NotifLevel)}>
+                  <SelectTrigger aria-label={tr('aj.notifLevel')} className="h-9 w-[140px] rounded-lg border text-xs" style={{ borderColor: 'var(--border)', backgroundColor: 'var(--surface)' }}>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent className="rounded-xl border-[var(--border)] bg-[var(--surface)]">
+                    {NOTIF_LEVELS.map((opt) => (
+                      <SelectItem key={opt.value} value={opt.value}>{tr(opt.labelKey)}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Push */}
+              {soporte === 'requiere-https' ? (
+                <p className="text-xs" style={{ color: 'var(--text-faint)' }}>{tr('aj.pushRequiereHttps')}</p>
+              ) : soporte === 'ok' ? (
+                <div className="flex items-center justify-between gap-2">
+                  <div>
+                    <p className="text-sm font-semibold">{tr('aj.alertasPush')}</p>
+                    <p className="text-xs" style={{ color: 'var(--text-muted)' }}>{estado.suscrito ? tr('aj.pushActivas') : tr('aj.pushInactivas')}</p>
+                  </div>
+                  {estado.suscrito ? (
+                    <button type="button" onClick={() => { void desactivar(); }} disabled={estado.cargando} className="h-8 rounded-lg border px-3 text-xs font-semibold disabled:opacity-50" style={{ borderColor: 'var(--border)' }}>{tr('aj.desactivar')}</button>
+                  ) : (
+                    <button type="button" onClick={() => { void activar(); }} disabled={estado.cargando} className="h-8 rounded-lg bg-violet-500 px-3 text-xs font-semibold text-white disabled:opacity-50">{tr('aj.activar')}</button>
+                  )}
+                </div>
+              ) : null}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </Card>
   );
 }

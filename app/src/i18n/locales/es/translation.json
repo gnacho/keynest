@@ -601,7 +601,7 @@
     "limpiezaAutoDesc": "Generar limpieza al detectar una salida",
     "umbralBateria": "Umbral de batería baja Tedee",
     "umbralBateriaDesc": "Aviso cuando una cerradura baje de este nivel",
-    "cerrarSesion": "Cerrar sesión",
+    "cerrarSesion": "Salir",
     "cerrarSesionQ": "¿Cerrar sesión?",
     "cerrarSesionDesc": "Volverás a la pantalla de acceso.",
     "eliminarPersonaQ": "¿Eliminar a {{name}}?",
@@ -652,7 +652,7 @@
     "categoriaGuardada": "Categorías guardadas",
     "etiqueta": "Etiqueta",
     "icono": "Icono",
-    "cambiarPassword": "Cambiar contraseña",
+    "cambiarPassword": "Contraseña",
     "cambiarPasswordDesc": "Actualiza tu contraseña de acceso",
     "passActual": "Contraseña actual",
     "passNueva": "Nueva contraseña (mín. 6 caracteres)",
@@ -794,7 +794,21 @@
     "ejecutando": "Ejecutando…",
     "backupGuardado": "Configuración guardada",
     "backupCreado": "Backup creado correctamente",
-    "backupError": "Error al crear el backup"
+    "backupError": "Error al crear el backup",
+    "miPerfil": "Mi perfil",
+    "nombrePlaceholder": "Tu nombre",
+    "editarNombre": "Editar nombre",
+    "emailPlaceholder": "tu@email.com",
+    "editarEmail": "Editar email",
+    "emailVacio": "Sin email",
+    "alertasPush": "Alertas push",
+    "pushActivas": "Alertas activadas en este dispositivo",
+    "pushInactivas": "Alertas desactivadas",
+    "activar": "Activar",
+    "desactivar": "Desactivar",
+    "pushRequiereHttps": "Las notificaciones push necesitan HTTPS (o localhost). Con acceso por IP local (http) están dormidas y se activarán solas cuando la app se sirva por HTTPS.",
+    "guardando": "Guardando…",
+    "rolUsuario": "Usuario"
   },
   "common2": {
     "confirmar": "Confirmar",
@@ -848,13 +862,5 @@
     "save": "Guardar",
     "saving": "Guardando…",
     "free": "Libre"
-  },
-  "aj.miPerfil": "Mi perfil",
-  "aj.nombrePlaceholder": "Tu nombre",
-  "aj.editarNombre": "Editar nombre",
-  "aj.emailPlaceholder": "tu@email.com",
-  "aj.editarEmail": "Editar email",
-  "aj.emailVacio": "Sin email",
-  "aj.cambiarPassword": "Contraseña",
-  "aj.cerrarSesion": "Salir"
+  }
 }

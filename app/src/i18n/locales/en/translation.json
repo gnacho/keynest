@@ -652,7 +652,7 @@
     "categoriaGuardada": "Categories saved",
     "etiqueta": "Label",
     "icono": "Icon",
-    "cambiarPassword": "Change password",
+    "cambiarPassword": "Password",
     "cambiarPasswordDesc": "Update your sign-in password",
     "passActual": "Current password",
     "passNueva": "New password (min 6 characters)",
@@ -794,7 +794,21 @@
     "ejecutando": "Running…",
     "backupGuardado": "Settings saved",
     "backupCreado": "Backup created successfully",
-    "backupError": "Error creating backup"
+    "backupError": "Error creating backup",
+    "miPerfil": "My profile",
+    "nombrePlaceholder": "Your name",
+    "editarNombre": "Edit name",
+    "emailPlaceholder": "your@email.com",
+    "editarEmail": "Edit email",
+    "emailVacio": "No email",
+    "alertasPush": "Push alerts",
+    "pushActivas": "Alerts enabled on this device",
+    "pushInactivas": "Alerts disabled",
+    "activar": "Enable",
+    "desactivar": "Disable",
+    "pushRequiereHttps": "Push notifications require HTTPS (or localhost). Over local IP access (http) they stay dormant and will activate by themselves once the app is served over HTTPS.",
+    "guardando": "Saving…",
+    "rolUsuario": "User"
   },
   "common2": {
     "confirmar": "Confirm",
@@ -848,13 +862,5 @@
     "save": "Save",
     "saving": "Saving…",
     "free": "Free"
-  },
-  "aj.miPerfil": "My profile",
-  "aj.nombrePlaceholder": "Your name",
-  "aj.editarNombre": "Edit name",
-  "aj.emailPlaceholder": "your@email.com",
-  "aj.editarEmail": "Edit email",
-  "aj.emailVacio": "No email",
-  "aj.cambiarPassword": "Password",
-  "aj.cerrarSesion": "Sign out"
+  }
 }

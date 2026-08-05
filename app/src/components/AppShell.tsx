@@ -38,6 +38,9 @@ interface NavItem {
 
 /* Items de dominio; Ajustes NO va en el nav principal del sidebar: va abajo,
    junto al ThemeToggle (webapp-shell). En móvil sí entra en el sheet "Más". */
+/* NAV_ITEMS es la fuente única (webapp-shell): las rutas OCULTAS siguen
+   existiendo (URL directa, enlaces del dashboard), solo no se muestran en la
+   navegación. Cambiar HIDDEN_ROUTES para recuperarlas. */
 const NAV_ITEMS: NavItem[] = [
   { to: '/', labelKey: 'resumen', icon: LayoutDashboard },
   { to: '/calendario', labelKey: 'calendario', icon: CalendarDays },
@@ -47,10 +50,13 @@ const NAV_ITEMS: NavItem[] = [
   { to: '/rentabilidad', labelKey: 'rentabilidad', icon: TrendingUp },
 ];
 
+const HIDDEN_ROUTES = ['/calendario', '/reservas', '/mantenimiento'];
+const VISIBLE_NAV: NavItem[] = NAV_ITEMS.filter((i) => !HIDDEN_ROUTES.includes(i.to));
+
 const SETTINGS_ITEM: NavItem = { to: '/ajustes', labelKey: 'ajustes', icon: Settings };
 
-const BOTTOM_ITEMS: NavItem[] = NAV_ITEMS.slice(0, 4);
-const MORE_ITEMS: NavItem[] = [...NAV_ITEMS.slice(4), SETTINGS_ITEM];
+const BOTTOM_ITEMS: NavItem[] = VISIBLE_NAV.slice(0, 4);
+const MORE_ITEMS: NavItem[] = [...VISIBLE_NAV.slice(4), SETTINGS_ITEM];
 
 const TITLE_KEYS: Record<string, string> = {
   '/': 'resumen',
@@ -236,11 +242,11 @@ export default function AppShell({ children }: { children: ReactNode }) {
 
           {collapsed ? (
             <nav className="flex flex-1 flex-col items-center gap-1 overflow-y-auto px-3 py-2">
-              {[...NAV_ITEMS, SETTINGS_ITEM].map(renderIconItem)}
+              {[...VISIBLE_NAV, SETTINGS_ITEM].map(renderIconItem)}
             </nav>
           ) : (
             <nav className="flex flex-1 flex-col gap-1 overflow-y-auto px-3 py-2">
-              {NAV_ITEMS.map(renderNavItem)}
+              {VISIBLE_NAV.map(renderNavItem)}
             </nav>
           )}
 
@@ -292,7 +298,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
             <LogoMark size={26} />
           </Link>
           <nav className="mt-3 flex flex-1 flex-col items-center gap-1 overflow-y-auto">
-            {[...NAV_ITEMS, SETTINGS_ITEM].map(renderIconItem)}
+            {[...VISIBLE_NAV, SETTINGS_ITEM].map(renderIconItem)}
           </nav>
           <ThemeToggle />
         </aside>
@@ -388,7 +394,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
             paddingBottom: 'env(safe-area-inset-bottom)',
           }}
         >
-          <div className="grid h-16 grid-cols-5">
+          <div className="grid h-16 grid-cols-4">
             {BOTTOM_ITEMS.map((item) => {
               const active = isActive(item.to);
               const badge = badgeFor(item.to);
@@ -445,11 +451,6 @@ export default function AppShell({ children }: { children: ReactNode }) {
                   className="h-5 w-5"
                   style={{ color: moreActive ? '#6366F1' : 'var(--text-faint)' }}
                 />
-                {urgentMaintenance > 0 && (
-                  <span className="absolute -right-2 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-rose-500 px-1 text-[10px] font-semibold text-white">
-                    {urgentMaintenance}
-                  </span>
-                )}
               </span>
               <span
                 className="relative text-[10px] font-semibold"
