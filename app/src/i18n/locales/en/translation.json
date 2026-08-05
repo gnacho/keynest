@@ -642,6 +642,7 @@
     "nombreObligatorio": "Name is required",
     "activarEnlace": "Activate access link",
     "enlaceActivo": "Link active",
+    "sinEnlace": "No link",
     "enlaceCopiado": "Link copied to clipboard",
     "enlaceGenerado2": "Link generated (copy it now, it won't be shown again)",
     "enlaceRevocado": "Link revoked",

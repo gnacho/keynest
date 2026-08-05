@@ -94,6 +94,8 @@ export interface DataApi {
   deletePerson: (id: string) => Promise<void>;
   /** Genera enlace token; devuelve la ruta /t/<token> (el plano solo se ve una vez). */
   generatePersonToken: (id: string) => Promise<string | undefined>;
+  /** Recupera el enlace activo sin regenerarlo; null si no hay (o no es recuperable). */
+  getPersonLink: (id: string) => Promise<string | null>;
   revokePersonToken: (id: string) => Promise<void>;
   generateMaintenanceToken: (id: string) => Promise<string | undefined>;
   revokeMaintenanceToken: (id: string) => Promise<void>;

@@ -10,7 +10,6 @@ import {
   CalendarDays,
   Check,
   ChevronDown,
-  Copy,
   DoorOpen,
   Euro,
   FileText,
@@ -72,6 +71,28 @@ import { fmtDateShort, fmtMoney, fmtRelative } from '@/lib/format';
 import { cn } from '@/lib/utils';
 
 const EASE_OUT_QUART: [number, number, number, number] = [0.25, 1, 0.5, 1];
+
+/* Enlaces de acceso por token de personas: persistidos en localStorage porque el
+   servidor guarda solo el hash del token (nunca el token en claro). Sin esto, tras
+   recargar la página el enlace no se puede volver a ver ni copiar. */
+const PERSON_LINKS_KEY = 'keynest-person-links';
+
+function loadStoredPersonLinks(): Record<string, string> {
+  try {
+    const raw = localStorage.getItem(PERSON_LINKS_KEY);
+    return raw ? (JSON.parse(raw) as Record<string, string>) : {};
+  } catch {
+    return {};
+  }
+}
+
+function storePersonLinks(links: Record<string, string>) {
+  try {
+    localStorage.setItem(PERSON_LINKS_KEY, JSON.stringify(links));
+  } catch {
+    /* sin persistencia disponible: sigue el flujo actual */
+  }
+}
 
 const containerV: Variants = {
   hidden: {},
@@ -168,13 +189,45 @@ export default function Ajustes() {
 
   /* ---- Personas: BD real vía provider ---- */
   const people = data.getPeople();
-  const [personLinks, setPersonLinks] = useState<Record<string, string>>({});
+  const [personLinks, setPersonLinks] = useState<Record<string, string>>(() => loadStoredPersonLinks());
   const [copiedPerson, setCopiedPerson] = useState<string | null>(null);
   const [editPerson, setEditPerson] = useState<Person | null>(null);
   const [personForm, setPersonForm] = useState({ name: '', phone: '', hourlyRate: 0, specialty: '' });
   const [deletePerson, setDeletePerson] = useState<Person | null>(null);
   const [addPersonOpen, setAddPersonOpen] = useState(false);
   const [newPersonRole, setNewPersonRole] = useState<PersonRole>('limpieza');
+
+  /* Recupera de la BD el enlace activo de cada persona (token_cipher cifrado en server,
+     GET /api/people/:id/token). Fuente de verdad = server; localStorage solo caché inicial. */
+  const fetchedLinksRef = useRef<Set<string>>(new Set());
+  useEffect(() => {
+    const pending = people.filter((p) => p.hasToken && !fetchedLinksRef.current.has(p.id));
+    pending.forEach((p) => {
+      fetchedLinksRef.current.add(p.id);
+      void data
+        .getPersonLink(p.id)
+        .then((path) => {
+          setPersonLinks((prev) => {
+            if (path) {
+              const next = { ...prev, [p.id]: path };
+              storePersonLinks(next);
+              return next;
+            }
+            if (prev[p.id]) {
+              const next = { ...prev };
+              delete next[p.id];
+              storePersonLinks(next);
+              return next;
+            }
+            return prev;
+          });
+        })
+        .catch(() => {
+          fetchedLinksRef.current.delete(p.id);
+        });
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [data.version]);
 
   const [checklistText, setChecklistText] = useState('');
   const [instructionsText, setInstructionsText] = useState('');
@@ -477,7 +530,11 @@ export default function Ajustes() {
     const path = await data.generatePersonToken(p.id);
     if (path) {
       const url = `${window.location.origin}${path}`;
-      setPersonLinks((prev) => ({ ...prev, [p.id]: url }));
+      setPersonLinks((prev) => {
+        const next = { ...prev, [p.id]: url };
+        storePersonLinks(next);
+        return next;
+      });
       const ok = await copyText(url);
       toast.success(ok ? tr('aj.enlaceCopiado') : tr('aj.enlaceGenerado2'));
     }
@@ -499,6 +556,7 @@ export default function Ajustes() {
     setPersonLinks((prev) => {
       const next = { ...prev };
       delete next[p.id];
+      storePersonLinks(next);
       return next;
     });
     toast.success(tr('aj.enlaceRevocado'));
@@ -795,68 +853,66 @@ export default function Ajustes() {
                               </span>
                             </div>
                             {/* Enlace de acceso por token: SOLO personal de limpieza;
-                                los proveedores usan token por orden de trabajo */}
+                                los proveedores usan token por orden de trabajo.
+                                Compacto: iconos con tooltip, sin URL ni botones de texto. */}
                             {p.role === 'limpieza' && (
-                            <div className="flex flex-col gap-2 border-t pt-2.5" style={{ borderColor: 'var(--border)' }}>
-                              {p.hasToken && !personLinks[p.id] ? (
-                                <div className="flex items-center gap-2">
-                                  <span className="flex flex-1 items-center gap-1.5 text-[11px] font-medium text-emerald-500">
-                                    <Check className="h-3.5 w-3.5" />
-                                    {tr('aj.enlaceActivo')}
-                                  </span>
+                            <div className="flex items-center justify-between gap-2 border-t pt-2.5" style={{ borderColor: 'var(--border)' }}>
+                              <div className="flex items-center gap-2">
+                                {personLinks[p.id] ? (
+                                  <button
+                                    type="button"
+                                    onClick={() => void copyPersonLink(p)}
+                                    aria-label={tr('aj.copiarEnlace')}
+                                    title={tr('aj.copiarEnlace')}
+                                    className="flex h-8 w-8 items-center justify-center rounded-xl text-violet-500 transition-colors hover:bg-[var(--vi-chip-bg)]"
+                                  >
+                                    {copiedPerson === p.id ? <Check className="h-4 w-4" /> : <Link2 className="h-4 w-4" />}
+                                  </button>
+                                ) : p.hasToken ? (
                                   <button
                                     type="button"
                                     onClick={() => void genPersonLink(p)}
-                                    className="rounded-lg px-2 py-1 text-[11px] font-semibold transition-colors hover:bg-[var(--surface-2)]"
-                                    style={{ color: 'var(--text-muted)' }}
+                                    aria-label={tr('aj.regenerar')}
+                                    title={tr('aj.regenerar')}
+                                    className="flex h-8 w-8 items-center justify-center rounded-xl text-violet-500 transition-colors hover:bg-[var(--vi-chip-bg)]"
                                   >
-                                    {tr('aj.regenerar')}
+                                    <RefreshCw className="h-4 w-4" />
                                   </button>
+                                ) : (
                                   <button
                                     type="button"
-                                    onClick={() => void revokePersonLink(p)}
-                                    className="rounded-lg px-2 py-1 text-[11px] font-semibold text-rose-500 transition-colors hover:bg-[var(--ro-chip-bg)]"
+                                    onClick={() => void genPersonLink(p)}
+                                    aria-label={tr('aj.activarEnlace')}
+                                    title={tr('aj.activarEnlace')}
+                                    className="flex h-8 w-8 items-center justify-center rounded-xl text-violet-500 transition-colors hover:bg-[var(--vi-chip-bg)]"
                                   >
-                                    {tr('aj.revocar')}
+                                    <Link2 className="h-4 w-4" />
                                   </button>
-                                </div>
-                              ) : personLinks[p.id] ? (
-                                <div className="flex flex-col gap-1.5">
-                                  <div className="flex items-center gap-2 rounded-xl border px-2.5 py-1.5" style={{ borderColor: 'var(--border)', backgroundColor: 'var(--surface-2)' }}>
-                                    <Link2 className="h-3.5 w-3.5 shrink-0 text-violet-500" />
-                                    <span className="tnum min-w-0 flex-1 truncate text-[11px] font-medium" style={{ color: 'var(--text-muted)' }}>
-                                      {personLinks[p.id]}
-                                    </span>
-                                  </div>
-                                  <div className="flex gap-1.5">
-                                    <button
-                                      type="button"
-                                      onClick={() => void copyPersonLink(p)}
-                                      className="flex h-7 flex-1 items-center justify-center gap-1 rounded-lg bg-violet-500 text-[11px] font-semibold text-white transition-all hover:brightness-110"
-                                    >
-                                      {copiedPerson === p.id ? <Check className="h-3 w-3" /> : <Copy className="h-3 w-3" />}
-                                      {copiedPerson === p.id ? tr('aj.copiado') : tr('aj.copiarEnlace')}
-                                    </button>
-                                    <button
-                                      type="button"
-                                      onClick={() => void revokePersonLink(p)}
-                                      className="flex h-7 items-center rounded-lg border px-2 text-[11px] font-semibold text-rose-500 transition-colors hover:bg-[var(--ro-chip-bg)]"
-                                      style={{ borderColor: 'var(--border)' }}
-                                    >
-                                      {tr('aj.revocar')}
-                                    </button>
-                                  </div>
-                                </div>
-                              ) : (
-                                <button
-                                  type="button"
-                                  onClick={() => void genPersonLink(p)}
-                                  className="flex h-8 items-center justify-center gap-1.5 rounded-xl border border-dashed border-violet-400 text-[11px] font-semibold text-violet-500 transition-colors hover:bg-[var(--vi-chip-bg)]"
+                                )}
+                                <span
+                                  className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold"
+                                  style={{
+                                    color: p.hasToken ? '#10B981' : 'var(--text-faint)',
+                                    backgroundColor: p.hasToken ? 'rgba(16,185,129,0.12)' : 'transparent',
+                                  }}
                                 >
-                                  <Link2 className="h-3.5 w-3.5" />
-                                  {tr('aj.activarEnlace')}
-                                </button>
-                              )}
+                                  <span
+                                    className="h-1.5 w-1.5 rounded-full"
+                                    style={{ backgroundColor: p.hasToken ? '#10B981' : 'var(--text-faint)' }}
+                                  />
+                                  {p.hasToken ? tr('aj.enlaceActivo') : tr('aj.sinEnlace')}
+                                </span>
+                              </div>
+                              <button
+                                type="button"
+                                onClick={() => void revokePersonLink(p)}
+                                aria-label={tr('aj.revocar')}
+                                title={tr('aj.revocar')}
+                                disabled={!p.hasToken}
+                                className="flex h-8 w-8 items-center justify-center rounded-xl text-rose-500 transition-colors hover:bg-[var(--ro-chip-bg)] disabled:cursor-not-allowed disabled:opacity-35"
+                              >
+                                <Ban className="h-4 w-4" />
+                              </button>
                             </div>
                             )}
                           </motion.div>

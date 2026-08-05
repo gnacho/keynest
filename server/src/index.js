@@ -7,7 +7,7 @@ import { serveStatic } from '@hono/node-server/serve-static'
 import { Hono } from 'hono'
 import { z } from 'zod'
 import * as auth from './auth.js'
-import { audit, openDb, kvGet, kvSet } from './db.js'
+import { audit, openDb, kvGet, kvSet, encryptSecret, decryptSecret } from './db.js'
 import { syncAll, syncStatus } from './sync.js'
 import { fetchIcs, icsToReservations, parseIcs } from './ical.js'
 import { seedDemo } from './seed-demo.js'
@@ -548,7 +548,8 @@ guarded.put('/maintenance/:id', async (c) => {
 })
 
 /* Token POR ORDEN de trabajo (proveedores): enlace a la vista pública de ESA orden.
-   Solo el hash en BD; el plano se devuelve una vez. */
+   Solo el hash en BD; el plano se devuelve una vez. v12: también token_cipher cifrado
+   para poder recuperarlo con GET sin regenerar. */
 guarded.post('/maintenance/:id/token', (c) => {
   const db = c.get('db')
   const task = db.prepare('SELECT * FROM maintenance_tasks WHERE id = ?').get(c.req.param('id'))
@@ -557,14 +558,24 @@ guarded.post('/maintenance/:id/token', (c) => {
   const rand = Array.from(crypto.randomBytes(16), (b) => alphabet[b % alphabet.length]).join('')
   const token = `kn-wo-${rand}`
   const hash = crypto.createHash('sha256').update(token).digest('hex')
-  db.prepare('UPDATE maintenance_tasks SET token_hash = ? WHERE id = ?').run(hash, task.id)
+  db.prepare('UPDATE maintenance_tasks SET token_hash = ?, token_cipher = ? WHERE id = ?').run(hash, encryptSecret(db, token), task.id)
   aud(c, 'update', 'maintenance', task.id, 'token creado')
   return c.json({ ok: true, token, path: `/t/${token}` })
 })
 
+/* Recupera el enlace activo de la orden sin regenerarlo. */
+guarded.get('/maintenance/:id/token', (c) => {
+  const db = c.get('db')
+  const task = db.prepare('SELECT token_hash, token_cipher FROM maintenance_tasks WHERE id = ?').get(c.req.param('id'))
+  if (!task) return c.json({ error: 'no encontrada' }, 404)
+  if (!task.token_hash) return c.json({ path: null })
+  const token = decryptSecret(db, task.token_cipher)
+  return c.json({ ok: Boolean(token), path: token ? `/t/${token}` : null })
+})
+
 guarded.delete('/maintenance/:id/token', (c) => {
   const db = c.get('db')
-  db.prepare('UPDATE maintenance_tasks SET token_hash = NULL WHERE id = ?').run(c.req.param('id'))
+  db.prepare('UPDATE maintenance_tasks SET token_hash = NULL, token_cipher = NULL WHERE id = ?').run(c.req.param('id'))
   aud(c, 'update', 'maintenance', c.req.param('id'), 'token revocado')
   return c.json({ ok: true })
 })
@@ -615,7 +626,9 @@ guarded.delete('/people/:id', (c) => {
 })
 
 /* Token de acceso por enlace (capability URL): se guarda SOLO el hash; el plano se devuelve una vez.
-   REGLA: solo personas de limpieza — los proveedores usan token POR ORDEN de trabajo. */
+   REGLA: solo personas de limpieza — los proveedores usan token POR ORDEN de trabajo.
+   v12: además del hash se guarda el token en claro CIFRADO (token_cipher, AES-GCM con ENC_KEY)
+   para poder recuperarlo y volver a copiarlo (GET) sin regenerar el enlace. */
 guarded.post('/people/:id/token', (c) => {
   const db = c.get('db')
   const person = db.prepare('SELECT * FROM people WHERE id = ?').get(c.req.param('id'))
@@ -626,13 +639,25 @@ guarded.post('/people/:id/token', (c) => {
   const rand = Array.from(crypto.randomBytes(16), (b) => alphabet[b % alphabet.length]).join('')
   const token = `kn-${slug}-${rand}`
   const hash = crypto.createHash('sha256').update(token).digest('hex')
-  db.prepare('UPDATE people SET token_hash = ? WHERE id = ?').run(hash, person.id)
+  db.prepare('UPDATE people SET token_hash = ?, token_cipher = ? WHERE id = ?').run(hash, encryptSecret(db, token), person.id)
+  aud(c, 'update', 'person', person.id, 'token creado')
   return c.json({ ok: true, token, path: `/t/${token}` })
+})
+
+/* Recupera el enlace activo sin regenerarlo (token en claro cifrado en BD). */
+guarded.get('/people/:id/token', (c) => {
+  const db = c.get('db')
+  const person = db.prepare('SELECT token_hash, token_cipher FROM people WHERE id = ?').get(c.req.param('id'))
+  if (!person) return c.json({ error: 'no encontrada' }, 404)
+  if (!person.token_hash) return c.json({ path: null })
+  const token = decryptSecret(db, person.token_cipher)
+  return c.json({ ok: Boolean(token), path: token ? `/t/${token}` : null })
 })
 
 guarded.delete('/people/:id/token', (c) => {
   const db = c.get('db')
-  db.prepare('UPDATE people SET token_hash = NULL WHERE id = ?').run(c.req.param('id'))
+  db.prepare('UPDATE people SET token_hash = NULL, token_cipher = NULL WHERE id = ?').run(c.req.param('id'))
+  aud(c, 'update', 'person', c.req.param('id'), 'token revocado')
   return c.json({ ok: true })
 })
 

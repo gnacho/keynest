@@ -397,6 +397,10 @@ export default function DataProvider({ children }: { children: ReactNode }) {
         bump();
         return res.path;
       },
+      getPersonLink: async (id) => {
+        const res = await api<{ path: string | null }>(`/api/people/${id}/token`);
+        return res.path;
+      },
       revokePersonToken: async (id) => {
         await api(`/api/people/${id}/token`, { method: 'DELETE' });
         const idx = people.current.findIndex((p) => p.id === id);
