@@ -209,7 +209,11 @@ export default function Ajustes() {
         .then((path) => {
           setPersonLinks((prev) => {
             if (path) {
-              const next = { ...prev, [p.id]: path };
+              /* El server devuelve SOLO el path (/t/kn-...); la URL completa
+                 se construye aquí con el origin, igual que en genPersonLink.
+                 Sin esto, tras recargar el enlace copiado perdía el host. */
+              const url = `${window.location.origin}${path}`;
+              const next = { ...prev, [p.id]: url };
               storePersonLinks(next);
               return next;
             }
