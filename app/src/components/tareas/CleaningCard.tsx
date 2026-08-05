@@ -114,7 +114,7 @@ export default function CleaningCard({ cleaning: c, variants, highlight = false,
             <ChevronDown className="h-4 w-4" style={{ color: 'var(--text-faint)' }} />
           </motion.span>
         </button>
-        {expanded && (
+        {expanded && !data.isDemo && (
           <div className="mt-2 flex justify-end gap-2">
             <button
               type="button"
@@ -312,25 +312,36 @@ export default function CleaningCard({ cleaning: c, variants, highlight = false,
             />
           </div>
           <div className="mt-2 grid grid-cols-2 gap-1.5">
-            {c.checks.map((k) => (
-              <button
-                key={k.id}
-                type="button"
-                onClick={() => data.toggleCleaningCheck(c.id, k.id)}
-                className="flex items-center gap-2 rounded-lg px-1.5 py-1 text-left text-[13px] transition-colors duration-150 hover:bg-[var(--surface)]"
-              >
-                <span
-                  className={cn(
-                    'flex h-[18px] w-[18px] shrink-0 items-center justify-center rounded-md border transition-all duration-150',
-                    k.done ? 'border-emerald-500 bg-emerald-500 text-white' : 'text-transparent',
-                  )}
-                  style={k.done ? undefined : { borderColor: 'var(--border)' }}
-                >
-                  <Check className="h-3 w-3" strokeWidth={3} />
+            {c.checks.map((k) => {
+              const checkInner = (
+                <>
+                  <span
+                    className={cn(
+                      'flex h-[18px] w-[18px] shrink-0 items-center justify-center rounded-md border transition-all duration-150',
+                      k.done ? 'border-emerald-500 bg-emerald-500 text-white' : 'text-transparent',
+                    )}
+                    style={k.done ? undefined : { borderColor: 'var(--border)' }}
+                  >
+                    <Check className="h-3 w-3" strokeWidth={3} />
+                  </span>
+                  <span className={cn(k.done && 'line-through opacity-60')}>{k.label}</span>
+                </>
+              );
+              return data.isDemo ? (
+                <span key={k.id} className="flex cursor-default items-center gap-2 rounded-lg px-1.5 py-1 text-left text-[13px]">
+                  {checkInner}
                 </span>
-                <span className={cn(k.done && 'line-through opacity-60')}>{k.label}</span>
-              </button>
-            ))}
+              ) : (
+                <button
+                  key={k.id}
+                  type="button"
+                  onClick={() => data.toggleCleaningCheck(c.id, k.id)}
+                  className="flex items-center gap-2 rounded-lg px-1.5 py-1 text-left text-[13px] transition-colors duration-150 hover:bg-[var(--surface)]"
+                >
+                  {checkInner}
+                </button>
+              );
+            })}
           </div>
           <AnimatePresence>
             {allDone && c.status === 'en-curso' && (
@@ -380,18 +391,20 @@ export default function CleaningCard({ cleaning: c, variants, highlight = false,
                 <span className="text-[11px]" style={{ color: 'var(--text-faint)' }}>
                   {p.hourlyRate} €/h
                 </span>
-                <button
-                  type="button"
-                  onClick={() => data.removeCleaningAssignee(c.id, p.id)}
-                  aria-label={t('tareas.quitarA', { name: p.name })}
-                  className="flex h-4 w-4 items-center justify-center rounded-full transition-colors hover:bg-[var(--surface-2)]"
-                  style={{ color: 'var(--text-faint)' }}
-                >
-                  <X className="h-3 w-3" />
-                </button>
+                {!data.isDemo && (
+                  <button
+                    type="button"
+                    onClick={() => data.removeCleaningAssignee(c.id, p.id)}
+                    aria-label={t('tareas.quitarA', { name: p.name })}
+                    className="flex h-4 w-4 items-center justify-center rounded-full transition-colors hover:bg-[var(--surface-2)]"
+                    style={{ color: 'var(--text-faint)' }}
+                  >
+                    <X className="h-3 w-3" />
+                  </button>
+                )}
               </motion.span>
             ))}
-            {c.assigneeIds.length < 2 && (
+            {!data.isDemo && c.assigneeIds.length < 2 && (
               <AssignPopover
                 people={candidates}
                 tone="violet"
@@ -405,12 +418,16 @@ export default function CleaningCard({ cleaning: c, variants, highlight = false,
                 <span className="text-xs font-medium" style={{ color: 'var(--text-muted)' }}>
                   {t('tareas.previsionHoras')}
                 </span>
-                <HoursStepper
-                  compact
-                  value={estimate}
-                  onChange={(h) => data.setCleaningEstimate(c.id, h)}
-                  ariaLabel="previsión de horas"
-                />
+                {data.isDemo ? (
+                  <span className="tnum text-sm font-semibold">{estimate} h</span>
+                ) : (
+                  <HoursStepper
+                    compact
+                    value={estimate}
+                    onChange={(h) => data.setCleaningEstimate(c.id, h)}
+                    ariaLabel="previsión de horas"
+                  />
+                )}
               </span>
               <span className="text-[11px]" style={{ color: 'var(--text-faint)' }}>
                 {t('tareas.horasPorPersona')}
@@ -423,6 +440,7 @@ export default function CleaningCard({ cleaning: c, variants, highlight = false,
         <div>
           <CleaningPhotos
             photos={photos}
+            readOnly={data.isDemo}
             onUpload={async (file) => {
               const next = await data.uploadCleaningPhoto(c.id, file);
               if (next) setPhotos(next);
@@ -441,7 +459,7 @@ export default function CleaningCard({ cleaning: c, variants, highlight = false,
 
         {/* Acciones de estado: confirmar directo (sin paso intermedio "iniciar") */}
         <div className="flex justify-end gap-2">
-          {(c.status === 'asignada' || c.status === 'en-curso') && (
+          {!data.isDemo && (c.status === 'asignada' || c.status === 'en-curso') && (
             <button
               type="button"
               onClick={() => setConfirmOpen(true)}

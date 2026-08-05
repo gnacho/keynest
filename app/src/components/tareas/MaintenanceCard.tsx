@@ -246,7 +246,7 @@ export default function MaintenanceCard({ task: t, variants, animateEntry = true
 
       {/* Asignación + acciones por estado */}
       <div className="mt-0.5 flex items-center justify-between gap-2">
-        {onEdit && t.status !== 'finalizada' && (
+        {!data.isDemo && onEdit && t.status !== 'finalizada' && (
           <button
             type="button"
             onClick={onEdit}
@@ -257,27 +257,28 @@ export default function MaintenanceCard({ task: t, variants, animateEntry = true
             <Pencil className="h-3.5 w-3.5" />
           </button>
         )}
-        {/* Enlace público de la orden (proveedor): generar+copiar / revocar */}
-        <button
-          type="button"
-          aria-label={tr('mant.compartirOrden')}
-          title={tr('mant.compartirOrden')}
-          onClick={async () => {
-            const path = await data.generateMaintenanceToken(t.id);
-            if (path) {
-              const ok = await copyText(`${window.location.origin}${path}`);
-              toast.success(ok ? tr('mant.enlaceCopiado') : tr('mant.enlaceGenerado', { url: `${window.location.origin}${path}` }));
-            }
-          }}
-          className={cn(
-            'flex h-7 w-7 items-center justify-center rounded-lg transition-colors hover:bg-[var(--surface-2)]',
-            t.hasToken ? 'text-[#6366F1]' : '',
-          )}
-          style={t.hasToken ? undefined : { color: 'var(--text-faint)' }}
-        >
-          <Link2 className="h-3.5 w-3.5" />
-        </button>
-        {t.hasToken && (
+        {!data.isDemo && (
+          <button
+            type="button"
+            aria-label={tr('mant.compartirOrden')}
+            title={tr('mant.compartirOrden')}
+            onClick={async () => {
+              const path = await data.generateMaintenanceToken(t.id);
+              if (path) {
+                const ok = await copyText(`${window.location.origin}${path}`);
+                toast.success(ok ? tr('mant.enlaceCopiado') : tr('mant.enlaceGenerado', { url: `${window.location.origin}${path}` }));
+              }
+            }}
+            className={cn(
+              'flex h-7 w-7 items-center justify-center rounded-lg transition-colors hover:bg-[var(--surface-2)]',
+              t.hasToken ? 'text-[#6366F1]' : '',
+            )}
+            style={t.hasToken ? undefined : { color: 'var(--text-faint)' }}
+          >
+            <Link2 className="h-3.5 w-3.5" />
+          </button>
+        )}
+        {!data.isDemo && t.hasToken && (
           <button
             type="button"
             aria-label={tr('mant.revocarEnlace')}
@@ -301,16 +302,18 @@ export default function MaintenanceCard({ task: t, variants, animateEntry = true
             </span>
           </span>
         ) : (
-          <AssignPopover
-            people={maintPeople}
-            tone="blue"
-            variant={t.status === 'nueva' ? 'button' : 'dashed'}
-            label={t.status === 'nueva' ? tr('mant.asignar') : `+ ${tr('mant.asignar')}`}
-            onSelect={(id) => data.assignMaintenance(t.id, id)}
-          />
+          !data.isDemo && (
+            <AssignPopover
+              people={maintPeople}
+              tone="blue"
+              variant={t.status === 'nueva' ? 'button' : 'dashed'}
+              label={t.status === 'nueva' ? tr('mant.asignar') : `+ ${tr('mant.asignar')}`}
+              onSelect={(id) => data.assignMaintenance(t.id, id)}
+            />
+          )
         )}
 
-        {t.status === 'asignada' && !belowLg && (
+        {t.status === 'asignada' && !belowLg && !data.isDemo && (
           <button
             type="button"
             onClick={() => setConfirmOpen(true)}
@@ -328,15 +331,17 @@ export default function MaintenanceCard({ task: t, variants, animateEntry = true
             {t.cost !== undefined && (
               <MoneyText value={t.cost} className="text-xs font-semibold text-rose-500" />
             )}
-            <button
-              type="button"
-              onClick={() => data.setMaintenanceStatus(t.id, t.assigneeId ? 'asignada' : 'nueva')}
-              className="flex items-center gap-1 rounded-lg px-2 py-1 text-[11px] font-semibold transition-colors hover:bg-[var(--surface-2)]"
-              style={{ color: 'var(--text-faint)' }}
-            >
-              <Undo2 className="h-3 w-3" />
-              {tr('mant.reabrir')}
-            </button>
+            {!data.isDemo && (
+              <button
+                type="button"
+                onClick={() => data.setMaintenanceStatus(t.id, t.assigneeId ? 'asignada' : 'nueva')}
+                className="flex items-center gap-1 rounded-lg px-2 py-1 text-[11px] font-semibold transition-colors hover:bg-[var(--surface-2)]"
+                style={{ color: 'var(--text-faint)' }}
+              >
+                <Undo2 className="h-3 w-3" />
+                {tr('mant.reabrir')}
+              </button>
+            )}
           </span>
         )}
       </div>
@@ -353,7 +358,7 @@ export default function MaintenanceCard({ task: t, variants, animateEntry = true
   );
 
   // Gesto clave en móvil: deslizar para finalizar (umbral 40 %)
-  if (t.status === 'asignada' && belowLg) {
+  if (t.status === 'asignada' && belowLg && !data.isDemo) {
     return <SwipeToFinish onDone={finish}>{card}</SwipeToFinish>;
   }
   return card;

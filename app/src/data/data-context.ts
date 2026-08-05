@@ -66,6 +66,8 @@ export interface DataApi {
   bump: () => void;
   /** true mientras carga el bootstrap inicial del backend. */
   loading: boolean;
+  /** Sesión demo: la UI oculta toda acción de escritura (server rechaza mutaciones). */
+  isDemo: boolean;
   /** Recarga inmuebles+reservas del backend. */
   refresh: () => Promise<void>;
   /** Alta de inmueble en el backend. Devuelve el inmueble creado. */

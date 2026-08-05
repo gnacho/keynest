@@ -526,23 +526,27 @@ export default function Rentabilidad() {
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <button
-            type="button"
-            onClick={sync}
-            className="flex h-9 items-center gap-2 rounded-xl border px-3 text-sm font-semibold transition-colors duration-150 hover:bg-[var(--surface-2)]"
-            style={{ borderColor: 'var(--border)' }}
-          >
-            <RefreshCw className={cn('h-4 w-4', syncing && 'animate-spin')} style={{ color: 'var(--text-muted)' }} />
-            <span className="hidden sm:inline">{t('rent.sincronizar')}</span>
-          </button>
-          <button
-            type="button"
-            onClick={openDialog}
-            className="brand-gradient flex h-9 items-center gap-2 rounded-xl px-3.5 text-sm font-semibold text-white transition-all duration-150 hover:brightness-110 active:scale-[0.98]"
-          >
-            <Plus className="h-4 w-4" />
-            {t('rent.anadirGasto')}
-          </button>
+          {!data.isDemo && (
+            <>
+              <button
+                type="button"
+                onClick={sync}
+                className="flex h-9 items-center gap-2 rounded-xl border px-3 text-sm font-semibold transition-colors duration-150 hover:bg-[var(--surface-2)]"
+                style={{ borderColor: 'var(--border)' }}
+              >
+                <RefreshCw className={cn('h-4 w-4', syncing && 'animate-spin')} style={{ color: 'var(--text-muted)' }} />
+                <span className="hidden sm:inline">{t('rent.sincronizar')}</span>
+              </button>
+              <button
+                type="button"
+                onClick={openDialog}
+                className="brand-gradient flex h-9 items-center gap-2 rounded-xl px-3.5 text-sm font-semibold text-white transition-all duration-150 hover:brightness-110 active:scale-[0.98]"
+              >
+                <Plus className="h-4 w-4" />
+                {t('rent.anadirGasto')}
+              </button>
+            </>
+          )}
         </div>
       </div>
 
@@ -784,14 +788,16 @@ export default function Rentabilidad() {
             title={t('rent.sinGastos')}
             text={selectedProperty ? t('rent.sinGastosProp', { name: selectedProperty.name }) : t('rent.sinGastosPeriodo')}
             action={
-              <button
-                type="button"
-                onClick={openDialog}
-                className="rounded-xl border px-4 py-2 text-sm font-semibold transition-colors hover:bg-[var(--surface-2)]"
-                style={{ borderColor: 'var(--border)' }}
-              >
-                {t('rent.anadirGasto')}
-              </button>
+              !data.isDemo ? (
+                <button
+                  type="button"
+                  onClick={openDialog}
+                  className="rounded-xl border px-4 py-2 text-sm font-semibold transition-colors hover:bg-[var(--surface-2)]"
+                  style={{ borderColor: 'var(--border)' }}
+                >
+                  {t('rent.anadirGasto')}
+                </button>
+              ) : undefined
             }
           />
         ) : (

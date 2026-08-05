@@ -10,10 +10,12 @@ interface CleaningPhotosProps {
   onUpload: (file: File) => Promise<string[] | undefined>;
   /** Elimina una foto (solo vista propietario). */
   onRemove?: (url: string) => void;
+  /** Solo lectura (demo): sin botón de añadir ni de borrar. */
+  readOnly?: boolean;
 }
 
 /** Fotos reales de una limpieza: galería/cámara del móvil (input file) + subida al servidor. */
-export default function CleaningPhotos({ photos, onUpload, onRemove }: CleaningPhotosProps) {
+export default function CleaningPhotos({ photos, onUpload, onRemove, readOnly = false }: CleaningPhotosProps) {
   const { t } = useTranslation();
   const inputRef = useRef<HTMLInputElement>(null);
   const [busy, setBusy] = useState(false);
@@ -28,16 +30,18 @@ export default function CleaningPhotos({ photos, onUpload, onRemove }: CleaningP
 
   return (
     <div className="flex flex-col gap-2">
-      <input
-        ref={inputRef}
-        type="file"
-        accept="image/jpeg,image/png,image/webp"
-        className="hidden"
-        onChange={(e) => {
-          void pick(e.target.files?.[0]);
-          e.target.value = '';
-        }}
-      />
+      {!readOnly && (
+        <input
+          ref={inputRef}
+          type="file"
+          accept="image/jpeg,image/png,image/webp"
+          className="hidden"
+          onChange={(e) => {
+            void pick(e.target.files?.[0]);
+            e.target.value = '';
+          }}
+        />
+      )}
       <div className="flex flex-wrap items-center gap-2">
         {photos.map((src, i) => (
           <span key={`${src}-${i}`} className="relative">
@@ -55,7 +59,7 @@ export default function CleaningPhotos({ photos, onUpload, onRemove }: CleaningP
                 onError={(e) => { (e.target as HTMLImageElement).src = 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" fill="%2394a3b8"><rect width="64" height="64" rx="8" fill="%23eef1f6"/><text x="32" y="38" text-anchor="middle" font-size="24">?</text></svg>'; }}
               />
             </button>
-            {onRemove && (
+            {!readOnly && onRemove && (
               <button
                 type="button"
                 onClick={() => onRemove(src)}
@@ -67,26 +71,28 @@ export default function CleaningPhotos({ photos, onUpload, onRemove }: CleaningP
             )}
           </span>
         ))}
-        <button
-          type="button"
-          disabled={busy}
-          onClick={() => inputRef.current?.click()}
-          className={cn(
-            'flex h-16 w-16 flex-col items-center justify-center gap-1 rounded-xl border-2 border-dashed transition-colors hover:bg-[var(--surface-2)]',
-            busy && 'opacity-50',
-          )}
-          style={{ borderColor: 'var(--border)', color: 'var(--text-faint)' }}
-          aria-label={t('tareas.anadirFotoReal')}
-        >
-          {busy ? (
-            <span className="h-4 w-4 animate-spin rounded-full border-2 border-violet-400 border-t-transparent" />
-          ) : (
-            <>
-              <Camera className="h-4 w-4 text-violet-500" />
-              <Plus className="h-3 w-3" />
-            </>
-          )}
-        </button>
+        {!readOnly && (
+          <button
+            type="button"
+            disabled={busy}
+            onClick={() => inputRef.current?.click()}
+            className={cn(
+              'flex h-16 w-16 flex-col items-center justify-center gap-1 rounded-xl border-2 border-dashed transition-colors hover:bg-[var(--surface-2)]',
+              busy && 'opacity-50',
+            )}
+            style={{ borderColor: 'var(--border)', color: 'var(--text-faint)' }}
+            aria-label={t('tareas.anadirFotoReal')}
+          >
+            {busy ? (
+              <span className="h-4 w-4 animate-spin rounded-full border-2 border-violet-400 border-t-transparent" />
+            ) : (
+              <>
+                <Camera className="h-4 w-4 text-violet-500" />
+                <Plus className="h-3 w-3" />
+              </>
+            )}
+          </button>
+        )}
       </div>
       <PhotoLightbox photos={photos} index={viewer} onIndexChange={setViewer} />
     </div>

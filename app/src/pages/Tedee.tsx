@@ -559,19 +559,21 @@ export default function Tedee() {
                 )}
               </div>
 
-              <button
-                type="button"
-                disabled={!detailLock.online || opening}
-                onClick={() => setConfirmOpen(true)}
-                className="brand-gradient flex h-11 items-center justify-center gap-2 rounded-xl text-sm font-semibold text-white transition-all duration-150 hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-40"
-              >
-                {opening ? (
-                  <RefreshCw className="h-4 w-4 animate-spin" />
-                ) : (
-                  <Lock className="h-4 w-4" />
-                )}
-                {opening ? t('ted.abriendo') : detailLock.online ? t('ted.abrirAhora') : t('ted.cerraduraOffline')}
-              </button>
+              {!data.isDemo && (
+                <button
+                  type="button"
+                  disabled={!detailLock.online || opening}
+                  onClick={() => setConfirmOpen(true)}
+                  className="brand-gradient flex h-11 items-center justify-center gap-2 rounded-xl text-sm font-semibold text-white transition-all duration-150 hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-40"
+                >
+                  {opening ? (
+                    <RefreshCw className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Lock className="h-4 w-4" />
+                  )}
+                  {opening ? t('ted.abriendo') : detailLock.online ? t('ted.abrirAhora') : t('ted.cerraduraOffline')}
+                </button>
+              )}
             </>
           )}
         </DialogContent>
