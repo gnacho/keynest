@@ -1,21 +1,24 @@
-import { lazy, Suspense, useEffect, useState } from 'react';
+import { Suspense, useEffect, useState } from 'react';
 import { BrowserRouter, Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom';
 import ThemeProvider from '@/theme/ThemeProvider';
 import DataProvider from '@/data/DataProvider';
 import AppShell from '@/components/AppShell';
+import ErrorBoundary from '@/components/ErrorBoundary';
+import { lazyRetry } from '@/lib/lazy-retry';
 import { clearSession, isAuthed } from '@/lib/auth';
 import Login from '@/pages/Login';
 import Dashboard from '@/pages/Dashboard';
 
-// React.lazy por ruta (code-split desde el día 1 — lección bundle del skill)
-const Calendario = lazy(() => import('@/pages/Calendario'));
-const Reservas = lazy(() => import('@/pages/Reservas'));
-const Tedee = lazy(() => import('@/pages/Tedee'));
-const Limpieza = lazy(() => import('@/pages/Limpieza'));
-const Mantenimiento = lazy(() => import('@/pages/Mantenimiento'));
-const Rentabilidad = lazy(() => import('@/pages/Rentabilidad'));
-const Ajustes = lazy(() => import('@/pages/Ajustes'));
-const TokenView = lazy(() => import('@/pages/TokenView'));
+// React.lazy por ruta (code-split desde el día 1) con lazyRetry (anti
+// pantalla-negra): si el chunk ya no existe tras un despliegue, recarga 1 vez.
+const Calendario = lazyRetry(() => import('@/pages/Calendario'));
+const Reservas = lazyRetry(() => import('@/pages/Reservas'));
+const Tedee = lazyRetry(() => import('@/pages/Tedee'));
+const Limpieza = lazyRetry(() => import('@/pages/Limpieza'));
+const Mantenimiento = lazyRetry(() => import('@/pages/Mantenimiento'));
+const Rentabilidad = lazyRetry(() => import('@/pages/Rentabilidad'));
+const Ajustes = lazyRetry(() => import('@/pages/Ajustes'));
+const TokenView = lazyRetry(() => import('@/pages/TokenView'));
 
 /**
  * AuthGate: sin sesión → /login. Un 401 de la API limpia la sesión y redirige.
@@ -46,11 +49,13 @@ function Root() {
   // Acceso por enlace token (limpieza): sin login ni AppShell
   if (isTokenView) {
     return (
-      <Suspense fallback={null}>
-        <Routes location={location}>
-          <Route path="/t/:token" element={<TokenView />} />
-        </Routes>
-      </Suspense>
+      <ErrorBoundary>
+        <Suspense fallback={null}>
+          <Routes location={location}>
+            <Route path="/t/:token" element={<TokenView />} />
+          </Routes>
+        </Suspense>
+      </ErrorBoundary>
     );
   }
 
@@ -67,19 +72,21 @@ function Root() {
 
   return (
     <AppShell>
-      <Suspense fallback={null}>
-      <Routes location={location}>
-        <Route path="/" element={<Dashboard />} />
-        <Route path="/calendario" element={<Calendario />} />
-        <Route path="/reservas" element={<Reservas />} />
-        <Route path="/tedee" element={<Tedee />} />
-        <Route path="/limpieza" element={<Limpieza />} />
-        <Route path="/mantenimiento" element={<Mantenimiento />} />
-        <Route path="/rentabilidad" element={<Rentabilidad />} />
-        <Route path="/ajustes" element={<Ajustes />} />
-        <Route path="*" element={<Navigate to="/" replace />} />
-      </Routes>
-      </Suspense>
+      <ErrorBoundary>
+        <Suspense fallback={null}>
+        <Routes location={location}>
+          <Route path="/" element={<Dashboard />} />
+          <Route path="/calendario" element={<Calendario />} />
+          <Route path="/reservas" element={<Reservas />} />
+          <Route path="/tedee" element={<Tedee />} />
+          <Route path="/limpieza" element={<Limpieza />} />
+          <Route path="/mantenimiento" element={<Mantenimiento />} />
+          <Route path="/rentabilidad" element={<Rentabilidad />} />
+          <Route path="/ajustes" element={<Ajustes />} />
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+        </Suspense>
+      </ErrorBoundary>
     </AppShell>
   );
 }

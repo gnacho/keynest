@@ -862,5 +862,14 @@
     "save": "Save",
     "saving": "Saving…",
     "free": "Free"
+  },
+  "update": {
+    "banner": "A new version has been deployed — reload to see it",
+    "reload": "Reload"
+  },
+  "errorBoundary": {
+    "title": "Something went wrong",
+    "desc": "The app hit an unexpected error. Reloading usually fixes it.",
+    "reload": "Reload"
   }
 }

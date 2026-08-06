@@ -13,7 +13,7 @@ import { syncAll, syncStatus } from './sync.js'
 import { fetchIcs, icsToReservations, parseIcs } from './ical.js'
 import { seedDemo } from './seed-demo.js'
 import { saveTedeeConfig, tedeeConfig, tedeeLocks } from './tedee.js'
-import { applyUpdate, updateStatus } from './update.js'
+import { applyUpdate, currentId, updateStatus } from './update.js'
 import { importAirbnb, parseAirbnbCsv } from './import-airbnb.js'
 import { configurePush, flushNotificationQueue } from './push.js'
 import { registerPushRoutes } from './routes-push.js'
@@ -1137,6 +1137,15 @@ app.get('/health', (c) => {
 })
 
 const pkgJson = JSON.parse(readFileSync(join(import.meta.dirname, '..', 'package.json'), 'utf8'))
+// Versión del propio servidor (anti pantalla-negra, webapp-shell): pública y
+// sin estado. `build` = release-id marcado tras cada deploy (cambia en cada
+// despliegue) o fallback a BUILD_SHA/versión para que la firma no sea estable.
+app.get('/api/version', (c) =>
+  c.json({
+    version: pkgJson.version,
+    build: currentId() || process.env.BUILD_SHA || pkgJson.version,
+  }),
+)
 app.get('/api/system/info', auth.requireAuth(prodDb, demoDb), (c) => {
   const cpuInfo = cpus()
   const distro = platform() === 'linux' && existsSync('/etc/os-release')
@@ -1159,6 +1168,17 @@ app.get('/api/system/info', auth.requireAuth(prodDb, demoDb), (c) => {
 })
 
 /* ------------------------------------------------------------- estático SPA */
+// Headers de caché (webapp-shell actualizaciones.md): index.html/sw.js se
+// revalidan siempre (no-cache) para que un despliegue se vea al recargar;
+// /assets/* (hash Vite) son inmutables; manifest/iconos caché corta.
+app.use('/*', (c, next) => {
+  const p = c.req.path
+  if (p.startsWith('/api/') || p.startsWith('/photos/') || p.startsWith('/avatars/')) return next()
+  if (p.startsWith('/assets/')) c.header('Cache-Control', 'public, max-age=31536000, immutable')
+  else if (p === '/' || p === '/index.html' || p === '/sw.js') c.header('Cache-Control', 'no-cache')
+  else if (p === '/manifest.webmanifest' || p.endsWith('.png')) c.header('Cache-Control', 'max-age=3600')
+  return next()
+})
 app.use('/assets/*', serveStatic({ root: config.staticDir }))
 app.use('/photos/*', serveStatic({ root: config.dataDir }))
 app.use('/avatars/*', serveStatic({ root: config.dataDir }))
@@ -1167,6 +1187,7 @@ app.use('/*', serveStatic({ root: config.staticDir }))
 app.get('*', (c) => {
   if (c.req.path.startsWith('/api/')) return c.json({ error: 'no encontrado' }, 404)
   try {
+    c.header('Cache-Control', 'no-cache')
     const html = readFileSync(join(config.staticDir, 'index.html'), 'utf8')
     return c.html(html)
   } catch {
