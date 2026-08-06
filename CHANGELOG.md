@@ -7,6 +7,13 @@ y este proyecto se adhiere a [Versionado Semántico](https://semver.org/lang/es/
 
 ## [Unreleased]
 
+### Todo
+
+- **Auditoría de seguridad y robustez** (release bug-hunting): revisar auth y
+  sesiones, CSRF/Origin check, cabeceras de seguridad HTTP, path traversal,
+  secretos cifrados (ENC_KEY/SESSION_SECRET), rate-limit y body caps, y bugs
+  latentes. Cada hallazgo se materializa en su propio issue/PR.
+
 ### Added
 
 - Ajustes y menú al canon de webapp-shell con sincronización en tiempo real (SSE).
