@@ -18,13 +18,21 @@ const CSV = `﻿日期,最晚到账日期,类型,确认码,预订日期,开始�
 let dir;
 let db;
 
+const ymd = (d) => d.toISOString().slice(0, 10);
+const daysFrom = (n) => {
+  const d = new Date();
+  d.setUTCDate(d.getUTCDate() + n);
+  return d;
+};
+
 beforeAll(() => {
   dir = mkdtempSync(join(tmpdir(), 'keynest-import-test-'));
   db = openDb(dir, 'test.db');
   db.prepare(`INSERT INTO properties (id, slug, name, created_at) VALUES ('prop-chalet', 'chalet', 'Prop Test 1', 1), ('prop-dos', 'dos', 'Prop Test 2', 1)`).run();
-  // Reserva ya existente (vino del iCal): debe casar por confirmation_code
+  // Reserva ya existente (vino del iCal) FUTURA y sin cancelar: debe casar por
+  // confirmation_code y, si no vuelve a venir en el feed, se borra (cancelada).
   db.prepare(`INSERT INTO reservations (id, property_id, uid, checkin, checkout, summary, confirmation_code, created_at)
-              VALUES ('r1', 'prop-chalet', 'abc@airbnb.com', '2026-07-27', '2026-08-03', 'Reserved', 'HMTEST0001', 1)`).run();
+              VALUES ('r1', 'prop-chalet', 'abc@airbnb.com', ?, ?, 'Reserved', 'HMTEST0001', 1)`).run(ymd(daysFrom(20)), ymd(daysFrom(25)));
 });
 
 afterAll(() => {
