@@ -61,7 +61,7 @@ import { cachedUser, demoStatus, setDemoMode } from '@/lib/auth';
 import { api } from '@/lib/api';
 import { copyText } from '@/lib/clipboard';
 import { catIcon, CAT_ICONS } from '@/lib/cat-icons';
-import { AppearanceCard, AboutCard, Card, SessionCard } from '@/components/settings/settings-cards';
+import { AppearanceCard, AboutCard, Card, InstallCard, SessionCard } from '@/components/settings/settings-cards';
 import UsersManager from '@/components/settings/UsersManager';
 import ImportAirbnbCard from '@/components/settings/ImportAirbnbCard';
 import BackupCard from '@/components/settings/BackupCard';
@@ -1456,6 +1456,7 @@ export default function Ajustes() {
                 </div>
               )}
 
+              <InstallCard />
               <AboutCard />
             </div>
           )}

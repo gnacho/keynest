@@ -7,7 +7,7 @@ import { useEffect, useState } from 'react';
 import type { ReactNode } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import React from 'react';
-import { Bell, Check, Download, Github, KeyRound, LogOut, Mail, Moon, MonitorSmartphone, Pencil, Sun, User, X } from 'lucide-react';
+import { Bell, Check, Download, FileText, Github, Heart, KeyRound, LogOut, Mail, Moon, MonitorSmartphone, Pencil, ShieldCheck, Sun, User, X } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -657,12 +657,13 @@ interface SystemInfoData {
   demo: boolean;
 }
 
-function SystemInfoBlock() {
+function SystemInfoBlock({ info: propInfo }: { info?: SystemInfoData | null }) {
   const { t } = useTranslation();
-  const [info, setInfo] = useState<SystemInfoData | null>(null);
+  const [info, setInfo] = useState<SystemInfoData | null>(propInfo ?? null);
   const [failed, setFailed] = useState(false);
 
   useEffect(() => {
+    if (propInfo) { setInfo(propInfo); return; }
     let disposed = false;
     void (async () => {
       try {
@@ -677,7 +678,7 @@ function SystemInfoBlock() {
       }
     })();
     return () => { disposed = true; };
-  }, []);
+  }, [propInfo]);
 
   const server = info && !info.demo ? info : null;
   const rows: { label: string; value: string }[] = [
@@ -724,36 +725,95 @@ function SystemInfoBlock() {
   );
 }
 
-/* ---------- Tarjeta Acerca de: versión + repo + PWA + sistema ---------- */
+/* ---------- Tarjeta Acerca de: logo + enlaces + versión·licencia·runtime (canon webapp-shell) ----------
+   Fila 1: logo + nombre + descripción a la izquierda, tiles de enlaces BAJOS a la derecha.
+   Fila 2: versión · licencia · runtime en UNA línea sin recuadros, alineada con la descripción.
+   El instalador PWA y Comprobar actualizaciones NO viven aquí (InstallCard propia / AdminBar). */
 export function AboutCard() {
   const { t: tr } = useTranslation();
-  const { state, install } = useInstallPrompt();
+  const [info, setInfo] = useState<SystemInfoData | null>(null);
+
+  useEffect(() => {
+    let disposed = false;
+    void (async () => {
+      try {
+        const res = await fetch('/api/system/info');
+        if (!res.ok || !(res.headers.get('content-type') ?? '').includes('application/json')) {
+          throw new Error(`HTTP ${res.status}`);
+        }
+        const json = (await res.json()) as SystemInfoData;
+        if (!disposed) setInfo(json);
+      } catch {
+        if (!disposed) setInfo(null);
+      }
+    })();
+    return () => { disposed = true; };
+  }, []);
+
+  const server = info && !info.demo ? info : null;
+  const runtimeLine = `Node ${server?.nodeVersion || '—'} · React v${React.version} · ${tr('aj.aboutUptime')} ${server ? fmtUptime(server.uptimeS) : '—'}`;
+  const tiles = [
+    { key: 'code', icon: Github, label: tr('aj.aboutCode'), href: REPO_URL },
+    { key: 'changelog', icon: FileText, label: tr('aj.aboutCambios'), href: `${REPO_URL}/commits/main` },
+    { key: 'kofi', icon: Heart, label: tr('aj.aboutKofi') },
+    { key: 'privacy', icon: ShieldCheck, label: tr('aj.aboutPrivacidad') },
+  ];
+  const linkCls = 'flex items-center gap-2 rounded-lg border border-[var(--border)] px-2.5 py-1 text-xs font-medium transition-colors duration-150 hover:border-[#6366F1]/50 hover:text-[#6366F1]';
+  const plainCls = 'flex items-center gap-2 rounded-lg border border-[var(--border)] px-2.5 py-1 text-xs font-medium';
 
   return (
     <Card title={tr('aj.acercaDe')}>
-      <div className="flex items-center gap-3">
-        <img src="/logo.svg" alt="Keynest" className="h-10 w-10" />
-        <div>
-          <p className="font-display text-lg font-semibold tracking-[-0.01em]">Keynest</p>
-          <p className="text-xs" style={{ color: 'var(--text-faint)' }}>
-            v{APP_VERSION} · AGPL-3.0
-          </p>
+      <div className="space-y-5">
+        {/* Fila 1: logo + nombre + descripción a la izquierda, enlaces a la derecha */}
+        <div className="grid gap-5 md:grid-cols-2">
+          <div className="flex items-start gap-3.5">
+            <img src="/logo.svg" alt="Keynest" className="h-10 w-10 shrink-0" />
+            <div className="min-w-0 flex-1">
+              <p className="font-display text-lg font-semibold tracking-[-0.01em]">Keynest</p>
+              <p className="mt-1.5 text-sm leading-relaxed" style={{ color: 'var(--text-faint)' }}>
+                {tr('aj.acercaDeDesc')}
+              </p>
+            </div>
+          </div>
+          <div className="grid grid-cols-1 gap-1.5 sm:grid-cols-2">
+            {tiles.map((item) =>
+              item.href ? (
+                <a key={item.key} href={item.href} target="_blank" rel="noreferrer" className={linkCls}>
+                  <item.icon className="h-3.5 w-3.5 shrink-0" strokeWidth={1.75} aria-hidden="true" />
+                  <span className="leading-snug" style={{ color: 'var(--text-muted)' }}>{item.label}</span>
+                </a>
+              ) : (
+                <div key={item.key} className={plainCls} style={{ color: 'var(--text-muted)' }}>
+                  <item.icon className="h-3.5 w-3.5 shrink-0" strokeWidth={1.75} aria-hidden="true" />
+                  <span className="leading-snug">{item.label}</span>
+                </div>
+              ),
+            )}
+          </div>
         </div>
-      </div>
-      <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
-        {tr('aj.acercaDeDesc')}
-      </p>
-      <a
-        href={REPO_URL}
-        target="_blank"
-        rel="noreferrer"
-        className="inline-flex h-9 w-fit items-center gap-2 rounded-xl border px-3 text-xs font-semibold transition-colors duration-150 hover:bg-[var(--surface-2)]"
-        style={{ borderColor: 'var(--border)', color: 'var(--text-muted)' }}
-      >
-        <Github className="h-4 w-4" strokeWidth={1.75} />
-        {tr('aj.codigoFuente')}
-      </a>
+        {/* Fila 2: versión · licencia · runtime en UNA línea sin recuadros,
+            alineada con la descripción (tras el logo) en escritorio */}
+        <p className="font-mono text-[11px] md:pl-[54px]" style={{ color: 'var(--text-faint)' }}>
+          v{APP_VERSION} · AGPL-3.0 · {runtimeLine}
+        </p>
 
+        {/* Bloque Sistema fusionado dentro de Acerca de (patrón EasyZFS) */}
+        <SystemInfoBlock info={info} />
+      </div>
+    </Card>
+  );
+}
+
+/* ---------- Tarjeta Instalar app (PWA): tarjeta propia, NO vive en Acerca de ---------- */
+export function InstallCard() {
+  const { t: tr } = useTranslation();
+  const { state, install } = useInstallPrompt();
+
+  // 'hidden' = navegador sin soporte → NO renderizar nada (regla del usuario)
+  if (state === 'hidden') return null;
+
+  return (
+    <Card title={tr('aj.instalarApp')}>
       {state === 'installed' && (
         <p
           className="inline-flex w-fit items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-semibold"
@@ -776,8 +836,6 @@ export function AboutCard() {
           {tr('aj.instalarIos')}
         </p>
       )}
-
-      <SystemInfoBlock />
     </Card>
   );
 }
