@@ -23,6 +23,13 @@ y este proyecto se adhiere a [Versionado Semántico](https://semver.org/lang/es/
 - Anti pantalla-negra tras despliegue (webapp-shell, decisión 12).
 - Sincronización iCal: conservar reservas finalizadas y empty state según lookahead.
 
+### Fixed
+
+- **Body cap global de 11 MB** en todas las rutas (los endpoints JSON se
+  parseaban sin límite; los uploads de fotos ≤10 MB siguen permitidos).
+- **Cambio de contraseña invalida las demás sesiones** del usuario (la
+  actual sobrevive): un dispositivo con la contraseña vieja se desconecta.
+
 ### Changed
 
 - **Migración del toolchain de build**: Vite 7 → 8 (Rolldown), @vitejs/plugin-react 5 → 6, Tailwind CSS 3 → 4 (config en CSS vía `@theme`, plugin Vite `@tailwindcss/vite`).

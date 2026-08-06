@@ -8,6 +8,7 @@ import {
   countAdmins,
   createUser,
   deleteUser,
+  destroyOtherSessions,
   ensureBootstrapAdmin,
   setUserPassword,
   setUserRole,
@@ -79,5 +80,17 @@ describe('gestión de usuarios (admin)', () => {
     expect(db.prepare('SELECT COUNT(*) n FROM users WHERE id = ?').get(u.id).n).toBe(0);
     expect(db.prepare('SELECT COUNT(*) n FROM sessions WHERE user_id = ?').get(u.id).n).toBe(0);
     expect(deleteUser(db, 'no-existe')).toBe(false);
+  });
+
+  it('destroyOtherSessions borra todas salvo la actual (cambio de contraseña)', async () => {
+    const u = await createUser(db, { username: 'multi-sesion', password: 'clave99' });
+    for (const id of ['sess-a', 'sess-b', 'sess-c']) {
+      db.prepare('INSERT INTO sessions (id, user_id, created_at, expires_at, ua, is_demo) VALUES (?, ?, ?, ?, ?, 0)')
+        .run(id, u.id, Date.now(), Date.now() + 60000, 'test');
+    }
+    destroyOtherSessions(db, u.id, 'sess-b');
+    const restantes = db.prepare('SELECT id FROM sessions WHERE user_id = ?').all(u.id).map((r) => r.id);
+    expect(restantes).toEqual(['sess-b']);
+    deleteUser(db, u.id); // limpieza
   });
 });

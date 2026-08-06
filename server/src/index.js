@@ -5,6 +5,7 @@ import crypto from 'node:crypto'
 import { serve } from '@hono/node-server'
 import { serveStatic } from '@hono/node-server/serve-static'
 import { streamSSE } from 'hono/streaming'
+import { bodyLimit } from 'hono/body-limit'
 import { Hono } from 'hono'
 import { z } from 'zod'
 import * as auth from './auth.js'
@@ -77,6 +78,12 @@ app.use('*', async (c, next) => {
   c.header('Content-Security-Policy', "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self'")
   await next()
 })
+
+/* ------------------------------------------------------ body cap (auditoría)
+   Techo defensivo de 11 MB para todo body HTTP: cubre los uploads legítimos
+   (fotos ≤10 MB + overhead multipart) pero bloquea bodies gigantes en los
+   endpoints JSON (login, users, sync, import) que Hono parsea sin límite. */
+app.use('*', bodyLimit({ maxSize: 11 * 1024 * 1024 }))
 
 /* ---------------------------------------------- demo de solo lectura
    La demo publicada es un escaparate: con sesión demo (is_demo) se rechaza
@@ -206,6 +213,10 @@ app.put('/api/auth/password', auth.requireAuth(prodDb, demoDb), async (c) => {
   if (!parsed.success) return c.json({ error: 'formato inválido', code: 'format' }, 400)
   const res = await auth.changePassword(c.get('db'), c.get('user').id, parsed.data.current, parsed.data.next)
   if (res === 'wrong-current') return c.json({ error: 'contraseña actual incorrecta', code: 'wrong-current' }, 403)
+  // Invalida el resto de sesiones del usuario (la actual sobrevive): si alguien
+  // tenía la contraseña vieja en otro dispositivo, se le desconecta (auditoría).
+  const current = auth.sessionFromCookie(c.get('db'), c)
+  auth.destroyOtherSessions(c.get('db'), c.get('user').id, current?.id || '')
   return c.json({ ok: true })
 })
 

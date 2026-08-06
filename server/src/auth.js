@@ -191,6 +191,11 @@ export async function changePassword(db, userId, current, next) {
   return 'ok'
 }
 
+/** Destruye las sesiones de un usuario salvo la actual (cambio de contraseña). */
+export function destroyOtherSessions(db, userId, currentToken) {
+  db.prepare('DELETE FROM sessions WHERE user_id = ? AND id <> ?').run(userId, currentToken)
+}
+
 /** Alta de usuario (admin): password inicial obligatoria (≥6 en la ruta). */
 export async function createUser(db, { username, password, phone, role }) {
   const existing = db.prepare('SELECT id FROM users WHERE username = ?').get(username)
