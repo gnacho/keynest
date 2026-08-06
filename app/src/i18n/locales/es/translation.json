@@ -729,11 +729,6 @@
     "notifNoSoportado": "Este navegador no soporta notificaciones push.",
     "notifPermisoDenegado": "El permiso de notificaciones está bloqueado en el navegador. Actívalo en los ajustes del sitio para recibir alertas.",
     "notifTipos": "Alertas que quieres recibir",
-    "notifLevel": "Nivel de alertas",
-    "notifLevelDesc": "Controla qué notificaciones recibes",
-    "notifLevelAll": "Todas",
-    "notifLevelImportant": "Solo importantes",
-    "notifLevelNone": "Ninguna",
     "notifTipo": {
       "checkin_hoy": "Check-in del día",
       "checkout_hoy": "Check-out del día",

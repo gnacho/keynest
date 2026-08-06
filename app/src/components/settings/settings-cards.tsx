@@ -1,6 +1,6 @@
 // Tarjetas de Ajustes (webapp-shell adaptado a Keynest):
 // Apariencia (tema con previews pintados con las variables CSS reales,
-// densidad, reduce-motion), Mi sesión (idioma, nivel de alertas, push,
+// densidad, reduce-motion), Mi sesión (idioma, notificaciones por tipo, push,
 // cambiar contraseña + cerrar sesión), y Acerca de (versión + repo + PWA +
 // bloque de sistema tipo NetPulse).
 import { useEffect, useState } from 'react';
@@ -14,7 +14,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useTheme } from '@/theme/ThemeProvider';
 import type { ThemeMode } from '@/theme/ThemeProvider';
 import { api } from '@/lib/api';
-import { cachedUser, logout, saveNotificationLevel } from '@/lib/auth';
+import { cachedUser, logout } from '@/lib/auth';
 import { applyLanguage, cachedLanguagePref } from '@/i18n';
 import type { AppLanguage } from '@/i18n';
 import { useData } from '@/data/useData';
@@ -302,13 +302,15 @@ export function useInstallPrompt() {
   return { state, install };
 }
 
-type NotifLevel = 'all' | 'important' | 'none';
-
-const NOTIF_LEVELS: { value: NotifLevel; labelKey: string }[] = [
-  { value: 'all', labelKey: 'aj.notifLevelAll' },
-  { value: 'important', labelKey: 'aj.notifLevelImportant' },
-  { value: 'none', labelKey: 'aj.notifLevelNone' },
-];
+const TIPOS_NOTIF = [
+  'checkin_hoy',
+  'checkout_hoy',
+  'reserva_nueva',
+  'tedee_offline',
+  'tedee_ok',
+  'tedee_bateria',
+  'limpieza_pendiente',
+] as const;
 
 /* ---------- Tarjeta Mi perfil (canónica webapp-shell): avatar + nombre + email + idioma + notifs + contraseña + logout ----------
    Estructura ProfileCard: línea horizontal SIN flex-wrap; nombre/email editables
@@ -327,8 +329,20 @@ export function SessionCard({ isDemo }: { isDemo: boolean }) {
   const [editingName, setEditingName] = useState(false);
   const [editingEmail, setEditingEmail] = useState(false);
   const [lang, setLang] = useState<AppLanguage>(() => user?.language ?? cachedLanguagePref());
-  const [notifLevel, setNotifLevel] = useState<NotifLevel>(() => user?.notification_level ?? 'all');
+  const [prefs, setPrefs] = useState<Record<string, boolean> | null>(null);
   const { soporte, estado, activar, desactivar } = usePush();
+
+  // Preferencias por tipo: solo tienen sentido con el push suscrito en este
+  // dispositivo (patrón Helios/skill web-push-alerts).
+  useEffect(() => {
+    if (!estado.suscrito) {
+      setPrefs(null);
+      return;
+    }
+    api<{ prefs: Record<string, boolean> }>('/api/push/preferences')
+      .then((r) => setPrefs(r.prefs))
+      .catch(() => setPrefs(null));
+  }, [estado.suscrito]);
 
   const saveProfile = async (field: 'displayName' | 'email', value: string) => {
     try {
@@ -348,9 +362,11 @@ export function SessionCard({ isDemo }: { isDemo: boolean }) {
     })();
   };
 
-  const changeNotifLevel = (v: NotifLevel) => {
-    setNotifLevel(v);
-    void saveNotificationLevel(v).catch(() => setNotifLevel(notifLevel));
+  const cambiarPref = (tipo: string, enabled: boolean) => {
+    setPrefs((p) => (p ? { ...p, [tipo]: enabled } : p));
+    api('/api/push/preferences', { method: 'PUT', body: JSON.stringify({ tipo, enabled }) }).catch(() => {
+      setPrefs((p) => (p ? { ...p, [tipo]: !enabled } : p)); // rollback optimista
+    });
   };
 
   const saveName = async () => {
@@ -589,29 +605,11 @@ export function SessionCard({ isDemo }: { isDemo: boolean }) {
         )}
       </AnimatePresence>
 
-      {/* Panel notificaciones desplegable: nivel + push */}
+      {/* Panel notificaciones desplegable: push + toggles por tipo */}
       <AnimatePresence>
         {showNotif && (
           <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} transition={{ duration: 0.2 }} className="mt-4 overflow-hidden border-t pt-4" style={{ borderColor: 'var(--border)' }}>
             <div className="flex flex-col gap-3 rounded-xl border p-3" style={{ borderColor: 'var(--border)', backgroundColor: 'var(--surface-2)' }}>
-              {/* Nivel de alertas */}
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <div>
-                  <p className="text-sm font-semibold">{tr('aj.notifLevel')}</p>
-                  <p className="text-xs" style={{ color: 'var(--text-muted)' }}>{tr('aj.notifLevelDesc')}</p>
-                </div>
-                <Select value={notifLevel} onValueChange={(v) => changeNotifLevel(v as NotifLevel)}>
-                  <SelectTrigger aria-label={tr('aj.notifLevel')} className="h-9 w-[140px] rounded-lg border text-xs" style={{ borderColor: 'var(--border)', backgroundColor: 'var(--surface)' }}>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent className="rounded-xl border-[var(--border)] bg-[var(--surface)]">
-                    {NOTIF_LEVELS.map((opt) => (
-                      <SelectItem key={opt.value} value={opt.value}>{tr(opt.labelKey)}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
               {/* Push */}
               {soporte === 'requiere-https' ? (
                 <p className="text-xs" style={{ color: 'var(--text-faint)' }}>{tr('aj.pushRequiereHttps')}</p>
@@ -628,6 +626,34 @@ export function SessionCard({ isDemo }: { isDemo: boolean }) {
                   )}
                 </div>
               ) : null}
+
+              {/* Toggles por tipo: solo con el push suscrito en este dispositivo */}
+              {estado.suscrito && prefs && (
+                <div className="flex flex-col gap-2 border-t pt-3" style={{ borderColor: 'var(--border)' }}>
+                  <p className="text-[13px] font-medium" style={{ color: 'var(--text-muted)' }}>{tr('aj.notifTipos')}</p>
+                  {TIPOS_NOTIF.map((tipo) => (
+                    <div key={tipo} className="flex items-center justify-between gap-3">
+                      <span className="text-sm" style={{ color: 'var(--text)' }}>{tr(`aj.notifTipo.${tipo}`)}</span>
+                      <button
+                        type="button"
+                        role="switch"
+                        aria-checked={prefs[tipo] !== false}
+                        aria-label={tr(`aj.notifTipo.${tipo}`)}
+                        onClick={() => cambiarPref(tipo, prefs[tipo] === false)}
+                        className="relative h-6 w-11 shrink-0 rounded-full transition-colors duration-150"
+                        style={{ backgroundColor: prefs[tipo] !== false ? '#6366F1' : 'var(--surface-2)' }}
+                      >
+                        <span
+                          className={cn(
+                            'absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform',
+                            prefs[tipo] !== false ? 'translate-x-[22px]' : 'translate-x-0.5',
+                          )}
+                        />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           </motion.div>
         )}

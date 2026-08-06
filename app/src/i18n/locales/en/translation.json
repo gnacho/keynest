@@ -729,11 +729,6 @@
     "notifNoSoportado": "This browser does not support push notifications.",
     "notifPermisoDenegado": "Notification permission is blocked in the browser. Enable it in the site settings to receive alerts.",
     "notifTipos": "Alerts you want to receive",
-    "notifLevel": "Alert level",
-    "notifLevelDesc": "Controls which notifications you receive",
-    "notifLevelAll": "All",
-    "notifLevelImportant": "Important only",
-    "notifLevelNone": "None",
     "notifTipo": {
       "checkin_hoy": "Today's check-ins",
       "checkout_hoy": "Today's check-outs",
