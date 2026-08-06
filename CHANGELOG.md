@@ -14,6 +14,8 @@ y este proyecto se adhiere a [Versionado Semántico](https://semver.org/lang/es/
   secretos cifrados (ENC_KEY/SESSION_SECRET), rate-limit y body caps, y bugs
   latentes. Cada hallazgo se materializa en su propio issue/PR.
 
+## [1.5.0] - 2026-08-06
+
 ### Added
 
 - Ajustes y menú al canon de webapp-shell con sincronización en tiempo real (SSE).
