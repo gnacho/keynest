@@ -1,6 +1,95 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import 'tailwindcss';
+@import 'tw-animate-css';
+
+@custom-variant dark (&:is(.dark *));
+
+@theme {
+  /* ── Tokens canónicos webapp-shell (RGB triplets) ── */
+  --color-canvas: rgb(var(--canvas-rgb));
+  --color-elevated: rgb(var(--elevated-rgb));
+  --color-hover: rgb(var(--hover-rgb));
+  --color-border-strong: rgb(var(--border-strong-rgb));
+  --color-text-primary: rgb(var(--text-primary-rgb));
+  --color-text-secondary: rgb(var(--text-secondary-rgb));
+  --color-brand: rgb(var(--accent-rgb));
+  --color-brand-soft: rgb(var(--accent-rgb) / 0.12);
+  --color-ok: rgb(var(--ok-rgb));
+  --color-warn: rgb(var(--warn-rgb));
+  --color-danger: rgb(var(--danger-rgb));
+  --color-info: rgb(var(--info-rgb));
+
+  /* ── Legacy hex (en uso en toda la app) ── */
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-border: var(--border);
+  --color-text: var(--text);
+  --color-text-muted: var(--text-muted);
+  --color-text-faint: var(--text-faint);
+  --color-brand-2: #8B5CF6;
+
+  /* Alias para componentes shadcn/ui sobre los tokens */
+  --color-background: var(--bg);
+  --color-foreground: var(--text);
+  --color-input: var(--border);
+  --color-ring: #6366F1;
+  --color-primary: #6366F1;
+  --color-primary-foreground: #FFFFFF;
+  --color-secondary: var(--surface-2);
+  --color-secondary-foreground: var(--text);
+  --color-destructive: #F43F5E;
+  --color-destructive-foreground: #FFFFFF;
+  --color-muted: var(--surface-2);
+  --color-muted-foreground: var(--text-muted);
+  --color-accent: var(--surface-2);
+  --color-accent-foreground: var(--text);
+  --color-popover: var(--surface);
+  --color-popover-foreground: var(--text);
+  --color-card: var(--surface);
+  --color-card-foreground: var(--text);
+
+  --font-sans: Inter, system-ui, sans-serif;
+  --font-display: 'Space Grotesk', sans-serif;
+
+  --radius-2xl: 16px;
+  --radius-xl: 12px;
+  --radius-lg: 12px;
+  --radius-md: 10px;
+  --radius-sm: 8px;
+
+  --shadow-card: var(--card-shadow);
+  --shadow-overlay: var(--overlay-shadow);
+
+  --ease-out-quart: cubic-bezier(0.25, 1, 0.5, 1);
+
+  --animate-accordion-down: accordion-down 0.2s ease-out;
+  --animate-accordion-up: accordion-up 0.2s ease-out;
+  --animate-caret-blink: caret-blink 1.25s ease-out infinite;
+  --animate-dot-pulse: dot-pulse 1.6s ease-in-out infinite;
+  --animate-ring-pulse: ring-pulse 2s ease-out infinite;
+
+  @keyframes accordion-down {
+    from { height: 0; }
+    to { height: var(--radix-accordion-content-height); }
+  }
+  @keyframes accordion-up {
+    from { height: var(--radix-accordion-content-height); }
+    to { height: 0; }
+  }
+  @keyframes caret-blink {
+    0%, 70%, 100% { opacity: 1; }
+    20%, 50% { opacity: 0; }
+  }
+  @keyframes dot-pulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.55; transform: scale(0.82); }
+  }
+  @keyframes ring-pulse {
+    0% { box-shadow: 0 0 0 0 rgb(139 92 246 / 0.35); }
+    70% { box-shadow: 0 0 0 8px rgb(139 92 246 / 0); }
+    100% { box-shadow: 0 0 0 0 rgb(139 92 246 / 0); }
+  }
+}
 
 @layer base {
   /* .light permite forzar el tema claro en previews dentro de páginas oscuras */

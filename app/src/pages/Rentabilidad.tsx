@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams } from 'react-router';
 import { motion, useReducedMotion, AnimatePresence } from 'framer-motion';
 import type { Variants } from 'framer-motion';
 import {

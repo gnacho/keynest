@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams } from 'react-router';
 import { motion, useReducedMotion } from 'framer-motion';
 import type { Variants } from 'framer-motion';
 import { Clock, Euro, Plus, Sparkles, UserRoundX } from 'lucide-react';

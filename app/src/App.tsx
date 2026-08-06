@@ -1,5 +1,5 @@
 import { Suspense, useEffect, useState } from 'react';
-import { BrowserRouter, Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom';
+import { BrowserRouter, Navigate, Route, Routes, useLocation, useNavigate } from 'react-router';
 import ThemeProvider from '@/theme/ThemeProvider';
 import DataProvider from '@/data/DataProvider';
 import AppShell from '@/components/AppShell';

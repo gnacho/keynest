@@ -1,4 +1,4 @@
-import { Link } from 'react-router-dom';
+import { Link } from 'react-router';
 import { intlLocale } from '@/i18n';
 import { useEffect, useRef, useState } from 'react';
 import { animate, useReducedMotion } from 'framer-motion';

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import type { FormEvent } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router';
 import { motion, useReducedMotion } from 'framer-motion';
 import { Eye, EyeOff, Lock, Moon, Sparkles, Sun, User } from 'lucide-react';
 import { useTranslation } from 'react-i18next';

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams } from 'react-router';
 import { motion, useReducedMotion } from 'framer-motion';
 import { Check, ChevronLeft, ClipboardList, MapPin, Phone, RefreshCw, Wrench } from 'lucide-react';
 import { useTranslation } from 'react-i18next';

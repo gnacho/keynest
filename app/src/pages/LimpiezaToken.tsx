@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams } from 'react-router';
 import { motion } from 'framer-motion';
 import type { Variants } from 'framer-motion';
 import { Check, ClipboardList, Link2Off, Lock, Sparkles } from 'lucide-react';

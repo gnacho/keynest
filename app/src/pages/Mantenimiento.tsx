@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import type { DragEvent } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams } from 'react-router';
 import { motion } from 'framer-motion';
 import type { Variants } from 'framer-motion';
 import { ChevronDown, Plus, Wrench } from 'lucide-react';
