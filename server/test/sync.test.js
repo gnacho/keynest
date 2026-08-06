@@ -95,4 +95,24 @@ END:VEVENT`,
   it('usa la fecha local del negocio para el corte (hoyLocal)', () => {
     expect(hoyLocal()).toMatch(/^\d{4}-\d{2}-\d{2}$/);
   });
+
+  it('un UID compartido entre dos propiedades NO migra la reserva (auditoría bugs)', async () => {
+    db.prepare("DELETE FROM reservations").run();
+    db.prepare("INSERT INTO properties (id, slug, name, ical_url, created_at) VALUES ('p2','p2','Piso 2','http://feed.test/p2.ics',0)").run();
+    const futuro = ymd(daysFrom(10));
+    // p1 ya tiene la reserva con ese UID (misma reserva compartida en el feed de p2)
+    db.prepare("INSERT INTO reservations (id, property_id, uid, checkin, checkout, summary, created_at) VALUES ('r-p1','p1','shared@airbnb.com',?,?,'Reserved',0)").run(futuro, futuro);
+    fetchIcs.mockResolvedValue(feedWith([
+      'BEGIN:VEVENT',
+      `DTSTART;VALUE=DATE:${icsDT(daysFrom(10))}`,
+      `DTEND;VALUE=DATE:${icsDT(daysFrom(13))}`,
+      'UID:shared@airbnb.com',
+      'SUMMARY:Reserved',
+      'END:VEVENT',
+    ]));
+    // El feed de p2 contiene el mismo UID → no debe mover la reserva a p2
+    await syncAll(db);
+    const row = db.prepare("SELECT property_id FROM reservations WHERE uid = 'shared@airbnb.com'").get();
+    expect(row.property_id).toBe('p1');
+  });
 });

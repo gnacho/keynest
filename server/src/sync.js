@@ -32,7 +32,7 @@ export async function syncAll(db, { onNews } = {}) {
         INSERT INTO reservations (id, property_id, uid, checkin, checkout, summary, confirmation_code, phone_last4, created_at)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
         ON CONFLICT(uid) DO UPDATE SET
-          property_id = excluded.property_id,
+          property_id = reservations.property_id,
           checkin = excluded.checkin,
           checkout = excluded.checkout,
           summary = excluded.summary,

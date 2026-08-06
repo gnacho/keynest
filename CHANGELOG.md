@@ -14,6 +14,11 @@ y este proyecto se adhiere a [Versionado Semántico](https://semver.org/lang/es/
   secretos cifrados (ENC_KEY/SESSION_SECRET), rate-limit y body caps, y bugs
   latentes. Cada hallazgo se materializa en su propio issue/PR.
 
+### Fixed
+
+- **Sync iCal: un UID compartido entre dos inmuebles ya no migra la reserva**
+  a la otra propiedad (el `ON CONFLICT(uid)` sobreescribía `property_id`).
+
 ## [1.5.0] - 2026-08-06
 
 ### Added
