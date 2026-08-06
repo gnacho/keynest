@@ -21,6 +21,7 @@ import { useTranslation } from 'react-i18next';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import PersonAvatar from '@/components/PersonAvatar';
 import UpdateRibbon from '@/components/UpdateRibbon';
+import { useUpdateAvailable } from '@/hooks/useUpdateAvailable';
 import { useTheme } from '@/theme/ThemeProvider';
 import { useData } from '@/data/useData';
 import { cachedUser, logout } from '@/lib/auth';
@@ -125,6 +126,10 @@ export default function AppShell({ children }: { children: ReactNode }) {
   const sessionUser = cachedUser();
   const sessionName = sessionUser?.username ?? 'Usuario';
   const sessionInitials = sessionName.slice(0, 2).toUpperCase();
+
+  // Aviso proactivo de versión nueva del propio servidor (anti pantalla-negra):
+  // poll 10 min + visibilitychange; desactivado en demo.
+  const updateAvailable = useUpdateAvailable(!sessionUser?.is_demo);
 
   const isActive = (to: string) =>
     to === '/' ? location.pathname === '/' : location.pathname.startsWith(to);
@@ -362,6 +367,28 @@ export default function AppShell({ children }: { children: ReactNode }) {
           </header>
 
           <main className="mx-auto w-full max-w-[1440px] px-4 pb-24 pt-[72px] md:px-8 md:pb-10 md:pt-7">
+            {updateAvailable && (
+              <div
+                role="status"
+                className="mb-4 flex items-center gap-2.5 rounded-xl border px-3.5 py-2.5 text-[13px] font-semibold"
+                style={{
+                  borderColor: 'rgb(99 102 241 / 0.35)',
+                  backgroundColor: 'rgb(99 102 241 / 0.1)',
+                  color: '#6366F1',
+                }}
+              >
+                <span className="h-2 w-2 shrink-0 animate-ping rounded-full" style={{ backgroundColor: '#6366F1' }} />
+                <span className="flex-1">{t('update.banner')}</span>
+                <button
+                  type="button"
+                  onClick={() => window.location.reload()}
+                  className="flex h-8 shrink-0 items-center rounded-lg px-3 text-xs font-semibold text-white transition-opacity hover:opacity-90"
+                  style={{ backgroundColor: '#6366F1' }}
+                >
+                  {t('update.reload')}
+                </button>
+              </div>
+            )}
             {sessionUser?.role === 'admin' && <UpdateRibbon />}
             {sessionUser?.is_demo && (
               <div

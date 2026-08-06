@@ -9,7 +9,7 @@ const CACHE_KEY = 'gh_latest_release'
 const CACHE_TTL = 5 * 60 * 1000
 
 // Versión semver instalada (marker lo escribe keynest-update.sh tras cada deploy).
-function currentId() {
+export function currentId() {
   try {
     return readFileSync(MARKER, 'utf8').trim()
   } catch {

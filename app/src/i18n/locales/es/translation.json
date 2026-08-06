@@ -862,5 +862,14 @@
     "save": "Guardar",
     "saving": "Guardando…",
     "free": "Libre"
+  },
+  "update": {
+    "banner": "Se ha desplegado una versión nueva — recarga para verla",
+    "reload": "Recargar"
+  },
+  "errorBoundary": {
+    "title": "Algo no ha ido bien",
+    "desc": "La aplicación ha encontrado un error inesperado. Recargar suele solucionarlo.",
+    "reload": "Recargar"
   }
 }
