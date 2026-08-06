@@ -1,6 +1,6 @@
 // Tarjetas de Ajustes (webapp-shell adaptado a Keynest):
 // Apariencia (tema con previews pintados con las variables CSS reales,
-// densidad, reduce-motion), Mi sesión (idioma, notificaciones por tipo, push,
+// densidad), Mi sesión (idioma, notificaciones por tipo, push,
 // cambiar contraseña + cerrar sesión), y Acerca de (versión + repo + PWA +
 // bloque de sistema tipo NetPulse).
 import { useEffect, useState } from 'react';
@@ -11,6 +11,7 @@ import { Bell, Check, Download, Github, KeyRound, LogOut, Mail, Moon, MonitorSma
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Switch } from '@/components/ui/switch';
 import { useTheme } from '@/theme/ThemeProvider';
 import type { ThemeMode } from '@/theme/ThemeProvider';
 import { api } from '@/lib/api';
@@ -92,7 +93,7 @@ const THEME_OPTIONS: { value: ThemeMode; labelKey: string; icon: typeof Moon }[]
 /* ---------- Tarjeta Apariencia ---------- */
 export function AppearanceCard() {
   const { t: tr } = useTranslation();
-  const { mode, setMode, density, setDensity, reduceMotion, setReduceMotion } = useTheme();
+  const { mode, setMode, density, setDensity } = useTheme();
 
   return (
     <Card title={tr('aj.apariencia')} desc={tr('aj.aparienciaDesc')}>
@@ -175,31 +176,6 @@ export function AppearanceCard() {
             );
           })}
         </div>
-      </div>
-
-      {/* Reducir animaciones */}
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <p className="text-sm font-semibold">{tr('aj.reducirAnimaciones')}</p>
-          <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
-            {tr('aj.reducirAnimacionesDesc')}
-          </p>
-        </div>
-        <button
-          type="button"
-          role="switch"
-          aria-checked={reduceMotion}
-          onClick={() => setReduceMotion(!reduceMotion)}
-          className={cn('relative h-6 w-11 shrink-0 rounded-full transition-colors duration-150')}
-          style={{ backgroundColor: reduceMotion ? '#6366F1' : 'var(--surface-2)' }}
-        >
-          <span
-            className={cn(
-              'absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform duration-150',
-              reduceMotion ? 'translate-x-[22px]' : 'translate-x-0.5',
-            )}
-          />
-        </button>
       </div>
 
       {/* Días de aviso en el panel (preferencia por usuario) */}
@@ -614,15 +590,20 @@ export function SessionCard({ isDemo }: { isDemo: boolean }) {
               {soporte === 'requiere-https' ? (
                 <p className="text-xs" style={{ color: 'var(--text-faint)' }}>{tr('aj.pushRequiereHttps')}</p>
               ) : soporte === 'ok' ? (
-                <div className="flex items-center justify-between gap-2">
-                  <div>
-                    <p className="text-sm font-semibold">{tr('aj.alertasPush')}</p>
-                    <p className="text-xs" style={{ color: 'var(--text-muted)' }}>{estado.suscrito ? tr('aj.pushActivas') : tr('aj.pushInactivas')}</p>
+                <div className="flex flex-col gap-2">
+                  <div className="flex items-center justify-between gap-2">
+                    <div>
+                      <p className="text-sm font-semibold">{tr('aj.notificaciones')}</p>
+                      <p className="text-xs" style={{ color: 'var(--text-muted)' }}>{estado.suscrito ? tr('aj.notifActivadas') : tr('aj.pushInactivas')}</p>
+                    </div>
+                    {estado.suscrito ? (
+                      <button type="button" onClick={() => { void desactivar(); }} disabled={estado.cargando} className="h-8 rounded-lg border px-3 text-xs font-semibold disabled:opacity-50" style={{ borderColor: 'var(--border)' }}>{tr('aj.notifDesactivar')}</button>
+                    ) : (
+                      <button type="button" onClick={() => { void activar(); }} disabled={estado.cargando} className="h-8 rounded-lg bg-violet-500 px-3 text-xs font-semibold text-white disabled:opacity-50">{tr('aj.notifActivar')}</button>
+                    )}
                   </div>
-                  {estado.suscrito ? (
-                    <button type="button" onClick={() => { void desactivar(); }} disabled={estado.cargando} className="h-8 rounded-lg border px-3 text-xs font-semibold disabled:opacity-50" style={{ borderColor: 'var(--border)' }}>{tr('aj.desactivar')}</button>
-                  ) : (
-                    <button type="button" onClick={() => { void activar(); }} disabled={estado.cargando} className="h-8 rounded-lg bg-violet-500 px-3 text-xs font-semibold text-white disabled:opacity-50">{tr('aj.activar')}</button>
+                  {estado.error && (
+                    <p className="text-xs" style={{ color: '#F43F5E' }}>{estado.error}</p>
                   )}
                 </div>
               ) : null}
@@ -634,22 +615,10 @@ export function SessionCard({ isDemo }: { isDemo: boolean }) {
                   {TIPOS_NOTIF.map((tipo) => (
                     <div key={tipo} className="flex items-center justify-between gap-3">
                       <span className="text-sm" style={{ color: 'var(--text)' }}>{tr(`aj.notifTipo.${tipo}`)}</span>
-                      <button
-                        type="button"
-                        role="switch"
-                        aria-checked={prefs[tipo] !== false}
-                        aria-label={tr(`aj.notifTipo.${tipo}`)}
-                        onClick={() => cambiarPref(tipo, prefs[tipo] === false)}
-                        className="relative h-6 w-11 shrink-0 rounded-full transition-colors duration-150"
-                        style={{ backgroundColor: prefs[tipo] !== false ? '#6366F1' : 'var(--surface-2)' }}
-                      >
-                        <span
-                          className={cn(
-                            'absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform',
-                            prefs[tipo] !== false ? 'translate-x-[22px]' : 'translate-x-0.5',
-                          )}
-                        />
-                      </button>
+                      <Switch
+                        checked={prefs[tipo] !== false}
+                        onCheckedChange={(checked) => cambiarPref(tipo, checked)}
+                      />
                     </div>
                   ))}
                 </div>

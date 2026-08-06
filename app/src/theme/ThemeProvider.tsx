@@ -9,7 +9,6 @@ const SLUG = 'keynest';
 const MODE_KEY = `${SLUG}-theme-mode`;
 const LEGACY_MODE_KEY = `${SLUG}-theme`; // clave antigua (bi-estado), se migra a MODE_KEY
 const DENSITY_KEY = `${SLUG}-density`;
-const REDUCE_MOTION_KEY = `${SLUG}-reduce-motion`;
 
 const THEME_COLORS: Record<EffectiveTheme, string> = {
   light: '#F4F6FA',
@@ -49,9 +48,6 @@ export function applyBootPreferences() {
     applyTheme(mode === 'system' ? resolveSystem() : mode);
     const density = localStorage.getItem(DENSITY_KEY);
     if (density === 'compact' || density === 'comfortable') applyDensity(density);
-    if (localStorage.getItem(REDUCE_MOTION_KEY) === '1') {
-      document.documentElement.classList.add('reduce-motion');
-    }
   } catch {
     /* sin localStorage */
   }
@@ -65,8 +61,6 @@ interface ThemeContextValue {
   toggle: () => void;
   density: Density;
   setDensity: (d: Density) => void;
-  reduceMotion: boolean;
-  setReduceMotion: (v: boolean) => void;
 }
 
 const ThemeContext = createContext<ThemeContextValue | null>(null);
@@ -79,13 +73,6 @@ export default function ThemeProvider({ children }: { children: ReactNode }) {
       return localStorage.getItem(DENSITY_KEY) === 'compact' ? 'compact' : 'comfortable';
     } catch {
       return 'comfortable';
-    }
-  });
-  const [reduceMotion, setReduceMotionState] = useState<boolean>(() => {
-    try {
-      return localStorage.getItem(REDUCE_MOTION_KEY) === '1';
-    } catch {
-      return false;
     }
   });
 
@@ -127,16 +114,6 @@ export default function ThemeProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
-  const setReduceMotion = useCallback((next: boolean) => {
-    setReduceMotionState(next);
-    try {
-      localStorage.setItem(REDUCE_MOTION_KEY, next ? '1' : '0');
-      document.documentElement.classList.toggle('reduce-motion', next);
-    } catch {
-      /* sin localStorage */
-    }
-  }, []);
-
   const toggle = useCallback(() => setMode(resolved === 'dark' ? 'light' : 'dark'), [resolved, setMode]);
 
   const value = useMemo<ThemeContextValue>(
@@ -148,10 +125,8 @@ export default function ThemeProvider({ children }: { children: ReactNode }) {
       toggle,
       density,
       setDensity,
-      reduceMotion,
-      setReduceMotion,
     }),
-    [mode, setMode, resolved, toggle, density, setDensity, reduceMotion, setReduceMotion],
+    [mode, setMode, resolved, toggle, density, setDensity],
   );
 
   return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>;
