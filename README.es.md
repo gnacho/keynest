@@ -6,9 +6,12 @@
 </p>
 
 <p align="center">
+  <a href="https://keynest.cloudless.club"><img alt="Sitio web" src="https://img.shields.io/badge/Website-keynest.cloudless.club-blue"></a>
+  <a href="https://demo.keynest.cloudless.club"><img alt="Demo en vivo" src="https://img.shields.io/badge/Live%20demo-demo.keynest.cloudless.club-blue"></a>
   <a href="https://github.com/gnacho/keynest/releases"><img alt="Release" src="https://img.shields.io/github/v/release/gnacho/keynest"></a>
   <a href="https://github.com/gnacho/keynest/actions/workflows/release.yml"><img alt="CI" src="https://img.shields.io/github/actions/workflow/status/gnacho/keynest/release.yml?branch=main"></a>
-  <a href="LICENSE"><img alt="License" src="https://img.shields.io/github/license/gnacho/keynest"></a>
+  <a href="LICENSE"><img alt="Licencia" src="https://img.shields.io/github/license/gnacho/keynest"></a>
+  <a href="https://ko-fi.com/gnacho"><img alt="Apóyame en Ko-fi" src="https://img.shields.io/badge/Ko--fi-Donate-ff5e5b?logo=ko-fi&logoColor=white"></a>
 </p>
 
 <p align="center">
