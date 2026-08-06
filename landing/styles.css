@@ -172,13 +172,14 @@ body {
 .block .lead { max-width: 640px; color: var(--text-muted); font-size: 17px; margin-bottom: 44px; }
 
 /* ---------- Principios ---------- */
-.principles { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; }
-.principle {
-  background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
-  padding: 28px; box-shadow: var(--shadow);
+/* ---------- Club Cloudless ---------- */
+.club-inner { display: flex; align-items: center; gap: 2.5rem; }
+.club-copy { flex: 1; min-width: 0; }
+.club-copy .lead { max-width: none; margin-bottom: 0; }
+.club-cta { flex-shrink: 0; white-space: nowrap; }
+@media (max-width: 860px) {
+  .club-inner { flex-direction: column; align-items: flex-start; gap: 1.25rem; }
 }
-.principle h3 { font-size: 20px; margin-bottom: 12px; color: var(--accent); }
-.principle p { font-size: 15px; color: var(--text-muted); }
 
 /* ---------- Features ---------- */
 .features { display: flex; flex-direction: column; }
@@ -312,7 +313,6 @@ footer { border-top: 1px solid var(--border); padding: 56px 0 48px; background: 
 
 /* ---------- Responsive ---------- */
 @media (max-width: 900px) {
-  .principles { grid-template-columns: 1fr; }
   .req-list { grid-template-columns: 1fr; }
 }
 @media (max-width: 720px) {

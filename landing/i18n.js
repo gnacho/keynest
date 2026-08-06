@@ -30,15 +30,10 @@ const I18N = {
       users: "usuarios gratis",
       month: "€0 al mes",
     },
-    principles: {
-      title: "Construido sobre tres principios",
-      lead: "No son eslóganes. Condicionan cada decisión de diseño y de código.",
-      p1t: "Tus datos, en tu casa",
-      p1: "Keynest es un servicio Node con una base SQLite que corre donde tú digas: un mini-PC, una LXC, un servidor. Los datos de tus pisos no pasan por la nube de nadie, y una copia de seguridad es copiar un fichero.",
-      p2t: "Gratis siempre",
-      p2: "Código abierto bajo AGPL-3.0, sin planes ni comisiones. No pagas por piso, ni por usuario, ni por función. Si te funciona, úsalo; si no, se queda donde estaba.",
-      p3t: "Pensado para carteras de verdad",
-      p3: "Las herramientas del mercado están hechas para operadores con decenas de inmuebles. Keynest nace de una cartera familiar y crece contigo: da igual cuántos pisos tengas, no hay límite ni coste por propiedad.",
+    club: {
+      title: "Principios del club cloudless",
+      lead: "Keynest sigue los tres principios del Club Cloudless: soberanía digital, libre para siempre y de personas, no de empresas. Son comunes a todas las apps del club y viven en un único sitio.",
+      cta: "Conocer el club",
     },
     features: {
       title: "Todo el ciclo de una estancia",
@@ -122,8 +117,8 @@ const I18N = {
     },
     about: {
       title: "Por qué existe",
-      p1: "Keynest es una historia de familia. Un primo se casó, sus dos pisos pasaron a alquiler de media estancia, y más tarde se sumó un tercero heredado. Lo que empezó como \"dos pisos, con una hoja de cálculo sobra\" acabó en tardes enteras de Excel, hilos de WhatsApp cruzados y limpiezas coordinadas de memoria. Las apps del mercado estaban hechas para operadores turísticos: sobredimensionadas para tres pisos, caras y con los datos en la nube de otro. Así que construimos la que faltaba.",
-      p2: "Con colaboraciones o apoyo quizás podría crecer más rápido, pero no puedo prometer nada. Es un proyecto personal, libre y gratuito, que corre 24/7 gestionando esos alquileres de verdad. Cada versión se prueba ahí primero.",
+      p1: "Keynest es una historia de familia. Un primo se casó, sus dos pisos pasaron a alquiler de media estancia, y más tarde se sumó un tercero heredado. Lo que empezó como \"dos pisos, con una hoja de cálculo sobra\" acabó en tardes enteras de Excel, hilos de WhatsApp cruzados y limpiezas coordinadas de memoria. Las apps del mercado estaban hechas para operadores turísticos: sobredimensionadas para tres pisos, caras y con los datos en la nube de otro. Así que construimos la que faltaba, y la hemos usado a diario durante mucho tiempo. Lo desarrollo en mi tiempo libre, entre el trabajo y la familia.",
+      p2: "Con el tiempo, y de forma consecuente con los principios en los que creo, he decidido liberarlo y compartirlo con la comunidad. No hay ninguna empresa detrás, solo una persona que usa lo que publica. Será gratuito siempre, corre 24/7 gestionando esos alquileres de verdad y cada versión se prueba ahí primero. Si te sirve, me alegro. Si algo falla, quiero enterarme.",
       kofi: "Apoyar en Ko-fi",
     },
     footer: {
@@ -171,15 +166,10 @@ const I18N = {
       users: "free users",
       month: "$0 per month",
     },
-    principles: {
-      title: "Built on three principles",
-      lead: "They are not slogans. They shape every design and code decision.",
-      p1t: "Your data stays with you",
-      p1: "Keynest is a single Node service with a SQLite database that runs wherever you want: a mini-PC, an LXC, a server. Your property data never touches someone else's cloud, and a backup is copying one file.",
-      p2t: "Free, always",
-      p2: "Open source under AGPL-3.0, with no plans and no commissions. No fee per property, per user or per feature. If it works for you, keep using it; if not, it stays where it was.",
-      p3t: "Made for real portfolios",
-      p3: "The tools on the market are built for operators with dozens of rentals. Keynest starts from a family portfolio and grows with you: no matter how many properties you have, there is no limit and no fee per property.",
+    club: {
+      title: "Cloudless club principles",
+      lead: "Keynest follows the three principles of the Cloudless Club: digital sovereignty, free forever, and by people, not companies. They are shared by every app in the club and live in a single place.",
+      cta: "Meet the club",
     },
     features: {
       title: "The whole stay, covered",
@@ -263,8 +253,8 @@ const I18N = {
     },
     about: {
       title: "Why it exists",
-      p1: "Keynest is a family story. A cousin got married, his two flats went into mid-term rental, and a third inherited one joined later. What started as \"two flats, a spreadsheet will do\" ended up as whole evenings of Excel, crossed WhatsApp threads and cleanings coordinated from memory. The apps on the market were built for tourist operators: oversized for three flats, expensive and with the data in someone else's cloud. So we built the one that was missing.",
-      p2: "With contributions or support it might grow faster, but I cannot promise anything. It is a personal, free and open project that runs 24/7 managing those rentals for real. Every version is tested there first.",
+      p1: "Keynest is a family story. A cousin got married, his two flats went into mid-term rental, and a third inherited one joined later. What started as \"two flats, a spreadsheet will do\" ended up as whole evenings of Excel, crossed WhatsApp threads and cleanings coordinated from memory. The apps on the market were built for tourist operators: oversized for three flats, expensive and with the data in someone else's cloud. So we built the one that was missing, and we have used it every day for a long time. I develop it in my spare time, between work and family.",
+      p2: "Over time, and consistently with the principles I believe in, I decided to make it free and share it with the community. There is no company behind it, just a person who uses what they publish. It will always be free, it runs 24/7 managing those rentals for real, and every release is tested there first. If it helps you, I am glad. If something breaks, I want to know.",
       kofi: "Support on Ko-fi",
     },
     footer: {
