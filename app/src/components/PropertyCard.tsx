@@ -1,5 +1,5 @@
 import { useTranslation } from 'react-i18next';
-import { Link } from 'react-router-dom';
+import { Link } from 'react-router';
 import { motion, useReducedMotion } from 'framer-motion';
 import { BedDouble, BookOpen, CalendarDays, Ruler, Sparkles, TrendingUp } from 'lucide-react';
 import type { Property } from '@/data/types';

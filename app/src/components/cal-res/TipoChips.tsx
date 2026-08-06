@@ -1,4 +1,4 @@
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams } from 'react-router';
 import { useTranslation } from 'react-i18next';
 import { CHIP_COLORS, chipDot, chipStyle } from '@/lib/semantic';
 import type { SemColor } from '@/data/types';

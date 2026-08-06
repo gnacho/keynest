@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link } from 'react-router';
 import { toast } from 'sonner';
 import { CalendarDays, Sparkles, TrendingUp } from 'lucide-react';
 import StatusBadge from '@/components/StatusBadge';

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams } from 'react-router';
 import { RefreshCw } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import LimpiezaToken from '@/pages/LimpiezaToken';
