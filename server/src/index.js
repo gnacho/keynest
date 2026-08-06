@@ -1129,6 +1129,18 @@ guarded.post('/backup/run', (c) => {
   return c.json({ ok: true, path: result.path })
 })
 
+const pkgJson = JSON.parse(readFileSync(join(import.meta.dirname, '..', 'package.json'), 'utf8'))
+// Versión del propio servidor (anti pantalla-negra, webapp-shell): PÚBLICA (se
+// registra antes de `app.route('/api', guarded)`) y sin estado. `build` =
+// release-id marcado tras cada deploy (cambia en cada despliegue) o fallback a
+// BUILD_SHA/versión para que la firma no sea estable.
+app.get('/api/version', (c) =>
+  c.json({
+    version: pkgJson.version,
+    build: currentId() || process.env.BUILD_SHA || pkgJson.version,
+  }),
+)
+
 app.route('/api', guarded)
 
 app.get('/health', (c) => {
@@ -1136,16 +1148,6 @@ app.get('/health', (c) => {
   return c.json({ status: dbOk === 'connected' ? 'ok' : 'degraded', uptime: process.uptime(), db: dbOk })
 })
 
-const pkgJson = JSON.parse(readFileSync(join(import.meta.dirname, '..', 'package.json'), 'utf8'))
-// Versión del propio servidor (anti pantalla-negra, webapp-shell): pública y
-// sin estado. `build` = release-id marcado tras cada deploy (cambia en cada
-// despliegue) o fallback a BUILD_SHA/versión para que la firma no sea estable.
-app.get('/api/version', (c) =>
-  c.json({
-    version: pkgJson.version,
-    build: currentId() || process.env.BUILD_SHA || pkgJson.version,
-  }),
-)
 app.get('/api/system/info', auth.requireAuth(prodDb, demoDb), (c) => {
   const cpuInfo = cpus()
   const distro = platform() === 'linux' && existsSync('/etc/os-release')
