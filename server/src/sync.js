@@ -1,6 +1,7 @@
 import crypto from 'node:crypto'
 import { fetchIcs, icsToReservations, parseIcs } from './ical.js'
 import { kvGet, kvSet } from './db.js'
+import { hoyLocal } from './alerts.js'
 
 /**
  * Sincroniza las reservas de todos los inmuebles con ical_url.
@@ -44,7 +45,12 @@ export async function syncAll(db, { onNews } = {}) {
         }
         // Solo borra uds ORIGEN iCal (@airbnb.com): las reservas importadas
         // del CSV (uid csv-…) deben sobrevivir a cada sincronización.
-        const existing = db.prepare("SELECT uid FROM reservations WHERE property_id = ? AND uid LIKE '%@airbnb.com'").all(p.id)
+        // 🔥 Las reservas FINALIZADAS (checkout < hoy) se conservan SIEMPRE:
+        // el feed de Airbnb solo lista actuales/futuras, así que una estancia
+        // que termina desaparece del iCal y el reemplazo completo la borraría
+        // (perdiendo histórico y las cuentas de Rentabilidad). Solo se borran
+        // las reservas pendientes/futuras que ya no vienen (cancelaciones).
+        const existing = db.prepare("SELECT uid FROM reservations WHERE property_id = ? AND uid LIKE '%@airbnb.com' AND checkout >= ?").all(p.id, hoyLocal())
         const del = db.prepare('DELETE FROM reservations WHERE uid = ?')
         for (const row of existing) {
           if (!seen.has(row.uid)) del.run(row.uid)

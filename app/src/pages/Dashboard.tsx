@@ -344,7 +344,7 @@ export default function Dashboard() {
           <div className="p-4">
             <h2 className="mb-2 font-display text-[17px] font-semibold">{t('dash.entradas')}</h2>
             {checkInsNext.length === 0 ? (
-              <EmptyState icon={CalendarCheck2} title={t('dash.sinMovimientos')} text={t('dash.sinEntradasTxt')} />
+              <EmptyState icon={CalendarCheck2} title={t('dash.sinMovimientos')} text={t('dash.sinEntradasTxt', { count: lookaheadDays })} />
             ) : (
               <motion.div variants={rowV} className="flex flex-col">
                 {checkInsNext.map((r) => movementRow(r, 'in'))}
@@ -357,7 +357,7 @@ export default function Dashboard() {
           <div className="p-4">
             <h2 className="mb-2 font-display text-[17px] font-semibold">{t('dash.salidas')}</h2>
             {checkOutsNext.length === 0 ? (
-              <EmptyState icon={CalendarCheck2} title={t('dash.sinMovimientos')} text={t('dash.sinSalidasTxt')} />
+              <EmptyState icon={CalendarCheck2} title={t('dash.sinMovimientos')} text={t('dash.sinSalidasTxt', { count: lookaheadDays })} />
             ) : (
               <motion.div variants={rowV} className="flex flex-col">
                 {checkOutsNext.map((r) => movementRow(r, 'out'))}
