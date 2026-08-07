@@ -13,6 +13,7 @@ import {
   notifyReservasNuevas,
   createTedeeChecker,
   checkLimpiezas,
+  checkTransacciones,
   hoyLocal,
 } from '../src/alerts.js'
 
@@ -211,7 +212,7 @@ describe('alertas: reservas nuevas', () => {
     ], notifyFn)
     expect(llamadas).toHaveLength(2)
     expect(llamadas[0].tipo).toBe('reserva_nueva')
-    expect(llamadas[0].datos.fecha).toBe('2026-08-10 → 2026-08-12')
+    expect(llamadas[0].datos.tiempo).toBe('2026-08-10 → 2026-08-12')
 
     llamadas.length = 0
     notifyReservasNuevas(db, 'Carmen', Array.from({ length: 6 }, (_, i) => ({ summary: `R${i}`, checkin: '2026-09-01', checkout: '2026-09-03' })), notifyFn)
@@ -223,6 +224,90 @@ describe('alertas: reservas nuevas', () => {
   it('sin items no avisa', () => {
     const { llamadas, notifyFn } = captura()
     notifyReservasNuevas(db, 'Carmen', [], notifyFn)
+    expect(llamadas).toHaveLength(0)
+  })
+
+  it('enriquece con tiempo + personas + importe cuando la reserva tiene CSV', () => {
+    // La reserva ya está en BD con amount/guest_name (importada del CSV antes
+    // o por un sync posterior); el item del iCal solo trae fechas/summary.
+    const p = insertProperty('Ruzafa')
+    const code = 'HMK3XYZ'
+    db.prepare(
+      `INSERT INTO reservations (id, property_id, uid, checkin, checkout, summary, confirmation_code, amount, guest_name, created_at)
+       VALUES (?, ?, ?, '2026-08-10', '2026-08-12', 'A', ?, 450, 'María', ?)`
+    ).run(crypto.randomUUID(), p, 'ical-uid-1', code, Date.now())
+    const { llamadas, notifyFn } = captura()
+    notifyReservasNuevas(db, 'Ruzafa', [{ summary: 'A', checkin: '2026-08-10', checkout: '2026-08-12', confirmation_code: code }], notifyFn)
+    expect(llamadas[0].datos).toMatchObject({
+      tiempo: '2026-08-10 → 2026-08-12',
+      importe: 450,
+      huesped: 'María',
+    })
+  })
+
+  it('sin importe/personas en BD no inventa campos', () => {
+    const p = insertProperty('Ruzafa')
+    const code = 'HMK3NO'
+    db.prepare(
+      `INSERT INTO reservations (id, property_id, uid, checkin, checkout, summary, confirmation_code, amount, created_at)
+       VALUES (?, ?, ?, '2026-08-10', '2026-08-12', 'A', ?, 0, ?)`
+    ).run(crypto.randomUUID(), p, 'ical-uid-2', code, Date.now())
+    const { llamadas, notifyFn } = captura()
+    notifyReservasNuevas(db, 'Ruzafa', [{ summary: 'A', checkin: '2026-08-10', checkout: '2026-08-12', confirmation_code: code }], notifyFn)
+    expect(llamadas[0].datos).toEqual({
+      propiedad: 'Ruzafa',
+      resumen: 'A',
+      tiempo: '2026-08-10 → 2026-08-12',
+    })
+  })
+})
+
+describe('alertas: transacción abonada (24h post check-in)', () => {
+  function ayerLocal() {
+    return new Intl.DateTimeFormat('en-CA', {
+      timeZone: 'Europe/Madrid', year: 'numeric', month: '2-digit', day: '2-digit',
+    }).format(Date.now() - 24 * 3600 * 1000)
+  }
+
+  it('avisa de reservas cuyo check-in fue ayer con importe, y no se repite', () => {
+    const p = insertProperty('Ruzafa')
+    const ayer = ayerLocal()
+    const mañana = new Intl.DateTimeFormat('en-CA', {
+      timeZone: 'Europe/Madrid', year: 'numeric', month: '2-digit', day: '2-digit',
+    }).format(Date.now() + 24 * 3600 * 1000)
+    const id = crypto.randomUUID()
+    db.prepare(
+      `INSERT INTO reservations (id, property_id, uid, checkin, checkout, summary, confirmation_code, amount, guest_name, created_at)
+       VALUES (?, ?, ?, ?, ?, 'A', 'TX1', 450, 'María', ?)`
+    ).run(id, p, 'tx-uid-1', ayer, mañana, Date.now())
+    const { llamadas, notifyFn } = captura()
+    const n1 = checkTransacciones(db, notifyFn)
+    expect(n1).toBe(1)
+    expect(llamadas[0].tipo).toBe('transaccion')
+    expect(llamadas[0].datos).toMatchObject({ propiedad: 'Ruzafa', importe: 450, huesped: 'María' })
+    expect(llamadas[0].opciones.url).toBe('/rentabilidad')
+
+    llamadas.length = 0
+    const n2 = checkTransacciones(db, notifyFn)
+    expect(n2).toBe(0) // dedupe: no se vuelve a avisar
+    expect(llamadas).toHaveLength(0)
+  })
+
+  it('no avisa sin importe (amount=0) ni de otras fechas', () => {
+    const p = insertProperty('Ruzafa')
+    const ayer = ayerLocal()
+    const hoy = hoyLocal()
+    db.prepare(
+      `INSERT INTO reservations (id, property_id, uid, checkin, checkout, summary, amount, created_at)
+       VALUES (?, ?, ?, ?, ?, 'SinImporte', 0, ?)`
+    ).run(crypto.randomUUID(), p, 'tx-uid-2', ayer, ayer, Date.now())
+    db.prepare(
+      `INSERT INTO reservations (id, property_id, uid, checkin, checkout, summary, amount, created_at)
+       VALUES (?, ?, ?, ?, ?, 'DeHoy', 900, ?)`
+    ).run(crypto.randomUUID(), p, 'tx-uid-3', hoy, hoy, Date.now())
+    const { llamadas, notifyFn } = captura()
+    const n = checkTransacciones(db, notifyFn)
+    expect(n).toBe(0)
     expect(llamadas).toHaveLength(0)
   })
 })

@@ -3,7 +3,7 @@ import './index.css';
 import { applyBootPreferences } from '@/theme/ThemeProvider';
 import App from './App.tsx';
 
-// Preferencias (tema/densidad/reduce-motion) antes del primer render.
+// Preferencias (tema/densidad) antes del primer render.
 applyBootPreferences();
 
 // Service worker (push): solo producción y solo en contextos seguros

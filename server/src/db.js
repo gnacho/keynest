@@ -43,6 +43,9 @@ const MIGRATIONS = [
   //     el enlace de acceso. El hash sigue siendo el que valida en /api/t/:token.
   `ALTER TABLE people ADD COLUMN token_cipher TEXT;
    ALTER TABLE maintenance_tasks ADD COLUMN token_cipher TEXT`,
+  // 13: notificaciones POR TIPO (notification_preferences) sustituyen al nivel
+  //     all/important/none. La columna se elimina: las prefs son la única fuente.
+  `ALTER TABLE users DROP COLUMN notification_level`,
 ]
 
 export function migrate(db) {

@@ -53,23 +53,37 @@ const CATALOGO = {
   es: {
     checkin_hoy: { titulo: 'Check-in hoy', cuerpo: (d) => `${d.propiedad}: entra «${d.resumen}»` },
     checkout_hoy: { titulo: 'Check-out hoy', cuerpo: (d) => `${d.propiedad}: sale «${d.resumen}»` },
-    reserva_nueva: { titulo: 'Reserva nueva', cuerpo: (d) => `${d.propiedad}: «${d.resumen}» (${d.fecha})` },
+    reserva_nueva: {
+      titulo: 'Reserva nueva',
+      cuerpo: (d) => {
+        const extra = [d.tiempo, d.personas ? `${d.personas} pers.` : '', d.importe ? `${d.importe} €` : ''].filter(Boolean).join(' · ')
+        return `${d.propiedad}: «${d.resumen}»${extra ? ` (${extra})` : ''}`
+      },
+    },
     reservas_nuevas: { titulo: 'Reservas nuevas', cuerpo: (d) => `${d.total} reservas nuevas importadas` },
     tedee_offline: { titulo: 'Cerradura offline', cuerpo: (d) => `La cerradura «${d.nombre}» no responde` },
     tedee_ok: { titulo: 'Cerradura recuperada', cuerpo: (d) => `La cerradura «${d.nombre}» vuelve a estar online` },
     tedee_bateria: { titulo: 'Batería cerradura baja', cuerpo: (d) => `«${d.nombre}» al ${d.nivel}%` },
     limpieza_pendiente: { titulo: 'Limpieza pendiente', cuerpo: (d) => `${d.propiedad}: limpieza del ${d.fecha} sin completar` },
+    transaccion: { titulo: 'Pago abonado', cuerpo: (d) => `${d.propiedad}: ${d.importe} €${d.huesped ? ` · ${d.huesped}` : ''}` },
     resumen: { titulo: 'Actividad en Keynest', cuerpo: (d) => `${d.total} avisos durante las horas de silencio` },
   },
   en: {
     checkin_hoy: { titulo: 'Check-in today', cuerpo: (d) => `${d.propiedad}: “${d.resumen}” arrives` },
     checkout_hoy: { titulo: 'Check-out today', cuerpo: (d) => `${d.propiedad}: “${d.resumen}” leaves` },
-    reserva_nueva: { titulo: 'New booking', cuerpo: (d) => `${d.propiedad}: “${d.resumen}” (${d.fecha})` },
+    reserva_nueva: {
+      titulo: 'New booking',
+      cuerpo: (d) => {
+        const extra = [d.tiempo, d.personas ? `${d.personas} guests` : '', d.importe ? `${d.importe} €` : ''].filter(Boolean).join(' · ')
+        return `${d.propiedad}: “${d.resumen}”${extra ? ` (${extra})` : ''}`
+      },
+    },
     reservas_nuevas: { titulo: 'New bookings', cuerpo: (d) => `${d.total} new bookings imported` },
     tedee_offline: { titulo: 'Lock offline', cuerpo: (d) => `Lock “${d.nombre}” is not responding` },
     tedee_ok: { titulo: 'Lock recovered', cuerpo: (d) => `Lock “${d.nombre}” is back online` },
     tedee_bateria: { titulo: 'Low lock battery', cuerpo: (d) => `“${d.nombre}” at ${d.nivel}%` },
     limpieza_pendiente: { titulo: 'Cleaning pending', cuerpo: (d) => `${d.propiedad}: cleaning from ${d.fecha} not completed` },
+    transaccion: { titulo: 'Payment received', cuerpo: (d) => `${d.propiedad}: ${d.importe} €${d.huesped ? ` · ${d.huesped}` : ''}` },
     resumen: { titulo: 'Keynest activity', cuerpo: (d) => `${d.total} alerts during your quiet hours` },
   },
 }
@@ -83,6 +97,7 @@ export const TIPOS_ALERTA = [
   'tedee_ok',
   'tedee_bateria',
   'limpieza_pendiente',
+  'transaccion',
 ]
 
 const SEVERIDADES = ['normal', 'high', 'critical']
@@ -95,7 +110,6 @@ function stmts(db) {
     s = {
       subsPorUsuario: db.prepare('SELECT id, endpoint, p256dh, auth FROM push_subscriptions WHERE user_id = ?'),
       idioma: db.prepare('SELECT language FROM users WHERE id = ?'),
-      notifLevel: db.prepare('SELECT notification_level FROM users WHERE id = ?'),
       pref: db.prepare('SELECT enabled, min_severity FROM notification_preferences WHERE user_id = ? AND tipo = ?'),
       quiet: db.prepare('SELECT quiet_start, quiet_end, tz FROM notification_quiet_hours WHERE user_id = ?'),
       borrarPorEndpoint: db.prepare('DELETE FROM push_subscriptions WHERE endpoint = ?'),
@@ -182,9 +196,6 @@ export async function notifyUsers(db, userIds, tipo, datos = {}, opciones = {}) 
   const s = stmts(db)
 
   for (const userId of [...new Set(userIds)]) {
-    const level = s.notifLevel.get(userId)?.notification_level || 'all'
-    if (level === 'none') { res.omitidos++; continue }
-    if (level === 'important' && SEVERIDADES.indexOf(severity) < SEVERIDADES.indexOf('high')) { res.omitidos++; continue }
     const pref = s.pref.get(userId, tipo)
     if (pref) {
       if (!pref.enabled || SEVERIDADES.indexOf(severity) < SEVERIDADES.indexOf(pref.min_severity)) {

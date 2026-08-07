@@ -181,7 +181,6 @@ app.get('/api/auth/me', (c) => {
 const profileSchema = z.object({
   language: z.enum(['auto', 'es', 'en']).optional(),
   lookaheadDays: z.coerce.number().int().min(1).max(30).optional(),
-  notificationLevel: z.enum(['all', 'important', 'none']).optional(),
   displayName: z.string().max(50).optional(),
   email: z.string().email().max(100).or(z.literal('')).optional(),
 })
@@ -193,7 +192,6 @@ app.put('/api/auth/profile', auth.requireAuth(prodDb, demoDb), async (c) => {
   let user = c.get('user')
   if (parsed.data.language) user = auth.updateLanguage(db, user.id, parsed.data.language)
   if (parsed.data.lookaheadDays) user = auth.updateLookaheadDays(db, user.id, parsed.data.lookaheadDays)
-  if (parsed.data.notificationLevel) auth.updateNotificationLevel(db, user.id, parsed.data.notificationLevel)
   if (parsed.data.displayName !== undefined) {
     db.prepare('UPDATE users SET display_name = ? WHERE id = ?').run(parsed.data.displayName, user.id)
     user = { ...user, display_name: parsed.data.displayName }
@@ -257,7 +255,7 @@ app.get('/api/audit', auth.requireAdmin(prodDb, demoDb), (c) => {
 
 /* Lista de usuarios (solo admin) */
 app.get('/api/users', auth.requireAdmin(prodDb, demoDb), (c) => {
-  const users = prodDb.prepare('SELECT id, username, email, phone, language, role, lookahead_days, notification_level, display_name, avatar, created_at FROM users ORDER BY created_at').all()
+  const users = prodDb.prepare('SELECT id, username, email, phone, language, role, lookahead_days, display_name, avatar, created_at FROM users ORDER BY created_at').all()
   return c.json({ users })
 })
 
@@ -1251,11 +1249,13 @@ setInterval(() => {
 }, 3600 * 1000)
 
 /* Alertas push: Tedee cada 5 min (anti-rebote 3 ticks), reservas del día a
- * las 09:00 y limpiezas pendientes a las 12:00 (hora local del CT). */
+ * las 09:00, transacciones abonadas (24h post check-in) a las 09:00 y
+ * limpiezas pendientes a las 12:00 (hora local del CT). */
 const tedeeChecker = alerts.createTedeeChecker({ db: prodDb })
 setTimeout(() => tedeeChecker.check().catch((e) => console.error('[keynest] tedee check error:', e.message)), 10000)
 setInterval(() => tedeeChecker.check().catch((e) => console.error('[keynest] tedee check error:', e.message)), 5 * 60 * 1000)
 alerts.scheduleDaily(9, () => alerts.checkReservasHoy(prodDb), 'reservas-hoy')
+alerts.scheduleDaily(9, () => alerts.checkTransacciones(prodDb), 'transacciones')
 alerts.scheduleDaily(12, () => alerts.checkLimpiezas(prodDb), 'limpiezas-pendientes')
 
 /* Backup diario a las 03:00 si está habilitado */

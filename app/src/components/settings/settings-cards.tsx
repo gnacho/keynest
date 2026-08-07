@@ -1,20 +1,21 @@
 // Tarjetas de Ajustes (webapp-shell adaptado a Keynest):
 // Apariencia (tema con previews pintados con las variables CSS reales,
-// densidad, reduce-motion), Mi sesión (idioma, nivel de alertas, push,
+// densidad), Mi sesión (idioma, notificaciones por tipo, push,
 // cambiar contraseña + cerrar sesión), y Acerca de (versión + repo + PWA +
 // bloque de sistema tipo NetPulse).
 import { useEffect, useState } from 'react';
 import type { ReactNode } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import React from 'react';
-import { Bell, Check, Download, Github, KeyRound, LogOut, Mail, Moon, MonitorSmartphone, Pencil, Sun, User, X } from 'lucide-react';
+import { Bell, Check, Download, FileText, Github, Heart, KeyRound, LogOut, Mail, Moon, MonitorSmartphone, Pencil, ShieldCheck, Sun, User, X } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Switch } from '@/components/ui/switch';
 import { useTheme } from '@/theme/ThemeProvider';
 import type { ThemeMode } from '@/theme/ThemeProvider';
 import { api } from '@/lib/api';
-import { cachedUser, logout, saveNotificationLevel } from '@/lib/auth';
+import { cachedUser, logout } from '@/lib/auth';
 import { applyLanguage, cachedLanguagePref } from '@/i18n';
 import type { AppLanguage } from '@/i18n';
 import { useData } from '@/data/useData';
@@ -92,7 +93,7 @@ const THEME_OPTIONS: { value: ThemeMode; labelKey: string; icon: typeof Moon }[]
 /* ---------- Tarjeta Apariencia ---------- */
 export function AppearanceCard() {
   const { t: tr } = useTranslation();
-  const { mode, setMode, density, setDensity, reduceMotion, setReduceMotion } = useTheme();
+  const { mode, setMode, density, setDensity } = useTheme();
 
   return (
     <Card title={tr('aj.apariencia')} desc={tr('aj.aparienciaDesc')}>
@@ -175,31 +176,6 @@ export function AppearanceCard() {
             );
           })}
         </div>
-      </div>
-
-      {/* Reducir animaciones */}
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <p className="text-sm font-semibold">{tr('aj.reducirAnimaciones')}</p>
-          <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
-            {tr('aj.reducirAnimacionesDesc')}
-          </p>
-        </div>
-        <button
-          type="button"
-          role="switch"
-          aria-checked={reduceMotion}
-          onClick={() => setReduceMotion(!reduceMotion)}
-          className={cn('relative h-6 w-11 shrink-0 rounded-full transition-colors duration-150')}
-          style={{ backgroundColor: reduceMotion ? '#6366F1' : 'var(--surface-2)' }}
-        >
-          <span
-            className={cn(
-              'absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform duration-150',
-              reduceMotion ? 'translate-x-[22px]' : 'translate-x-0.5',
-            )}
-          />
-        </button>
       </div>
 
       {/* Días de aviso en el panel (preferencia por usuario) */}
@@ -302,13 +278,16 @@ export function useInstallPrompt() {
   return { state, install };
 }
 
-type NotifLevel = 'all' | 'important' | 'none';
-
-const NOTIF_LEVELS: { value: NotifLevel; labelKey: string }[] = [
-  { value: 'all', labelKey: 'aj.notifLevelAll' },
-  { value: 'important', labelKey: 'aj.notifLevelImportant' },
-  { value: 'none', labelKey: 'aj.notifLevelNone' },
-];
+const TIPOS_NOTIF = [
+  'checkin_hoy',
+  'checkout_hoy',
+  'reserva_nueva',
+  'transaccion',
+  'tedee_offline',
+  'tedee_ok',
+  'tedee_bateria',
+  'limpieza_pendiente',
+] as const;
 
 /* ---------- Tarjeta Mi perfil (canónica webapp-shell): avatar + nombre + email + idioma + notifs + contraseña + logout ----------
    Estructura ProfileCard: línea horizontal SIN flex-wrap; nombre/email editables
@@ -327,8 +306,20 @@ export function SessionCard({ isDemo }: { isDemo: boolean }) {
   const [editingName, setEditingName] = useState(false);
   const [editingEmail, setEditingEmail] = useState(false);
   const [lang, setLang] = useState<AppLanguage>(() => user?.language ?? cachedLanguagePref());
-  const [notifLevel, setNotifLevel] = useState<NotifLevel>(() => user?.notification_level ?? 'all');
+  const [prefs, setPrefs] = useState<Record<string, boolean> | null>(null);
   const { soporte, estado, activar, desactivar } = usePush();
+
+  // Preferencias por tipo: solo tienen sentido con el push suscrito en este
+  // dispositivo (patrón Helios/skill web-push-alerts).
+  useEffect(() => {
+    if (!estado.suscrito) {
+      setPrefs(null);
+      return;
+    }
+    api<{ prefs: Record<string, boolean> }>('/api/push/preferences')
+      .then((r) => setPrefs(r.prefs))
+      .catch(() => setPrefs(null));
+  }, [estado.suscrito]);
 
   const saveProfile = async (field: 'displayName' | 'email', value: string) => {
     try {
@@ -348,9 +339,11 @@ export function SessionCard({ isDemo }: { isDemo: boolean }) {
     })();
   };
 
-  const changeNotifLevel = (v: NotifLevel) => {
-    setNotifLevel(v);
-    void saveNotificationLevel(v).catch(() => setNotifLevel(notifLevel));
+  const cambiarPref = (tipo: string, enabled: boolean) => {
+    setPrefs((p) => (p ? { ...p, [tipo]: enabled } : p));
+    api('/api/push/preferences', { method: 'PUT', body: JSON.stringify({ tipo, enabled }) }).catch(() => {
+      setPrefs((p) => (p ? { ...p, [tipo]: !enabled } : p)); // rollback optimista
+    });
   };
 
   const saveName = async () => {
@@ -589,45 +582,48 @@ export function SessionCard({ isDemo }: { isDemo: boolean }) {
         )}
       </AnimatePresence>
 
-      {/* Panel notificaciones desplegable: nivel + push */}
+      {/* Panel notificaciones desplegable: push + toggles por tipo */}
       <AnimatePresence>
         {showNotif && (
           <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} transition={{ duration: 0.2 }} className="mt-4 overflow-hidden border-t pt-4" style={{ borderColor: 'var(--border)' }}>
             <div className="flex flex-col gap-3 rounded-xl border p-3" style={{ borderColor: 'var(--border)', backgroundColor: 'var(--surface-2)' }}>
-              {/* Nivel de alertas */}
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <div>
-                  <p className="text-sm font-semibold">{tr('aj.notifLevel')}</p>
-                  <p className="text-xs" style={{ color: 'var(--text-muted)' }}>{tr('aj.notifLevelDesc')}</p>
-                </div>
-                <Select value={notifLevel} onValueChange={(v) => changeNotifLevel(v as NotifLevel)}>
-                  <SelectTrigger aria-label={tr('aj.notifLevel')} className="h-9 w-[140px] rounded-lg border text-xs" style={{ borderColor: 'var(--border)', backgroundColor: 'var(--surface)' }}>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent className="rounded-xl border-[var(--border)] bg-[var(--surface)]">
-                    {NOTIF_LEVELS.map((opt) => (
-                      <SelectItem key={opt.value} value={opt.value}>{tr(opt.labelKey)}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
               {/* Push */}
               {soporte === 'requiere-https' ? (
                 <p className="text-xs" style={{ color: 'var(--text-faint)' }}>{tr('aj.pushRequiereHttps')}</p>
               ) : soporte === 'ok' ? (
-                <div className="flex items-center justify-between gap-2">
-                  <div>
-                    <p className="text-sm font-semibold">{tr('aj.alertasPush')}</p>
-                    <p className="text-xs" style={{ color: 'var(--text-muted)' }}>{estado.suscrito ? tr('aj.pushActivas') : tr('aj.pushInactivas')}</p>
+                <div className="flex flex-col gap-2">
+                  <div className="flex items-center justify-between gap-2">
+                    <div>
+                      <p className="text-sm font-semibold">{tr('aj.notificaciones')}</p>
+                      <p className="text-xs" style={{ color: 'var(--text-muted)' }}>{estado.suscrito ? tr('aj.notifActivadas') : tr('aj.pushInactivas')}</p>
+                    </div>
+                    {estado.suscrito ? (
+                      <button type="button" onClick={() => { void desactivar(); }} disabled={estado.cargando} className="h-8 rounded-lg border px-3 text-xs font-semibold disabled:opacity-50" style={{ borderColor: 'var(--border)' }}>{tr('aj.notifDesactivar')}</button>
+                    ) : (
+                      <button type="button" onClick={() => { void activar(); }} disabled={estado.cargando} className="h-8 rounded-lg bg-violet-500 px-3 text-xs font-semibold text-white disabled:opacity-50">{tr('aj.notifActivar')}</button>
+                    )}
                   </div>
-                  {estado.suscrito ? (
-                    <button type="button" onClick={() => { void desactivar(); }} disabled={estado.cargando} className="h-8 rounded-lg border px-3 text-xs font-semibold disabled:opacity-50" style={{ borderColor: 'var(--border)' }}>{tr('aj.desactivar')}</button>
-                  ) : (
-                    <button type="button" onClick={() => { void activar(); }} disabled={estado.cargando} className="h-8 rounded-lg bg-violet-500 px-3 text-xs font-semibold text-white disabled:opacity-50">{tr('aj.activar')}</button>
+                  {estado.error && (
+                    <p className="text-xs" style={{ color: '#F43F5E' }}>{estado.error}</p>
                   )}
                 </div>
               ) : null}
+
+              {/* Toggles por tipo: solo con el push suscrito en este dispositivo */}
+              {estado.suscrito && prefs && (
+                <div className="flex flex-col gap-2 border-t pt-3" style={{ borderColor: 'var(--border)' }}>
+                  <p className="text-[13px] font-medium" style={{ color: 'var(--text-muted)' }}>{tr('aj.notifTipos')}</p>
+                  {TIPOS_NOTIF.map((tipo) => (
+                    <div key={tipo} className="flex items-center justify-between gap-3">
+                      <span className="text-sm" style={{ color: 'var(--text)' }}>{tr(`aj.notifTipo.${tipo}`)}</span>
+                      <Switch
+                        checked={prefs[tipo] !== false}
+                        onCheckedChange={(checked) => cambiarPref(tipo, checked)}
+                      />
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           </motion.div>
         )}
@@ -662,12 +658,13 @@ interface SystemInfoData {
   demo: boolean;
 }
 
-function SystemInfoBlock() {
+function SystemInfoBlock({ info: propInfo }: { info?: SystemInfoData | null }) {
   const { t } = useTranslation();
-  const [info, setInfo] = useState<SystemInfoData | null>(null);
+  const [info, setInfo] = useState<SystemInfoData | null>(propInfo ?? null);
   const [failed, setFailed] = useState(false);
 
   useEffect(() => {
+    if (propInfo) { setInfo(propInfo); return; }
     let disposed = false;
     void (async () => {
       try {
@@ -682,7 +679,7 @@ function SystemInfoBlock() {
       }
     })();
     return () => { disposed = true; };
-  }, []);
+  }, [propInfo]);
 
   const server = info && !info.demo ? info : null;
   const rows: { label: string; value: string }[] = [
@@ -729,36 +726,95 @@ function SystemInfoBlock() {
   );
 }
 
-/* ---------- Tarjeta Acerca de: versión + repo + PWA + sistema ---------- */
+/* ---------- Tarjeta Acerca de: logo + enlaces + versión·licencia·runtime (canon webapp-shell) ----------
+   Fila 1: logo + nombre + descripción a la izquierda, tiles de enlaces BAJOS a la derecha.
+   Fila 2: versión · licencia · runtime en UNA línea sin recuadros, alineada con la descripción.
+   El instalador PWA y Comprobar actualizaciones NO viven aquí (InstallCard propia / AdminBar). */
 export function AboutCard() {
   const { t: tr } = useTranslation();
-  const { state, install } = useInstallPrompt();
+  const [info, setInfo] = useState<SystemInfoData | null>(null);
+
+  useEffect(() => {
+    let disposed = false;
+    void (async () => {
+      try {
+        const res = await fetch('/api/system/info');
+        if (!res.ok || !(res.headers.get('content-type') ?? '').includes('application/json')) {
+          throw new Error(`HTTP ${res.status}`);
+        }
+        const json = (await res.json()) as SystemInfoData;
+        if (!disposed) setInfo(json);
+      } catch {
+        if (!disposed) setInfo(null);
+      }
+    })();
+    return () => { disposed = true; };
+  }, []);
+
+  const server = info && !info.demo ? info : null;
+  const runtimeLine = `Node ${server?.nodeVersion || '—'} · React v${React.version} · ${tr('aj.aboutUptime')} ${server ? fmtUptime(server.uptimeS) : '—'}`;
+  const tiles = [
+    { key: 'code', icon: Github, label: tr('aj.aboutCode'), href: REPO_URL },
+    { key: 'changelog', icon: FileText, label: tr('aj.aboutCambios'), href: `${REPO_URL}/commits/main` },
+    { key: 'kofi', icon: Heart, label: tr('aj.aboutKofi') },
+    { key: 'privacy', icon: ShieldCheck, label: tr('aj.aboutPrivacidad') },
+  ];
+  const linkCls = 'flex items-center gap-2 rounded-lg border border-[var(--border)] px-2.5 py-1 text-xs font-medium transition-colors duration-150 hover:border-[#6366F1]/50 hover:text-[#6366F1]';
+  const plainCls = 'flex items-center gap-2 rounded-lg border border-[var(--border)] px-2.5 py-1 text-xs font-medium';
 
   return (
     <Card title={tr('aj.acercaDe')}>
-      <div className="flex items-center gap-3">
-        <img src="/logo.svg" alt="Keynest" className="h-10 w-10" />
-        <div>
-          <p className="font-display text-lg font-semibold tracking-[-0.01em]">Keynest</p>
-          <p className="text-xs" style={{ color: 'var(--text-faint)' }}>
-            v{APP_VERSION} · AGPL-3.0
-          </p>
+      <div className="space-y-5">
+        {/* Fila 1: logo + nombre + descripción a la izquierda, enlaces a la derecha */}
+        <div className="grid gap-5 md:grid-cols-2">
+          <div className="flex items-start gap-3.5">
+            <img src="/logo.svg" alt="Keynest" className="h-10 w-10 shrink-0" />
+            <div className="min-w-0 flex-1">
+              <p className="font-display text-lg font-semibold tracking-[-0.01em]">Keynest</p>
+              <p className="mt-1.5 text-sm leading-relaxed" style={{ color: 'var(--text-faint)' }}>
+                {tr('aj.acercaDeDesc')}
+              </p>
+            </div>
+          </div>
+          <div className="grid grid-cols-1 gap-1.5 sm:grid-cols-2">
+            {tiles.map((item) =>
+              item.href ? (
+                <a key={item.key} href={item.href} target="_blank" rel="noreferrer" className={linkCls}>
+                  <item.icon className="h-3.5 w-3.5 shrink-0" strokeWidth={1.75} aria-hidden="true" />
+                  <span className="leading-snug" style={{ color: 'var(--text-muted)' }}>{item.label}</span>
+                </a>
+              ) : (
+                <div key={item.key} className={plainCls} style={{ color: 'var(--text-muted)' }}>
+                  <item.icon className="h-3.5 w-3.5 shrink-0" strokeWidth={1.75} aria-hidden="true" />
+                  <span className="leading-snug">{item.label}</span>
+                </div>
+              ),
+            )}
+          </div>
         </div>
-      </div>
-      <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
-        {tr('aj.acercaDeDesc')}
-      </p>
-      <a
-        href={REPO_URL}
-        target="_blank"
-        rel="noreferrer"
-        className="inline-flex h-9 w-fit items-center gap-2 rounded-xl border px-3 text-xs font-semibold transition-colors duration-150 hover:bg-[var(--surface-2)]"
-        style={{ borderColor: 'var(--border)', color: 'var(--text-muted)' }}
-      >
-        <Github className="h-4 w-4" strokeWidth={1.75} />
-        {tr('aj.codigoFuente')}
-      </a>
+        {/* Fila 2: versión · licencia · runtime en UNA línea sin recuadros,
+            alineada con la descripción (tras el logo) en escritorio */}
+        <p className="font-mono text-[11px] md:pl-[54px]" style={{ color: 'var(--text-faint)' }}>
+          v{APP_VERSION} · AGPL-3.0 · {runtimeLine}
+        </p>
 
+        {/* Bloque Sistema fusionado dentro de Acerca de (patrón EasyZFS) */}
+        <SystemInfoBlock info={info} />
+      </div>
+    </Card>
+  );
+}
+
+/* ---------- Tarjeta Instalar app (PWA): tarjeta propia, NO vive en Acerca de ---------- */
+export function InstallCard() {
+  const { t: tr } = useTranslation();
+  const { state, install } = useInstallPrompt();
+
+  // 'hidden' = navegador sin soporte → NO renderizar nada (regla del usuario)
+  if (state === 'hidden') return null;
+
+  return (
+    <Card title={tr('aj.instalarApp')}>
       {state === 'installed' && (
         <p
           className="inline-flex w-fit items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-semibold"
@@ -781,8 +837,6 @@ export function AboutCard() {
           {tr('aj.instalarIos')}
         </p>
       )}
-
-      <SystemInfoBlock />
     </Card>
   );
 }

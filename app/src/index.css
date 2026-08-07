@@ -294,16 +294,8 @@
   .animate-ping-soft { animation: ping-soft 1.6s cubic-bezier(0, 0, 0.2, 1) infinite; }
 }
 
-/* Reducir animaciones: clase del switch de Apariencia + respeto del SO */
-html.reduce-motion *,
-html.reduce-motion *::before,
-html.reduce-motion *::after {
-  animation-duration: 0.01ms !important;
-  animation-iteration-count: 1 !important;
-  transition-duration: 0.01ms !important;
-  scroll-behavior: auto !important;
-}
-
+/* Reducir animaciones: solo preferencia del SO (framer-motion usa
+   useReducedMotion(); ya no existe el switch de Apariencia) */
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
