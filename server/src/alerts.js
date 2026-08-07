@@ -15,6 +15,9 @@
 // - limpieza_pendiente: job diario (12:00 local): limpiezas 'pendiente' con
 //   fecha ≤ hoy (el check-out ya pasó o es hoy). Dedupe por kv: un aviso por
 //   limpieza y día como máximo.
+// - transaccion: job diario: reservas cuyo check-in fue AYER (24h después,
+//   cuando Airbnb suele abonar) con importe registrado (amount > 0, del CSV).
+//   Informa importe + inmueble + huésped. Dedupe por kv: un aviso por reserva.
 //
 // notifyFn inyectable para tests (defecto: notifyAll de push.js).
 import { kvGet, kvSet } from './db.js'
@@ -58,6 +61,37 @@ export function checkReservasHoy(db, notifyFn = notifyAll) {
 }
 
 // ── Reservas nuevas importadas (llamado desde el sync iCal) ──────────────────
+// Enriquecido (issue #34): además de inmueble + resumen, se informa del tiempo
+// (checkin → checkout), personas y importe CUANDO existan (vienen del CSV de
+// Airbnb, no del iCal; el iCal solo trae fechas/summary).
+const guestsDisponible = new WeakMap()
+function tieneGuests(db) {
+  if (!guestsDisponible.has(db)) {
+    const cols = db.prepare('PRAGMA table_info(reservations)').all().map((c) => c.name)
+    guestsDisponible.set(db, cols.includes('guests'))
+  }
+  return guestsDisponible.get(db)
+}
+
+function detalleReserva(db, item) {
+  const d = { tiempo: `${item.checkin} → ${item.checkout}` }
+  // El CSV cruza por confirmation_code; si no hay, se busca por uid.
+  const fila = item.confirmation_code
+    ? db.prepare('SELECT amount, guest_name FROM reservations WHERE confirmation_code = ?').get(item.confirmation_code)
+    : null
+  const r = fila || (item.uid ? db.prepare('SELECT amount, guest_name FROM reservations WHERE uid = ?').get(item.uid) : null)
+  if (!r) return d
+  if (tieneGuests(db)) {
+    const g = (item.confirmation_code
+      ? db.prepare('SELECT guests FROM reservations WHERE confirmation_code = ?').get(item.confirmation_code)
+      : item.uid ? db.prepare('SELECT guests FROM reservations WHERE uid = ?').get(item.uid) : null)
+    if (g?.guests) d.personas = g.guests
+  }
+  if (r.amount > 0) d.importe = r.amount
+  if (r.guest_name) d.huesped = r.guest_name
+  return d
+}
+
 export function notifyReservasNuevas(db, propiedad, items, notifyFn = notifyAll) {
   if (!items || items.length === 0) return
   if (items.length > MAX_AVISOS_INDIVIDUALES) {
@@ -69,10 +103,42 @@ export function notifyReservasNuevas(db, propiedad, items, notifyFn = notifyAll)
     notifyFn(
       db,
       'reserva_nueva',
-      { propiedad, resumen: i.summary, fecha: `${i.checkin} → ${i.checkout}` },
+      { propiedad, resumen: i.summary, ...detalleReserva(db, i) },
       { severity: 'normal', url: '/reservas' }
     )
   }
+}
+
+// ── Transacción abonada: 24h después del check-in con importe ────────────────
+// Airbnb suele abonar el pago ~24h tras el check-in; solo se avisa si la
+// reserva tiene importe registrado (amount > 0, del CSV). Dedupe por kv:
+// un aviso por reserva (nunca más, aunque el job se repita).
+export function checkTransacciones(db, notifyFn = notifyAll) {
+  const ayer = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Europe/Madrid',
+    year: 'numeric', month: '2-digit', day: '2-digit',
+  }).format(Date.now() - 24 * 3600 * 1000)
+  const filas = db
+    .prepare(
+      `SELECT r.id, r.checkin, r.checkout, r.summary, r.amount, r.guest_name, p.name AS propiedad
+       FROM reservations r JOIN properties p ON p.id = r.property_id
+       WHERE r.checkin = ? AND r.amount > 0`
+    )
+    .all(ayer)
+  let avisos = 0
+  for (const f of filas) {
+    const key = `push_tx_${f.id}`
+    if (kvGet(db, key)) continue // ya avisada
+    notifyFn(
+      db,
+      'transaccion',
+      { propiedad: f.propiedad, resumen: f.summary, importe: f.amount, huesped: f.guest_name || null },
+      { severity: 'normal', url: '/rentabilidad' }
+    )
+    kvSet(db, key, '1')
+    avisos++
+  }
+  return avisos
 }
 
 // ── Tedee: offline (3 ticks) y batería baja ──────────────────────────────────

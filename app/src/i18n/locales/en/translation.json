@@ -736,6 +736,7 @@
       "checkin_hoy": "Today's check-ins",
       "checkout_hoy": "Today's check-outs",
       "reserva_nueva": "New booking imported",
+      "transaccion": "Payment received (24h after check-in)",
       "tedee_offline": "Lock offline",
       "tedee_ok": "Lock recovered",
       "tedee_bateria": "Low lock battery",

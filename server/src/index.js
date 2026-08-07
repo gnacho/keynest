@@ -1249,11 +1249,13 @@ setInterval(() => {
 }, 3600 * 1000)
 
 /* Alertas push: Tedee cada 5 min (anti-rebote 3 ticks), reservas del día a
- * las 09:00 y limpiezas pendientes a las 12:00 (hora local del CT). */
+ * las 09:00, transacciones abonadas (24h post check-in) a las 09:00 y
+ * limpiezas pendientes a las 12:00 (hora local del CT). */
 const tedeeChecker = alerts.createTedeeChecker({ db: prodDb })
 setTimeout(() => tedeeChecker.check().catch((e) => console.error('[keynest] tedee check error:', e.message)), 10000)
 setInterval(() => tedeeChecker.check().catch((e) => console.error('[keynest] tedee check error:', e.message)), 5 * 60 * 1000)
 alerts.scheduleDaily(9, () => alerts.checkReservasHoy(prodDb), 'reservas-hoy')
+alerts.scheduleDaily(9, () => alerts.checkTransacciones(prodDb), 'transacciones')
 alerts.scheduleDaily(12, () => alerts.checkLimpiezas(prodDb), 'limpiezas-pendientes')
 
 /* Backup diario a las 03:00 si está habilitado */

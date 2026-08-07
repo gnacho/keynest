@@ -53,23 +53,37 @@ const CATALOGO = {
   es: {
     checkin_hoy: { titulo: 'Check-in hoy', cuerpo: (d) => `${d.propiedad}: entra «${d.resumen}»` },
     checkout_hoy: { titulo: 'Check-out hoy', cuerpo: (d) => `${d.propiedad}: sale «${d.resumen}»` },
-    reserva_nueva: { titulo: 'Reserva nueva', cuerpo: (d) => `${d.propiedad}: «${d.resumen}» (${d.fecha})` },
+    reserva_nueva: {
+      titulo: 'Reserva nueva',
+      cuerpo: (d) => {
+        const extra = [d.tiempo, d.personas ? `${d.personas} pers.` : '', d.importe ? `${d.importe} €` : ''].filter(Boolean).join(' · ')
+        return `${d.propiedad}: «${d.resumen}»${extra ? ` (${extra})` : ''}`
+      },
+    },
     reservas_nuevas: { titulo: 'Reservas nuevas', cuerpo: (d) => `${d.total} reservas nuevas importadas` },
     tedee_offline: { titulo: 'Cerradura offline', cuerpo: (d) => `La cerradura «${d.nombre}» no responde` },
     tedee_ok: { titulo: 'Cerradura recuperada', cuerpo: (d) => `La cerradura «${d.nombre}» vuelve a estar online` },
     tedee_bateria: { titulo: 'Batería cerradura baja', cuerpo: (d) => `«${d.nombre}» al ${d.nivel}%` },
     limpieza_pendiente: { titulo: 'Limpieza pendiente', cuerpo: (d) => `${d.propiedad}: limpieza del ${d.fecha} sin completar` },
+    transaccion: { titulo: 'Pago abonado', cuerpo: (d) => `${d.propiedad}: ${d.importe} €${d.huesped ? ` · ${d.huesped}` : ''}` },
     resumen: { titulo: 'Actividad en Keynest', cuerpo: (d) => `${d.total} avisos durante las horas de silencio` },
   },
   en: {
     checkin_hoy: { titulo: 'Check-in today', cuerpo: (d) => `${d.propiedad}: “${d.resumen}” arrives` },
     checkout_hoy: { titulo: 'Check-out today', cuerpo: (d) => `${d.propiedad}: “${d.resumen}” leaves` },
-    reserva_nueva: { titulo: 'New booking', cuerpo: (d) => `${d.propiedad}: “${d.resumen}” (${d.fecha})` },
+    reserva_nueva: {
+      titulo: 'New booking',
+      cuerpo: (d) => {
+        const extra = [d.tiempo, d.personas ? `${d.personas} guests` : '', d.importe ? `${d.importe} €` : ''].filter(Boolean).join(' · ')
+        return `${d.propiedad}: “${d.resumen}”${extra ? ` (${extra})` : ''}`
+      },
+    },
     reservas_nuevas: { titulo: 'New bookings', cuerpo: (d) => `${d.total} new bookings imported` },
     tedee_offline: { titulo: 'Lock offline', cuerpo: (d) => `Lock “${d.nombre}” is not responding` },
     tedee_ok: { titulo: 'Lock recovered', cuerpo: (d) => `Lock “${d.nombre}” is back online` },
     tedee_bateria: { titulo: 'Low lock battery', cuerpo: (d) => `“${d.nombre}” at ${d.nivel}%` },
     limpieza_pendiente: { titulo: 'Cleaning pending', cuerpo: (d) => `${d.propiedad}: cleaning from ${d.fecha} not completed` },
+    transaccion: { titulo: 'Payment received', cuerpo: (d) => `${d.propiedad}: ${d.importe} €${d.huesped ? ` · ${d.huesped}` : ''}` },
     resumen: { titulo: 'Keynest activity', cuerpo: (d) => `${d.total} alerts during your quiet hours` },
   },
 }
@@ -83,6 +97,7 @@ export const TIPOS_ALERTA = [
   'tedee_ok',
   'tedee_bateria',
   'limpieza_pendiente',
+  'transaccion',
 ]
 
 const SEVERIDADES = ['normal', 'high', 'critical']
