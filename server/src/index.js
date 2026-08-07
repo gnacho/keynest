@@ -241,6 +241,7 @@ app.get('/api/update/status', auth.requireAdmin(prodDb, demoDb), async (c) => {
 })
 
 app.post('/api/update/apply', auth.requireAdmin(prodDb, demoDb), async (c) => {
+  audit(c.get('db'), c.get('user').id, 'update.apply', 'system', 'server', '')
   const ok = await applyUpdate()
   // systemd Restart=always levanta el servicio con el código nuevo tras salir
   setTimeout(() => process.exit(0), 1500)
