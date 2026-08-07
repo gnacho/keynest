@@ -245,3 +245,8 @@ export function deleteUser(db, userId) {
 export function cleanExpiredSessions(db) {
   db.prepare('DELETE FROM sessions WHERE expires_at < ?').run(Date.now())
 }
+
+export function cleanExpiredLoginAttempts(db) {
+  const oneHourAgo = Date.now() - 3600 * 1000
+  db.prepare('DELETE FROM login_attempts WHERE locked_until > 0 AND locked_until < ?').run(oneHourAgo)
+}

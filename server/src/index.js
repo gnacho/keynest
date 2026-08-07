@@ -1241,7 +1241,7 @@ const runSync = () => syncAll(prodDb, { onNews: onSyncNews }).catch((e) => conso
 setTimeout(runSync, 5000) // sync inicial al arrancar
 try { purgeExpiredPhotos(prodDb, config.dataDir) } catch { /* noop */ } // purge fotos expiradas al arrancar
 setInterval(runSync, config.syncIntervalMs)
-setInterval(() => auth.cleanExpiredSessions(prodDb), 3600 * 1000)
+setInterval(() => { auth.cleanExpiredSessions(prodDb); auth.cleanExpiredLoginAttempts(prodDb) }, 3600 * 1000)
 setInterval(() => {
   try { prodDb.pragma('wal_checkpoint(TRUNCATE)'); demoDb.pragma('wal_checkpoint(TRUNCATE)') } catch { /* noop */ }
   flushNotificationQueue(prodDb).catch((err) => console.error('[keynest] flush cola push error:', err.message))
