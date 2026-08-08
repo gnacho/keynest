@@ -7,7 +7,7 @@ import { useEffect, useState } from 'react';
 import type { ReactNode } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import React from 'react';
-import { Bell, Check, Download, FileText, Github, Heart, KeyRound, LogOut, Mail, Moon, MonitorSmartphone, Pencil, ShieldCheck, Sun, User, X } from 'lucide-react';
+import { Bell, Check, Download, FileText, Github, Heart, KeyRound, Languages, LogOut, Mail, Moon, MonitorSmartphone, Pencil, ShieldCheck, Sun, User, X } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -403,8 +403,8 @@ export function SessionCard({ isDemo }: { isDemo: boolean }) {
 
   return (
     <Card title={tr('aj.miPerfil')}>
-      {/* Línea horizontal sin flex-wrap (canon ProfileCard) */}
-      <div className="flex min-w-0 items-center gap-3 sm:gap-4">
+      {/* Línea horizontal con flex-wrap (envuelve a 2 líneas en móvil) */}
+      <div className="flex min-w-0 flex-wrap items-center gap-3 sm:gap-4">
         {/* Avatar */}
         <div className="h-11 w-11 shrink-0 overflow-hidden rounded-full" style={{ backgroundColor: 'var(--accent-soft, #e3f0e9)' }}>
           {avatarSrc ? (
@@ -513,8 +513,9 @@ export function SessionCard({ isDemo }: { isDemo: boolean }) {
         {/* Idioma */}
         {!isDemo && (
           <Select value={lang} onValueChange={(v) => changeLang(v as AppLanguage)}>
-            <SelectTrigger aria-label={tr('aj.idioma')} className="h-9 w-[120px] shrink-0 rounded-lg border text-xs" style={{ borderColor: 'var(--border)', backgroundColor: 'var(--surface)' }}>
-              <SelectValue />
+            <SelectTrigger aria-label={tr('aj.idioma')} className="h-9 w-9 justify-center rounded-lg border text-xs sm:w-[120px] sm:justify-between" style={{ borderColor: 'var(--border)', backgroundColor: 'var(--surface)' }}>
+              <Languages className="h-4 w-4 sm:hidden" aria-hidden="true" />
+              <span className="hidden sm:inline"><SelectValue /></span>
             </SelectTrigger>
             <SelectContent className="rounded-xl border-[var(--border)] bg-[var(--surface)]">
               <SelectItem value="auto">🌐 Auto</SelectItem>
@@ -555,15 +556,15 @@ export function SessionCard({ isDemo }: { isDemo: boolean }) {
           </button>
         )}
 
-        {/* Logout — SIEMPRE a la derecha, texto visible incluso en móvil, rojo */}
+        {/* Logout — SIEMPRE a la derecha, rojo; texto solo en ≥sm */}
         <button
           type="button"
           onClick={() => { void logout(); }}
-          className="ml-auto inline-flex h-9 shrink-0 items-center gap-1.5 rounded-lg border px-3 text-xs font-semibold transition-colors hover:bg-red-50 dark:hover:bg-red-950/20"
+          className="ml-auto inline-flex h-9 shrink-0 items-center gap-1.5 rounded-lg border px-2.5 text-xs font-semibold transition-colors hover:bg-red-50 dark:hover:bg-red-950/20 sm:px-3"
           style={{ borderColor: 'var(--danger-border, #fca5a5)', color: 'var(--danger, #ef4444)', backgroundColor: 'rgb(var(--danger-rgb) / 0.10)' }}
         >
           <LogOut className="h-4 w-4" aria-hidden="true" />
-          {isDemo ? tr('aj.salirDemo') : tr('aj.cerrarSesion')}
+          <span className={actionTextCls}>{isDemo ? tr('aj.salirDemo') : tr('aj.cerrarSesion')}</span>
         </button>
       </div>
 
