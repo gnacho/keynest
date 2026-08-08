@@ -309,3 +309,14 @@ export function hydrateCleaning(cl, properties) {
   }
   return cl
 }
+
+/* ---- Borrado de limpiezas (issue #40) ----
+ * Una limpieza es eliminable si NO se ha realizado: estado pendiente/asignada y
+ * sin horas, productos ni fotos. Las en-curso/archivadas o con datos reales se
+ * bloquean. `cl` es una fila de la BD (work_log/supplies/photos son JSON en string). */
+export function canDeleteCleaning(cl) {
+  return (cl.status === 'pendiente' || cl.status === 'asignada')
+    && JSON.parse(cl.work_log || '[]').length === 0
+    && JSON.parse(cl.supplies || '[]').length === 0
+    && JSON.parse(cl.photos || '[]').length === 0
+}

@@ -9,7 +9,7 @@ import { bodyLimit } from 'hono/body-limit'
 import { Hono } from 'hono'
 import { z } from 'zod'
 import * as auth from './auth.js'
-import { audit, openDb, kvGet, kvSet, encryptSecret, decryptSecret, hydrateCleaning } from './db.js'
+import { audit, openDb, kvGet, kvSet, encryptSecret, decryptSecret, hydrateCleaning, canDeleteCleaning } from './db.js'
 import { syncAll, syncStatus } from './sync.js'
 import { fetchIcs, icsToReservations, parseIcs } from './ical.js'
 import { seedDemo } from './seed-demo.js'
@@ -797,6 +797,19 @@ guarded.put('/cleanings/:id', async (c) => {
   const cleaning = db.prepare('SELECT * FROM cleanings WHERE id = ?').get(existing.id)
   aud(c, 'update', 'cleaning', existing.id, JSON.stringify(Object.keys(d)))
   return c.json({ ok: true, cleaning })
+})
+
+/* Eliminar una limpieza NO realizada (issue #40): solo pendiente/asignada y sin
+   horas, productos ni fotos. Las en-curso/archivadas o con datos reales se bloquean.
+   No toca la reserva de origen (si la limpieza venía de una). */
+guarded.delete('/cleanings/:id', (c) => {
+  const db = c.get('db')
+  const existing = db.prepare('SELECT * FROM cleanings WHERE id = ?').get(c.req.param('id'))
+  if (!existing) return c.json({ error: 'no encontrada' }, 404)
+  if (!canDeleteCleaning(existing)) return c.json({ error: 'no se puede eliminar: la limpieza ya se realizó o tiene datos', code: 'not-deletable' }, 409)
+  db.prepare('DELETE FROM cleanings WHERE id = ?').run(existing.id)
+  aud(c, 'delete', 'cleaning', existing.id, `${existing.property_id} ${existing.date}`)
+  return c.json({ ok: true })
 })
 
 /* Preferencias de la app (admin): horarios, umbral batería, limpieza automática */

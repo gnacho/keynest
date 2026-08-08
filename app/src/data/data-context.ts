@@ -89,6 +89,8 @@ export interface DataApi {
   /** Actualiza las instrucciones de ESTA limpieza (snapshot heredado del inmueble;
    *  editar aquí no toca el maestro del inmueble). */
   updateCleaningInstructions: (id: string, instructions: string) => Promise<void>;
+  /** Elimina una limpieza no realizada (pendiente/asignada sin horas, productos ni fotos). */
+  deleteCleaning: (id: string) => Promise<void>;
 
   /** Actualiza importe manual y/o notas de una reserva. */
   updateReservation: (id: string, patch: { amount?: number; notes?: string }) => Promise<void>;

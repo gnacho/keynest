@@ -501,7 +501,10 @@
     "instruccionesPlaceholder": "Instructions for this cleaning: access, supplies, incidents…",
     "instruccionesAyuda": "Inherited from the property and then independent: changes do not affect the property.",
     "sinInstrucciones": "No specific instructions.",
-    "sinInstruccionesAnadir": "No instructions for this cleaning."
+    "sinInstruccionesAnadir": "No instructions for this cleaning.",
+    "eliminar": "Delete",
+    "eliminarTitulo": "Delete cleaning",
+    "eliminarDesc": "This cleaning will be permanently deleted. This cannot be undone."
   },
   "aj": {
     "inmuebles": "Properties",

@@ -2,7 +2,7 @@ import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { openDb, hydrateCleaning } from '../src/db.js';
+import { openDb, hydrateCleaning, canDeleteCleaning } from '../src/db.js';
 
 let dir;
 let db;
@@ -84,5 +84,50 @@ describe('issue #39 — snapshot de checklist + instrucciones por limpieza', () 
     const propsAfter = db.prepare('SELECT instructions FROM properties WHERE id = ?').get('p3');
     expect(propsAfter.instructions).toBe(propsBefore.instructions);
     expect(propsAfter.instructions).toBe('MAESTRO');
+  });
+});
+
+describe('issue #40 — borrado de limpiezas no realizadas (canDeleteCleaning)', () => {
+  const mk = (overrides = {}) => ({
+    status: 'pendiente',
+    work_log: '[]',
+    supplies: '[]',
+    photos: '[]',
+    ...overrides,
+  });
+
+  it('una limpieza pendiente/asignada sin datos es eliminable', () => {
+    expect(canDeleteCleaning(mk({ status: 'pendiente' }))).toBe(true);
+    expect(canDeleteCleaning(mk({ status: 'asignada' }))).toBe(true);
+    expect(canDeleteCleaning(mk({ status: 'asignada', work_log: null, supplies: null, photos: null }))).toBe(true);
+  });
+
+  it('una limpieza en-curso o archivada NO es eliminable', () => {
+    expect(canDeleteCleaning(mk({ status: 'en-curso' }))).toBe(false);
+    expect(canDeleteCleaning(mk({ status: 'archivada' }))).toBe(false);
+  });
+
+  it('una limpieza con fotos/horas/productos NO es eliminable', () => {
+    expect(canDeleteCleaning(mk({ photos: '["/photos/x.webp"]' }))).toBe(false);
+    expect(canDeleteCleaning(mk({ work_log: '[{"personId":"p","hours":1}]' }))).toBe(false);
+    expect(canDeleteCleaning(mk({ supplies: '[{"label":"lejía","amount":2}]' }))).toBe(false);
+  });
+
+  it('el borrado en BD elimina la limpieza sin tocar otras ni la reserva origen', () => {
+    insertProperty('p-del', { checklist: ['A'], instructions: 'x' });
+    db.prepare(`INSERT INTO reservations (id, property_id, uid, checkin, checkout, summary, created_at)
+                VALUES ('r-origen','p-del','uid-del','2026-08-01','2026-08-05','R',0)`).run();
+    insertCleaning('c-del', 'p-del', { checks: '[]', instructions: null });
+    db.prepare('UPDATE cleanings SET reservation_id = ? WHERE id = ?').run('r-origen', 'c-del');
+    insertCleaning('c-keep', 'p-del');
+
+    const row = db.prepare('SELECT * FROM cleanings WHERE id = ?').get('c-del');
+    expect(canDeleteCleaning(row)).toBe(true);
+    db.prepare('DELETE FROM cleanings WHERE id = ?').run('c-del');
+
+    expect(db.prepare('SELECT COUNT(*) n FROM cleanings WHERE id = ?').get('c-del').n).toBe(0);
+    expect(db.prepare('SELECT COUNT(*) n FROM cleanings WHERE id = ?').get('c-keep').n).toBe(1);
+    // la reserva de origen sigue intacta
+    expect(db.prepare('SELECT COUNT(*) n FROM reservations WHERE id = ?').get('r-origen').n).toBe(1);
   });
 });
