@@ -2,13 +2,14 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router';
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 import type { Variants } from 'framer-motion';
-import { Check, ChevronDown, ClipboardList, Phone, Pencil, Plus, Sparkles, X } from 'lucide-react';
+import { Check, ChevronDown, ClipboardList, Phone, Pencil, Plus, Sparkles, Trash2, X } from 'lucide-react';
 import CleaningPhotos from '@/components/tareas/CleaningPhotos';
 import PhotoLightbox from '@/components/tareas/PhotoLightbox';
 import PersonAvatar from '@/components/PersonAvatar';
 import PropertyAvatar from '@/components/PropertyAvatar';
 import StatusBadge from '@/components/StatusBadge';
 import MoneyText from '@/components/MoneyText';
+import ConfirmDialog from '@/components/ConfirmDialog';
 import AssignPopover from '@/components/tareas/AssignPopover';
 import ConfirmCleaningDialog from '@/components/tareas/ConfirmCleaningDialog';
 import HoursStepper from '@/components/tareas/HoursStepper';
@@ -67,11 +68,18 @@ export default function CleaningCard({ cleaning: c, variants, highlight = false,
   // Edición inline de las instrucciones propias de esta limpieza (no tocan el inmueble)
   const [instrEditing, setInstrEditing] = useState(false);
   const [instrDraft, setInstrDraft] = useState(c.instructions);
+  const [deleteOpen, setDeleteOpen] = useState(false);
 
   const done = c.checks.filter((k) => k.done).length;
   const total = c.checks.length;
   const allDone = total > 0 && done === total;
   const archived = c.status === 'archivada';
+  // Elimable: no realizada (pendiente/asignada) y sin horas, productos ni fotos
+  const canDelete = !archived
+    && (c.status === 'pendiente' || c.status === 'asignada')
+    && (c.workLog ?? []).length === 0
+    && (c.supplies ?? []).length === 0
+    && (c.photos ?? []).length === 0;
   const isToday = isSameDay(c.date, new Date());
   const retention = photoRetentionUntil(c.date);
 
@@ -526,7 +534,18 @@ export default function CleaningCard({ cleaning: c, variants, highlight = false,
         </div>
 
         {/* Acciones de estado: confirmar directo (sin paso intermedio "iniciar") */}
-        <div className="flex justify-end gap-2">
+        <div className="flex items-center justify-end gap-2">
+          {!data.isDemo && canDelete && (
+            <button
+              type="button"
+              onClick={() => setDeleteOpen(true)}
+              className="mr-auto flex h-9 items-center gap-1.5 rounded-xl border px-3 text-sm font-semibold transition-colors hover:bg-[var(--surface-2)]"
+              style={{ borderColor: 'var(--border)', color: 'var(--text-muted)' }}
+            >
+              <Trash2 className="h-4 w-4" />
+              {t('tareas.eliminar')}
+            </button>
+          )}
           {!data.isDemo && (c.status === 'asignada' || c.status === 'en-curso') && (
             <button
               type="button"
@@ -538,6 +557,16 @@ export default function CleaningCard({ cleaning: c, variants, highlight = false,
           )}
         </div>
       </div>
+
+      <ConfirmDialog
+        open={deleteOpen}
+        onOpenChange={setDeleteOpen}
+        title={t('tareas.eliminarTitulo')}
+        description={t('tareas.eliminarDesc')}
+        tone="danger"
+        confirmLabel={t('tareas.eliminar')}
+        onConfirm={() => { void data.deleteCleaning(c.id); }}
+      />
 
       <ConfirmCleaningDialog
         open={confirmOpen}

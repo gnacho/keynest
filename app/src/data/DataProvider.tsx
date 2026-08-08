@@ -513,6 +513,11 @@ export default function DataProvider({ children }: { children: ReactNode }) {
       updateCleaningInstructions: async (id, instructions) => {
         await putCleaning(id, { instructions });
       },
+      deleteCleaning: async (id) => {
+        await api(`/api/cleanings/${id}`, { method: 'DELETE' });
+        cleanings.current = cleanings.current.filter((c) => c.id !== id);
+        bump();
+      },
       createCleaning: async (propertyId, date, reservationId, force = false) => {
         const ymd = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
         const res = await fetch('/api/cleanings', {
