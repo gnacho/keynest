@@ -46,6 +46,10 @@ const MIGRATIONS = [
   // 13: notificaciones POR TIPO (notification_preferences) sustituyen al nivel
   //     all/important/none. La columna se elimina: las prefs son la única fuente.
   `ALTER TABLE users DROP COLUMN notification_level`,
+  // 14: snapshot de instrucciones POR LIMPIEZA. Se hereda del inmueble al crear la
+  //     limpieza y a partir de ahí es editable de forma independiente (nunca toca
+  //     el maestro). El checklist ya vivía por limpieza en `checks`.
+  `ALTER TABLE cleanings ADD COLUMN instructions TEXT DEFAULT ''`,
 ]
 
 export function migrate(db) {
@@ -287,4 +291,21 @@ export function decryptSecret(db, stored) {
 export function audit(db, userId, action, entity, entityId, detail = '') {
   db.prepare('INSERT INTO audit_log (user_id, action, entity, entity_id, detail, at) VALUES (?, ?, ?, ?, ?, ?)')
     .run(userId || '', action, entity, entityId || '', String(detail).slice(0, 500), Date.now())
+}
+
+/* ---- Snapshot por limpieza (issue #39) ----
+ * Las limpiezas antiguas (pre-migración 14, o con checks vacíos pre-asignación)
+ * hidratan en caliente el checklist y las instrucciones del inmueble. En cuanto
+ * se editan, fijan su propia copia y dejan de depender del maestro.
+ * `properties` debe traer `checklist` ya parseado (array) e `instructions` (string). */
+export function hydrateCleaning(cl, properties) {
+  if (JSON.parse(cl.checks || '[]').length === 0) {
+    const prop = properties.find((p) => p.id === cl.property_id)
+    if (prop) cl.checks = JSON.stringify(prop.checklist.map((label, i) => ({ id: `chk-${i}`, label, done: false })))
+  }
+  if (!cl.instructions) {
+    const prop = properties.find((p) => p.id === cl.property_id)
+    if (prop) cl.instructions = prop.instructions ?? ''
+  }
+  return cl
 }

@@ -9,7 +9,7 @@ import { bodyLimit } from 'hono/body-limit'
 import { Hono } from 'hono'
 import { z } from 'zod'
 import * as auth from './auth.js'
-import { audit, openDb, kvGet, kvSet, encryptSecret, decryptSecret } from './db.js'
+import { audit, openDb, kvGet, kvSet, encryptSecret, decryptSecret, hydrateCleaning } from './db.js'
 import { syncAll, syncStatus } from './sync.js'
 import { fetchIcs, icsToReservations, parseIcs } from './ical.js'
 import { seedDemo } from './seed-demo.js'
@@ -407,14 +407,7 @@ guarded.get('/bootstrap', (c) => {
     .map((p) => ({ ...p, checklist: JSON.parse(p.checklist || '[]') }))
   const reservations = db.prepare('SELECT * FROM reservations ORDER BY checkin').all()
   const cleanings = db.prepare('SELECT * FROM cleanings ORDER BY date').all()
-    .map((cl) => {
-      // Limpiezas antiguas sin checks: heredan el checklist actual del inmueble
-      if (JSON.parse(cl.checks || '[]').length === 0) {
-        const prop = properties.find((p) => p.id === cl.property_id)
-        if (prop) cl.checks = JSON.stringify(prop.checklist.map((label, i) => ({ id: `chk-${i}`, label, done: false })))
-      }
-      return cl
-    })
+    .map((cl) => hydrateCleaning(cl, properties))
   const maintenance = db.prepare('SELECT * FROM maintenance_tasks ORDER BY created_at DESC').all()
     .map((t) => ({ ...t, has_token: Boolean(t.token_hash), token_hash: undefined }))
   const people = db.prepare('SELECT id, name, phone, role, specialty, hourly_rate, token_hash, created_at FROM people ORDER BY created_at').all()
@@ -537,10 +530,13 @@ guarded.post('/cleanings', async (c) => {
 
   const checklist = JSON.parse(property.checklist || '[]')
   const checks = checklist.map((label, i) => ({ id: `chk-${i}`, label, done: false }))
+  // Snapshot de instrucciones heredado del inmueble; a partir de aquí la limpieza
+  // es dueña de su copia (editable sin tocar el maestro).
+  const instructions = property.instructions ?? ''
   const id = crypto.randomUUID()
-  db.prepare(`INSERT INTO cleanings (id, property_id, reservation_id, date, status, assignee_ids, estimated_hours, checks, photos, created_at)
-              VALUES (?, ?, ?, ?, 'pendiente', '[]', 2, ?, '[]', ?)`)
-    .run(id, d.propertyId, d.reservationId ?? null, d.date, JSON.stringify(checks), Date.now())
+  db.prepare(`INSERT INTO cleanings (id, property_id, reservation_id, date, status, assignee_ids, estimated_hours, checks, instructions, photos, created_at)
+              VALUES (?, ?, ?, ?, 'pendiente', '[]', 2, ?, ?, '[]', ?)`)
+    .run(id, d.propertyId, d.reservationId ?? null, d.date, JSON.stringify(checks), instructions, Date.now())
   const cleaning = db.prepare('SELECT * FROM cleanings WHERE id = ?').get(id)
   aud(c, 'create', 'cleaning', id, `${d.propertyId} ${d.date}`)
   return c.json({ ok: true, cleaning }, 201)
@@ -755,12 +751,13 @@ guarded.delete('/people/:id/token', (c) => {
   return c.json({ ok: true })
 })
 
-/* Actualización de limpieza (asignación, estado, checks, fotos, confirmación) */
+/* Actualización de limpieza (asignación, estado, checks, instrucciones, fotos, confirmación) */
 const cleaningUpdateSchema = z.object({
   status: z.enum(['pendiente', 'asignada', 'en-curso', 'archivada']).optional(),
   assigneeIds: z.array(z.string()).max(2).optional(),
   estimatedHours: z.coerce.number().min(0).optional(),
   checks: z.array(z.object({ id: z.string(), label: z.string(), done: z.boolean() })).optional(),
+  instructions: z.string().optional(),
   photos: z.array(z.string()).optional(),
   workLog: z.array(z.object({ personId: z.string(), hours: z.number() })).optional(),
   supplies: z.array(z.object({ label: z.string(), amount: z.number() })).optional(),
@@ -779,6 +776,7 @@ guarded.put('/cleanings/:id', async (c) => {
     assignee_ids = COALESCE(?, assignee_ids),
     estimated_hours = COALESCE(?, estimated_hours),
     checks = COALESCE(?, checks),
+    instructions = COALESCE(?, instructions),
     photos = COALESCE(?, photos),
     work_log = COALESCE(?, work_log),
     supplies = COALESCE(?, supplies),
@@ -789,6 +787,7 @@ guarded.put('/cleanings/:id', async (c) => {
       d.assigneeIds ? JSON.stringify(d.assigneeIds) : null,
       d.estimatedHours ?? null,
       d.checks ? JSON.stringify(d.checks) : null,
+      d.instructions ?? null,
       d.photos ? JSON.stringify(d.photos) : null,
       d.workLog ? JSON.stringify(d.workLog) : null,
       d.supplies ? JSON.stringify(d.supplies) : null,
@@ -855,16 +854,10 @@ app.get('/api/t/:token', (c) => {
     const cleanings = prodDb.prepare(
       `SELECT * FROM cleanings
        WHERE status != 'archivada'
-         AND EXISTS (SELECT 1 FROM json_each(assignee_ids) WHERE value = ?)
+          AND EXISTS (SELECT 1 FROM json_each(assignee_ids) WHERE value = ?)
        ORDER BY date`,
     ).all(person.id)
-      .map((cl) => {
-        if (JSON.parse(cl.checks || '[]').length === 0) {
-          const prop = props.find((p) => p.id === cl.property_id)
-          if (prop) cl.checks = JSON.stringify(prop.checklist.map((label, i) => ({ id: `chk-${i}`, label, done: false })))
-        }
-        return cl
-      })
+      .map((cl) => hydrateCleaning(cl, props))
     return c.json({ type: 'person', person, cleanings, properties: props })
   }
   // Token POR ORDEN de trabajo (proveedor): la orden + su inmueble + su asignado

@@ -494,7 +494,14 @@
     "reabierta": "Limpieza reabierta",
     "editada": "Limpieza actualizada",
     "guardarCambios": "Guardar cambios",
-    "fotosEliminadas": "Las fotos de esta limpieza se han eliminado tras 1 mes."
+    "fotosEliminadas": "Las fotos de esta limpieza se han eliminado tras 1 mes.",
+    "instruccionesLimpieza": "Instrucciones",
+    "editarInstrucciones": "Editar",
+    "anadirInstrucciones": "Añadir instrucciones",
+    "instruccionesPlaceholder": "Instrucciones para esta limpieza: acceso, productos, incidencias…",
+    "instruccionesAyuda": "Se heredan del inmueble y son independientes: los cambios no afectan al inmueble.",
+    "sinInstrucciones": "Sin instrucciones específicas.",
+    "sinInstruccionesAnadir": "Sin instrucciones para esta limpieza."
   },
   "aj": {
     "inmuebles": "Inmuebles",
