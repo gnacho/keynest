@@ -539,8 +539,8 @@ export default function CleaningCard({ cleaning: c, variants, highlight = false,
             <button
               type="button"
               onClick={() => setDeleteOpen(true)}
-              className="mr-auto flex h-9 items-center gap-1.5 rounded-xl border px-3 text-sm font-semibold transition-colors hover:bg-[var(--surface-2)]"
-              style={{ borderColor: 'var(--border)', color: 'var(--text-muted)' }}
+              className="mr-auto flex h-9 items-center gap-1.5 rounded-xl border px-3 text-sm font-semibold text-rose-500 transition-colors hover:bg-[var(--ro-chip-bg)]"
+              style={{ borderColor: 'rgb(244 63 94 / 0.5)' }}
             >
               <Trash2 className="h-4 w-4" />
               {t('tareas.eliminar')}
