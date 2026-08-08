@@ -230,7 +230,7 @@ export default function Dashboard() {
             const dd = dayDiff(kind === 'in' ? r.checkIn : r.checkOut);
             return (
               <span
-                className="text-[11px] font-bold uppercase tracking-wide"
+                className="text-[11px] font-bold uppercase tracking-wide md:text-xl md:tracking-tight"
                 style={{ color: dd === 0 ? '#F43F5E' : dd === 1 ? '#F97316' : 'var(--text-faint)' }}
               >
                 {dd === 0 ? t('dash.hoy') : dd === 1 ? t('common.manana') : fmtDateShort(kind === 'in' ? r.checkIn : r.checkOut)}
