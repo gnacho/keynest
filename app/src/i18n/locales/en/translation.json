@@ -494,7 +494,14 @@
     "reabierta": "Cleaning reopened",
     "editada": "Cleaning updated",
     "guardarCambios": "Save changes",
-    "fotosEliminadas": "The photos for this cleaning were deleted after 1 month."
+    "fotosEliminadas": "The photos for this cleaning were deleted after 1 month.",
+    "instruccionesLimpieza": "Instructions",
+    "editarInstrucciones": "Edit",
+    "anadirInstrucciones": "Add instructions",
+    "instruccionesPlaceholder": "Instructions for this cleaning: access, supplies, incidents…",
+    "instruccionesAyuda": "Inherited from the property and then independent: changes do not affect the property.",
+    "sinInstrucciones": "No specific instructions.",
+    "sinInstruccionesAnadir": "No instructions for this cleaning."
   },
   "aj": {
     "inmuebles": "Properties",

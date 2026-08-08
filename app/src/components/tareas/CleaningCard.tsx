@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router';
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 import type { Variants } from 'framer-motion';
-import { Check, ChevronDown, Phone, Sparkles, X } from 'lucide-react';
+import { Check, ChevronDown, ClipboardList, Phone, Pencil, Plus, Sparkles, X } from 'lucide-react';
 import CleaningPhotos from '@/components/tareas/CleaningPhotos';
 import PhotoLightbox from '@/components/tareas/PhotoLightbox';
 import PersonAvatar from '@/components/PersonAvatar';
@@ -64,6 +64,9 @@ export default function CleaningCard({ cleaning: c, variants, highlight = false,
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [expanded, setExpanded] = useState(false);
   const [photoViewer, setPhotoViewer] = useState<number | null>(null);
+  // Edición inline de las instrucciones propias de esta limpieza (no tocan el inmueble)
+  const [instrEditing, setInstrEditing] = useState(false);
+  const [instrDraft, setInstrDraft] = useState(c.instructions);
 
   const done = c.checks.filter((k) => k.done).length;
   const total = c.checks.length;
@@ -360,7 +363,72 @@ export default function CleaningCard({ cleaning: c, variants, highlight = false,
           </AnimatePresence>
         </div>
 
-        {/* 2) Asignación (hasta 2 personas) + previsión de horas */}
+        {/* 2) Instrucciones de la limpieza — snapshot heredado del inmueble, editable
+              aquí sin tocar el maestro. Las personas de limpieza las ven (solo lectura). */}
+        <div className="rounded-2xl border p-3" style={{ borderColor: 'var(--border)', backgroundColor: 'var(--surface-2)' }}>
+          <div className="mb-1.5 flex items-center justify-between gap-2">
+            <p className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-[0.08em]" style={{ color: 'var(--text-faint)' }}>
+              <ClipboardList className="h-3.5 w-3.5 text-violet-500" />
+              {t('tareas.instruccionesLimpieza')}
+            </p>
+            {!data.isDemo && !instrEditing && (
+              <button
+                type="button"
+                onClick={() => { setInstrDraft(c.instructions); setInstrEditing(true); }}
+                className="flex h-7 items-center gap-1 rounded-lg border px-2 text-[11px] font-semibold transition-colors hover:bg-[var(--surface)]"
+                style={{ borderColor: 'var(--border)', color: 'var(--text-muted)' }}
+              >
+                {c.instructions ? <Pencil className="h-3 w-3" /> : <Plus className="h-3 w-3" />}
+                {c.instructions ? t('tareas.editarInstrucciones') : t('tareas.anadirInstrucciones')}
+              </button>
+            )}
+          </div>
+          {instrEditing ? (
+            <div className="flex flex-col gap-2">
+              <textarea
+                value={instrDraft}
+                onChange={(e) => setInstrDraft(e.target.value)}
+                rows={4}
+                placeholder={t('tareas.instruccionesPlaceholder')}
+                className="w-full resize-y rounded-xl border bg-[var(--surface)] p-2.5 text-[13px] leading-[1.5] outline-none focus:border-violet-400"
+                style={{ borderColor: 'var(--border)', color: 'var(--text)' }}
+              />
+              <p className="text-[11px]" style={{ color: 'var(--text-faint)' }}>
+                {t('tareas.instruccionesAyuda')}
+              </p>
+              <div className="flex justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => setInstrEditing(false)}
+                  className="flex h-8 items-center rounded-xl border px-3 text-xs font-semibold transition-colors hover:bg-[var(--surface-2)]"
+                  style={{ borderColor: 'var(--border)', color: 'var(--text-muted)' }}
+                >
+                  {t('common.cancelar')}
+                </button>
+                <button
+                  type="button"
+                  onClick={async () => {
+                    await data.updateCleaningInstructions(c.id, instrDraft);
+                    setInstrEditing(false);
+                  }}
+                  className="flex h-8 items-center rounded-xl bg-violet-500 px-3 text-xs font-semibold text-white transition-all duration-150 hover:brightness-110 active:scale-[0.98]"
+                >
+                  {t('common.guardar')}
+                </button>
+              </div>
+            </div>
+          ) : c.instructions ? (
+            <p className="whitespace-pre-line text-[13px] leading-[1.55]" style={{ color: 'var(--text)' }}>
+              {c.instructions}
+            </p>
+          ) : (
+            <p className="text-[12px] italic" style={{ color: 'var(--text-faint)' }}>
+              {data.isDemo ? t('tareas.sinInstrucciones') : t('tareas.sinInstruccionesAnadir')}
+            </p>
+          )}
+        </div>
+
+        {/* 3) Asignación (hasta 2 personas) + previsión de horas */}
         <div>
           <p
             className="mb-1.5 text-[11px] font-semibold uppercase tracking-[0.08em]"
@@ -436,7 +504,7 @@ export default function CleaningCard({ cleaning: c, variants, highlight = false,
           )}
         </div>
 
-        {/* 3) Fotos reales (galería/cámara) + retención */}
+        {/* 4) Fotos reales (galería/cámara) + retención */}
         <div>
           <CleaningPhotos
             photos={photos}

@@ -305,6 +305,7 @@ export const CLEANINGS: Cleaning[] = CLEAN_SPECS.map((s, i) => {
     assigneeIds: s.assigneeIds ?? [],
     estimatedHours: s.estimatedHours,
     checks: checksFor(s.propertyId, s.checksDone),
+    instructions: PROPERTIES.find((p) => p.id === s.propertyId)?.instructions ?? '',
     workLog: s.workLog?.map((w) => ({ ...w })),
     supplies,
     materials: supplies?.reduce((acc, x) => acc + x.amount, 0),

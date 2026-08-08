@@ -86,6 +86,9 @@ export interface DataApi {
   uploadCleaningPhoto: (id: string, file: File) => Promise<string[] | undefined>;
   /** Sustituye la lista de fotos de la limpieza (p. ej. al borrar una). */
   updateCleaningPhotos: (id: string, photos: string[]) => Promise<void>;
+  /** Actualiza las instrucciones de ESTA limpieza (snapshot heredado del inmueble;
+   *  editar aquí no toca el maestro del inmueble). */
+  updateCleaningInstructions: (id: string, instructions: string) => Promise<void>;
 
   /** Actualiza importe manual y/o notas de una reserva. */
   updateReservation: (id: string, patch: { amount?: number; notes?: string }) => Promise<void>;

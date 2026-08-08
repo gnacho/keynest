@@ -51,6 +51,7 @@ interface ApiCleaningRow {
   assignee_ids: string;
   estimated_hours: number;
   checks: string;
+  instructions?: string | null;
   photos: string;
 }
 
@@ -80,6 +81,7 @@ function mapCleaning(row: ApiCleaningRow): Cleaning {
     assigneeIds: parseJson<string[]>(row.assignee_ids, []),
     estimatedHours: row.estimated_hours,
     checks: parseJson(row.checks, []),
+    instructions: row.instructions ?? '',
     photos: parseJson<string[]>(row.photos, []),
   };
 }
@@ -326,15 +328,15 @@ function TokenCleaningCard({
         </span>
       </div>
 
-      {/* 1) Instrucciones del inmueble — texto largo, distinto del checklist */}
-      {property.instructions && (
+      {/* 1) Instrucciones de la limpieza (snapshot propio, heredado del inmueble) */}
+      {c.instructions && (
         <div className="mt-3 rounded-2xl border p-3" style={{ borderColor: 'var(--border)', backgroundColor: 'var(--surface-2)' }}>
           <p className="mb-1.5 flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-[0.08em]" style={{ color: 'var(--text-faint)' }}>
             <ClipboardList className="h-3.5 w-3.5 text-violet-500" />
             {t('tok.instrucciones', { name: property.name })}
           </p>
           <p className="whitespace-pre-line text-[13px] leading-[1.55]" style={{ color: 'var(--text)' }}>
-            {property.instructions}
+            {c.instructions}
           </p>
         </div>
       )}

@@ -117,6 +117,9 @@ export interface Cleaning {
   /** Previsión de horas POR PERSONA (al asignar; por defecto 2 h). */
   estimatedHours?: number;
   checks: CleaningCheck[];
+  /** Instrucciones de limpieza de ESTA limpieza (snapshot heredado del inmueble
+   * al crearla; editable por limpieza sin tocar el maestro del inmueble). */
+  instructions: string;
   /** Horas reales por persona (al confirmar). */
   workLog?: CleaningWorkEntry[];
   /** Productos de limpieza (al confirmar); su suma se guarda en `materials`. */

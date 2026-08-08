@@ -156,6 +156,7 @@ interface ApiCleaning {
   id: string; property_id: string; reservation_id: string | null; date: string;
   status: Cleaning['status']; assignee_ids: string; estimated_hours: number;
   checks: { id: string; label: string; done: boolean }[] | string;
+  instructions?: string | null;
   photos: string[] | string; created_at: number;
   work_log?: { personId: string; hours: number }[] | string | null;
   supplies?: { label: string; amount: number }[] | string | null;
@@ -190,6 +191,7 @@ function mapCleaning(row: ApiCleaning): Cleaning {
     assigneeIds: parseJson<string[]>(row.assignee_ids, []),
     estimatedHours: row.estimated_hours,
     checks: parseJson(row.checks, []),
+    instructions: row.instructions ?? '',
     workLog: parseJson(row.work_log ?? undefined, undefined as unknown as Cleaning['workLog']),
     supplies: parseJson(row.supplies ?? undefined, undefined as unknown as Cleaning['supplies']),
     materials: row.materials ?? undefined,
@@ -507,6 +509,9 @@ export default function DataProvider({ children }: { children: ReactNode }) {
       },
       updateCleaningPhotos: async (id, photos) => {
         await putCleaning(id, { photos });
+      },
+      updateCleaningInstructions: async (id, instructions) => {
+        await putCleaning(id, { instructions });
       },
       createCleaning: async (propertyId, date, reservationId, force = false) => {
         const ymd = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
