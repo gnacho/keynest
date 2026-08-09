@@ -22,6 +22,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import PersonAvatar from '@/components/PersonAvatar';
 import UpdateRibbon from '@/components/UpdateRibbon';
 import AirbnbSessionRibbon from '@/components/AirbnbSessionRibbon';
+import PullToRefresh from '@/components/PullToRefresh';
 import { useUpdateAvailable } from '@/hooks/useUpdateAvailable';
 import { useTheme } from '@/theme/ThemeProvider';
 import { useData } from '@/data/useData';
@@ -368,6 +369,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
           </header>
 
           <main className="mx-auto w-full max-w-[1440px] px-4 pb-24 pt-[72px] md:px-8 md:pb-10 md:pt-7">
+            <PullToRefresh>
             {updateAvailable && (
               <div
                 role="status"
@@ -429,6 +431,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
                 {children}
               </motion.div>
             </AnimatePresence>
+            </PullToRefresh>
           </main>
         </div>
 
