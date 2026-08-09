@@ -333,7 +333,7 @@ export default function CleaningCard({ cleaning: c, variants, highlight = false,
           type="button"
           onClick={() => setBodyOpen((o) => !o)}
           aria-expanded={bodyOpen}
-          className="ml-auto flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] font-semibold transition-colors lg:hidden"
+          className="ml-auto flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] font-semibold transition-colors"
           style={{ borderColor: 'var(--border)', color: 'var(--text-muted)' }}
         >
           {t('tareas.detalles')}
@@ -342,7 +342,7 @@ export default function CleaningCard({ cleaning: c, variants, highlight = false,
       </div>
 
       {/* Cuerpo: en móvil colapsable, en desktop siempre visible */}
-      <div className={cn('mt-3 flex flex-col gap-3', !bodyOpen && 'hidden lg:flex')}>
+      <div className={cn('mt-3 flex flex-col gap-3', !bodyOpen && 'hidden')}>
         {/* 1) CHECKLIST DEL INMUEBLE — lo primero que mira la persona de limpieza */}
         <div className="rounded-2xl border p-3" style={{ borderColor: 'var(--border)', backgroundColor: 'var(--surface-2)' }}>
           <p
