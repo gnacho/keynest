@@ -200,7 +200,8 @@
     "importeManual": "Amount (€, manual)",
     "notasReserva": "Notes",
     "notasReservaPlaceholder": "Free text about this reservation…",
-    "reservaActualizada": "Reservation updated"
+    "reservaActualizada": "Reservation updated",
+    "errorCrearReserva": "Could not create the reservation"
   },
   "estadoReserva": {
     "confirmada": "Confirmed",
@@ -288,7 +289,9 @@
     "errorOcupada": "Cannot schedule: the date is occupied",
     "avisoOcupada": "The property is booked on that day. Create the cleaning anyway?",
     "crearIgualmente": "Create anyway",
-    "errorCrear": "Could not create the cleaning"
+    "errorCrear": "Could not create the cleaning",
+    "avisos": "{{count}} unassigned cleaning",
+    "avisos_other": "{{count}} unassigned cleanings"
   },
   "mant": {
     "titulo": "Maintenance",

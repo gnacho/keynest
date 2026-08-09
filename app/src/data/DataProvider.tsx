@@ -423,6 +423,23 @@ export default function DataProvider({ children }: { children: ReactNode }) {
         if (idx >= 0) reservations.current[idx] = mapped;
         bump();
       },
+      addReservation: async (input: {
+        propertyId: string;
+        guestName: string;
+        checkin: string;
+        checkout: string;
+        guests?: number;
+        amount?: number;
+      }) => {
+        const res = await api<{ reservation: ApiReservation }>('/api/reservations', {
+          method: 'POST',
+          body: JSON.stringify(input),
+        });
+        const mapped = mapReservation(res.reservation);
+        reservations.current = [...reservations.current, mapped];
+        bump();
+        return mapped;
+      },
       addPerson: async (input) => {
         const res = await api<{ person: ApiPerson }>('/api/people', { method: 'POST', body: JSON.stringify(input) });
         const mapped = mapPerson(res.person);

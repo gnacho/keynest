@@ -94,6 +94,14 @@ export interface DataApi {
 
   /** Actualiza importe manual y/o notas de una reserva. */
   updateReservation: (id: string, patch: { amount?: number; notes?: string }) => Promise<void>;
+  addReservation: (input: {
+    propertyId: string;
+    guestName: string;
+    checkin: string;
+    checkout: string;
+    guests?: number;
+    amount?: number;
+  }) => Promise<Reservation>;
 
   /* Personas (staff) en BD */
   addPerson: (p: PersonInput) => Promise<Person | undefined>;
