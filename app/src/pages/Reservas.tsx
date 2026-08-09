@@ -433,7 +433,7 @@ export default function Reservas() {
             initial={painted || reduce ? false : { opacity: 0, y: 24 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: i * 0.07, ease: EASE_OUT_QUART }}
-            className="w-[46%] min-w-[170px] shrink-0 lg:w-auto lg:min-w-0"
+            className="h-full w-[46%] min-w-[170px] shrink-0 lg:w-auto lg:min-w-0"
           >
             {card}
           </motion.div>
