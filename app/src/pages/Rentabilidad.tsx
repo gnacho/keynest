@@ -279,7 +279,6 @@ export default function Rentabilidad() {
   const hasta = params.get('hasta') ?? '';
 
   const allProperties = data.getProperties();
-  const users = data.getUsers();
   // Filtro de rentabilidad por usuario (dueño del inmueble); por defecto todos.
   const properties =
     usuarioParam === 'todos' ? allProperties : allProperties.filter((p) => p.ownerId === usuarioParam);
@@ -544,20 +543,6 @@ export default function Rentabilidad() {
           </button>
         )}
 
-        {/* Filtro por usuario (dueño del inmueble) */}
-        <Select value={usuarioParam} onValueChange={(v) => setParam('usuario', v, v === 'todos')}>
-          <SelectTrigger className="h-9 w-auto min-w-[150px] gap-2 rounded-xl border-[var(--border)] bg-[var(--surface)] text-sm font-medium shadow-none">
-            <SelectValue placeholder={t('rent.todosUsuarios')} />
-          </SelectTrigger>
-          <SelectContent className="rounded-xl border-[var(--border)] bg-[var(--surface)]">
-            <SelectItem value="todos">{t('rent.todosUsuarios')}</SelectItem>
-            {users.map((u) => (
-              <SelectItem key={u.id} value={u.id}>
-                {u.name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
         {/* Selector de periodo estilo Helios: granularidad + navegación + Este mes */}
         <div
           role="tablist"
