@@ -238,6 +238,7 @@ export default function Ajustes() {
 
   /* ---- Categorías de mantenimiento: maestro en BD ---- */
   const [cats, setCats] = useState<MaintCategory[]>(() => data.getCategories().map((c) => ({ ...c })));
+  const [editingCat, setEditingCat] = useState<string | null>(null);
   useEffect(() => {
     setCats(data.getCategories().map((c) => ({ ...c })));
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -1082,44 +1083,74 @@ export default function Ajustes() {
                   const Icon = catIcon(c.icon);
                   return (
                     <motion.div key={c.key} variants={itemV} className="card min-w-0 flex items-center gap-3 p-3">
-                      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl" style={{ backgroundColor: 'var(--ro-chip-bg)' }}>
-                        <Icon className="h-4 w-4 text-rose-500" />
-                      </span>
-                      <span className="min-w-0 flex-1 truncate text-sm font-semibold">{c.label}</span>
-                      {!isDemoUser && (
-                        <>
-                          <input
-                            value={c.label}
-                            onChange={(e) => updateCat(c.key, { label: e.target.value })}
-                            placeholder={tr('aj.etiqueta')}
-                            className={cn(inputCls, 'h-9 min-w-0 flex-1')}
-                            style={inputStyle}
+                      {/* Icono clicable: abre el selector de iconos */}
+                      {isDemoUser ? (
+                        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl" style={{ backgroundColor: 'var(--ro-chip-bg)' }}>
+                          <Icon className="h-4 w-4 text-rose-500" />
+                        </span>
+                      ) : (
+                        <Select value={c.icon} onValueChange={(v) => updateCat(c.key, { icon: v })}>
+                          <SelectTrigger asChild>
+                            <button
+                              type="button"
+                              aria-label={tr('aj.cambiarIcono')}
+                              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl transition-colors hover:brightness-95"
+                              style={{ backgroundColor: 'var(--ro-chip-bg)' }}
+                            >
+                              <Icon className="h-4 w-4 text-rose-500" />
+                            </button>
+                          </SelectTrigger>
+                          <SelectContent className="rounded-xl border-[var(--border)] bg-[var(--surface)]">
+                            {Object.entries(CAT_ICONS).map(([name, Ico]) => (
+                              <SelectItem key={name} value={name}>
+                                <span className="flex items-center gap-2">
+                                  <Ico className="h-3.5 w-3.5" />
+                                  {name}
+                                </span>
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      )}
+                      {/* Texto: editable con icono de lápiz */}
+                      {isDemoUser ? (
+                        <span className="min-w-0 flex-1 truncate text-sm font-semibold">{c.label}</span>
+                      ) : editingCat === c.key ? (
+                        <input
+                          autoFocus
+                          value={c.label}
+                          onChange={(e) => updateCat(c.key, { label: e.target.value })}
+                          onBlur={() => setEditingCat(null)}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') setEditingCat(null);
+                          }}
+                          placeholder={tr('aj.etiqueta')}
+                          className={cn(inputCls, 'h-9 min-w-0 flex-1')}
+                          style={inputStyle}
+                        />
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => setEditingCat(c.key)}
+                          className="group flex min-w-0 flex-1 items-center gap-2 text-left"
+                        >
+                          <span className="min-w-0 truncate text-sm font-semibold">{c.label}</span>
+                          <Pencil
+                            className="h-3.5 w-3.5 shrink-0 opacity-50 transition-opacity group-hover:opacity-100"
+                            style={{ color: 'var(--text-muted)' }}
                           />
-                          <Select value={c.icon} onValueChange={(v) => updateCat(c.key, { icon: v })}>
-                            <SelectTrigger className="h-9 w-[130px] rounded-xl border-[var(--border)] bg-[var(--surface)] text-sm shadow-none">
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent className="rounded-xl border-[var(--border)] bg-[var(--surface)]">
-                              {Object.entries(CAT_ICONS).map(([name, Ico]) => (
-                                <SelectItem key={name} value={name}>
-                                  <span className="flex items-center gap-2">
-                                    <Ico className="h-3.5 w-3.5" />
-                                    {name}
-                                  </span>
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                          <button
-                            type="button"
-                            onClick={() => removeCat(c.key)}
-                            aria-label={tr('aj.eliminar')}
-                            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg transition-colors hover:bg-[var(--ro-chip-bg)]"
-                            style={{ color: '#F43F5E' }}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </button>
-                        </>
+                        </button>
+                      )}
+                      {!isDemoUser && (
+                        <button
+                          type="button"
+                          onClick={() => removeCat(c.key)}
+                          aria-label={tr('aj.eliminar')}
+                          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg transition-colors hover:bg-[var(--ro-chip-bg)]"
+                          style={{ color: '#F43F5E' }}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
                       )}
                     </motion.div>
                   );

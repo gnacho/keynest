@@ -820,7 +820,8 @@
     "desactivar": "Desactivar",
     "pushRequiereHttps": "Las notificaciones push necesitan HTTPS (o localhost). Con acceso por IP local (http) están dormidas y se activarán solas cuando la app se sirva por HTTPS.",
     "guardando": "Guardando…",
-    "rolUsuario": "Usuario"
+    "rolUsuario": "Usuario",
+    "cambiarIcono": "Cambiar icono"
   },
   "common2": {
     "confirmar": "Confirmar",
