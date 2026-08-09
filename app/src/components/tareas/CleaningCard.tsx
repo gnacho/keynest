@@ -15,7 +15,7 @@ import ConfirmCleaningDialog from '@/components/tareas/ConfirmCleaningDialog';
 import HoursStepper from '@/components/tareas/HoursStepper';
 import { useTranslation } from 'react-i18next';
 import { useData } from '@/data/useData';
-import type { Cleaning, CleaningStatus } from '@/data/types';
+import type { Cleaning, CleaningStatus, SemColor } from '@/data/types';
 import {
   fmtDateShort,
   fmtDateLong,
@@ -23,7 +23,6 @@ import {
   fmtMonth,
   fmtNumber,
   fmtTime,
-  isSameDay,
   photoRetentionUntil,
 } from '@/lib/format';
 import { chipStyle } from '@/lib/semantic';
@@ -41,6 +40,14 @@ const STATUS_BORDER: Record<CleaningStatus, string> = {
   asignada: '#8B5CF6',
   'en-curso': '#3B82F6',
   archivada: '#64748B',
+};
+
+/* #68: asignada en verde, pendiente (no asignada) en rojo. */
+const STATUS_TONE: Record<CleaningStatus, SemColor> = {
+  pendiente: 'rose',
+  asignada: 'emerald',
+  'en-curso': 'blue',
+  archivada: 'slate',
 };
 
 interface CleaningCardProps {
@@ -84,7 +91,6 @@ export default function CleaningCard({ cleaning: c, variants, highlight = false,
     && (c.workLog ?? []).length === 0
     && (c.supplies ?? []).length === 0
     && (c.photos ?? []).length === 0;
-  const isToday = isSameDay(c.date, new Date());
   const retention = photoRetentionUntil(c.date);
 
   useEffect(() => {
@@ -295,31 +301,26 @@ export default function CleaningCard({ cleaning: c, variants, highlight = false,
             </div>
           </div>
         </div>
-        <div className="flex shrink-0 flex-col items-end gap-1.5">
-          <StatusBadge label={t(STATUS_LABEL_KEY[c.status])} dot={c.status === 'en-curso'} pulse={c.status === 'en-curso'} />
-          {/* Fecha de la limpieza grande (chip calendario, estilo #24) */}
-          <span
-            className="flex flex-col items-center justify-center rounded-lg border leading-none"
-            style={{ minWidth: '44px', padding: '3px 6px', borderColor: 'rgb(139 92 246 / 0.25)', backgroundColor: 'rgb(139 92 246 / 0.08)' }}
-          >
-            <span className="text-xl font-bold" style={{ color: '#8B5CF6' }}>
-              {c.date.getDate()}
-            </span>
-            <span className="mt-0.5 text-[10px] font-semibold uppercase tracking-wide" style={{ color: '#8B5CF6' }}>
-              {fmtMonth(c.date, true)}
-            </span>
+        {/* Fecha de la limpieza grande (chip calendario, estilo #24) + hora */}
+        <span
+          className="flex flex-col items-center justify-center rounded-lg border leading-none"
+          style={{ minWidth: '44px', padding: '3px 6px', borderColor: 'rgb(139 92 246 / 0.25)', backgroundColor: 'rgb(139 92 246 / 0.08)' }}
+        >
+          <span className="text-xl font-bold" style={{ color: '#8B5CF6' }}>
+            {c.date.getDate()}
           </span>
-        </div>
+          <span className="mt-0.5 text-[10px] font-semibold uppercase tracking-wide" style={{ color: '#8B5CF6' }}>
+            {fmtMonth(c.date, true)}
+          </span>
+          <span className="mt-0.5 text-[9px] font-medium tnum" style={{ color: '#8B5CF6' }}>
+            {fmtTime(c.date)}
+          </span>
+        </span>
       </div>
 
-      {/* Meta: salida + reserva origen + trigger de expand (móvil, junto a la salida) */}
+      {/* Meta: estado + reserva origen + trigger de expand (móvil) */}
       <div className="mt-2.5 flex flex-wrap items-center gap-2">
-        <span
-          className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold"
-          style={chipStyle(isToday ? 'orange' : 'slate')}
-        >
-          {isToday ? t('tareas.salidaHoy', { time: fmtTime(c.date) }) : t('tareas.salidaEl', { time: fmtTime(c.date), date: fmtDateShort(c.date) })}
-        </span>
+        <StatusBadge label={t(STATUS_LABEL_KEY[c.status])} tone={STATUS_TONE[c.status]} dot={c.status === 'en-curso'} pulse={c.status === 'en-curso'} />
         {reservation && (
           <Link
             to={`/reservas?inmueble=${property.slug}&reserva=${reservation.id}`}
