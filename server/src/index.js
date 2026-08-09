@@ -426,7 +426,7 @@ guarded.get('/bootstrap', (c) => {
     // Días de aviso del panel: preferencia POR USUARIO (0 = defecto global)
     lookaheadDays: c.get('user').lookahead_days || Number(kvGet(db, 'set_lookahead') || 7),
   }
-  const users = db.prepare('SELECT id, username AS name, phone, role, token FROM users').all()
+  const users = db.prepare('SELECT id, username AS name, phone, role FROM users').all()
   return c.json({ properties, reservations, cleanings, maintenance, people, categories: JSON.parse(categories), config: { ...settings }, sync: syncStatus(db), users, demo: c.get('user').is_demo, demoEnabled: auth.demoEnabled(prodDb) })
 })
 
