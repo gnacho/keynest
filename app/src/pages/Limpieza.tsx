@@ -102,13 +102,14 @@ export default function Limpieza() {
 
   return (
     <div className="flex flex-col gap-5">
-      {/* ============================== Topbar */}
-      <div className="flex items-start justify-end gap-3">
+      {/* ============================== Filtros + botón añadir (misma fila) */}
+      <div className="flex flex-wrap items-center gap-2">
+        <FilterBar className="mx-0 px-0" typeOptions={STATUS_OPTIONS.map((o) => ({ value: o.value, label: t(o.labelKey) }))} typeParam="estado" />
         {!data.isDemo && (
           <button
             type="button"
             onClick={() => setNewOpen(true)}
-            className="flex h-10 shrink-0 items-center gap-1.5 rounded-xl bg-violet-500 px-4 text-sm font-semibold text-white transition-all duration-150 hover:brightness-110 active:scale-[0.98]"
+            className="ml-auto flex h-10 shrink-0 items-center gap-1.5 rounded-xl bg-violet-500 px-4 text-sm font-semibold text-white transition-all duration-150 hover:brightness-110 active:scale-[0.98]"
           >
             <Plus className="h-4 w-4" />
             <span className="hidden sm:inline">{t('limp.nuevaLimpieza')}</span>
@@ -116,9 +117,6 @@ export default function Limpieza() {
           </button>
         )}
       </div>
-
-      {/* ============================== FilterBar */}
-      <FilterBar typeOptions={STATUS_OPTIONS.map((o) => ({ value: o.value, label: t(o.labelKey) }))} typeParam="estado" />
 
       {/* ============================== Alertas: limpiezas creadas sin asignar */}
       {alertas.length > 0 && (
