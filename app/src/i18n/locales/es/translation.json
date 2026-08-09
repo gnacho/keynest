@@ -41,6 +41,7 @@
   "common": {
     "guardar": "Guardar",
     "cancelar": "Cancelar",
+    "listos": "Listo",
     "cargando": "Cargando…",
     "hoy": "hoy",
     "si": "Sí",
@@ -540,6 +541,7 @@
     "nuevoInmueble": "Nuevo inmueble",
     "editarInmueble": "Editar inmueble",
     "editar": "Editar {{name}}",
+    "editarCampo": "Editar",
     "nuevoDesc": "Dalo de alta y pega la URL iCal de Airbnb para sincronizar sus reservas.",
     "editarDesc": "{{name}} · el checklist se aplica a las limpiezas de este inmueble.",
     "inmuebleCreado": "Inmueble creado",
