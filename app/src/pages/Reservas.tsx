@@ -625,20 +625,30 @@ export default function Reservas() {
                   className="-m-3.5 rounded-2xl p-3.5"
                 >
                   <button type="button" onClick={() => toggleExpand(r.id)} className="flex w-full flex-col gap-2.5 text-left">
+                    {/* Fila 1: avatar + nombre + guests + estado */}
                     <span className="flex items-center gap-2.5">
                       <PersonAvatar name={r.guest.name} initials={r.guest.initials} size={32} />
                       <span className="min-w-0 flex-1">
-                        <span className="block truncate text-sm font-semibold">{r.guest.name}</span>
+                        <span className="flex items-center gap-1.5">
+                          <span className="truncate text-sm font-semibold">{r.guest.name}</span>
+                          <span className="flex shrink-0 items-center gap-0.5 text-xs" style={{ color: 'var(--text-muted)' }}>
+                            <Users className="h-3.5 w-3.5" />
+                            <span className="tnum">{r.guestsCount}</span>
+                          </span>
+                        </span>
                         <span className="block truncate text-xs" style={{ color: 'var(--text-muted)' }}>
                           {r.guest.country}
                         </span>
                       </span>
                       <StatusBadge label={t(`estadoReserva.${r.status}`)} />
                     </span>
+                    {/* Fila 2: inmueble + importe en la misma horizontal */}
                     <span className="flex items-center gap-2">
                       <PropertyAvatar property={p} size={28} />
-                      <span className="truncate text-[13px] font-medium">{p.name}</span>
+                      <span className="min-w-0 flex-1 truncate text-[13px] font-medium">{p.name}</span>
+                      <MoneyText value={r.amount} className="shrink-0 text-sm text-emerald-500" />
                     </span>
+                    {/* Fila 3: fechas + noches + peticiones + chevron expand */}
                     <span className="flex items-center gap-1.5 font-display text-[13px] font-medium">
                       <span className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: '#10B981' }} />
                       {fmtRangeDate(r.checkIn, r.checkOut, r.checkIn)}
@@ -648,13 +658,7 @@ export default function Reservas() {
                       <span className="tnum text-xs" style={{ color: 'var(--text-muted)' }}>
                         · {t('cal.noches', { count: nightsOf(r) })}
                       </span>
-                    </span>
-                    <span className="flex items-center justify-between">
-                      <span className="flex items-center gap-1.5">
-                        <span className="flex items-center gap-1 text-[13px]" style={{ color: 'var(--text-muted)' }}>
-                          <Users className="h-3.5 w-3.5" />
-                          <span className="tnum">{r.guestsCount}</span>
-                        </span>
+                      <span className="ml-auto flex items-center gap-1.5">
                         {r.specialRequest && (
                           <span
                             className="rounded-full px-2 py-0.5 text-[10px] font-bold"
@@ -663,9 +667,6 @@ export default function Reservas() {
                             {t('res.peticiones')}
                           </span>
                         )}
-                      </span>
-                      <span className="flex items-center gap-1.5">
-                        <MoneyText value={r.amount} className="text-sm text-emerald-500" />
                         <ChevronDown
                           className={cn('h-4 w-4 transition-transform duration-200', expanded && 'rotate-180')}
                           style={{ color: 'var(--text-faint)' }}
