@@ -122,7 +122,7 @@ export default function Reservas() {
   useEffect(() => {
     const t = setTimeout(() => {
       setLoading(false);
-      setTimeout(() => setPainted(true), 700);
+      setTimeout(() => setPainted(true), 350);
     }, 900);
     return () => clearTimeout(t);
   }, []);
@@ -311,11 +311,11 @@ export default function Reservas() {
         animate: { opacity: 1, scale: 1 } as const,
         transition: { duration: 0.35, ease: EASE_OUT_QUART },
       };
-    if (painted || reduce || i >= 8) return { initial: false as const };
+    if (painted || reduce || i >= 6) return { initial: false as const };
     return {
       initial: { opacity: 0, y: 16 } as const,
       animate: { opacity: 1, y: 0 } as const,
-      transition: { duration: 0.4, delay: i * 0.04, ease: EASE_OUT_QUART },
+      transition: { duration: 0.3, delay: i * 0.025, ease: EASE_OUT_QUART },
     };
   };
 
