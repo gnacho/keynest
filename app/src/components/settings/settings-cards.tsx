@@ -626,127 +626,15 @@ export function SessionCard({ isDemo }: { isDemo: boolean }) {
   );
 }
 
-function fmtUptime(s: number): string {
-  if (!s || s <= 0) return '—';
-  const d = Math.floor(s / 86400);
-  const h = Math.floor((s % 86400) / 3600);
-  const m = Math.floor((s % 3600) / 60);
-  if (d > 0) return `${d}d ${h}h`;
-  if (h > 0) return `${h}h ${m}m`;
-  if (m > 0) return `${m}m`;
-  return `${Math.floor(s)}s`;
-}
-
-interface SystemInfoData {
-  version: string;
-  nodeVersion: string;
-  os: string;
-  arch: string;
-  distro: string;
-  kernel: string;
-  cpuModel: string;
-  cpuCores: number;
-  memTotalMb: number;
-  uptimeS: number;
-  hostname: string;
-  demo: boolean;
-}
-
-function SystemInfoBlock({ info: propInfo }: { info?: SystemInfoData | null }) {
-  const { t } = useTranslation();
-  const [info, setInfo] = useState<SystemInfoData | null>(propInfo ?? null);
-  const [failed, setFailed] = useState(false);
-
-  useEffect(() => {
-    if (propInfo) { setInfo(propInfo); return; }
-    let disposed = false;
-    void (async () => {
-      try {
-        const res = await fetch('/api/system/info');
-        if (!res.ok || !(res.headers.get('content-type') ?? '').includes('application/json')) {
-          throw new Error(`HTTP ${res.status}`);
-        }
-        const json = (await res.json()) as SystemInfoData;
-        if (!disposed) setInfo(json);
-      } catch {
-        if (!disposed) setFailed(true);
-      }
-    })();
-    return () => { disposed = true; };
-  }, [propInfo]);
-
-  const server = info && !info.demo ? info : null;
-  const rows: { label: string; value: string }[] = [
-    { label: t('aj.sysApp'), value: `v${server?.version || APP_VERSION}` },
-    ...(server ? [{ label: t('aj.sysNode'), value: server.nodeVersion }] : []),
-    { label: t('aj.sysReact'), value: React.version },
-    ...(server
-      ? [
-          { label: t('aj.sysOs'), value: `${server.distro || server.os} ${server.arch}`.trim() || '—' },
-          { label: t('aj.sysKernel'), value: server.kernel || '—' },
-          { label: t('aj.sysCpu'), value: server.cpuModel ? `${server.cpuModel} (${server.cpuCores})` : server.cpuCores > 0 ? `${server.cpuCores}` : '—' },
-          { label: t('aj.sysRam'), value: server.memTotalMb > 0 ? `${(server.memTotalMb / 1024).toFixed(1)} GiB` : '—' },
-          { label: t('aj.sysUptime'), value: fmtUptime(server.uptimeS) },
-          { label: t('aj.sysHostname'), value: server.hostname || '—' },
-        ]
-      : []),
-  ];
-
-  return (
-    <div className="mt-5 border-t pt-4" style={{ borderColor: 'var(--border)' }}>
-      <p className="mb-2 text-[11px] font-semibold uppercase tracking-[0.06em]" style={{ color: 'var(--text-muted)' }}>
-        {t('aj.sistema')}
-      </p>
-      {!info && !failed ? (
-        <div className="grid animate-pulse grid-cols-1 gap-x-6 gap-y-2.5 sm:grid-cols-2" aria-hidden="true">
-          {Array.from({ length: 4 }).map((_, i) => (
-            <div key={i} className="flex items-baseline justify-between gap-3">
-              <span className="h-3 w-14 rounded" style={{ backgroundColor: 'var(--surface-2)' }} />
-              <span className="h-3 w-24 rounded" style={{ backgroundColor: 'var(--surface-2)' }} />
-            </div>
-          ))}
-        </div>
-      ) : (
-        <dl className="grid grid-cols-1 gap-x-6 gap-y-1.5 sm:grid-cols-2">
-          {rows.map((r) => (
-            <div key={r.label} className="flex items-baseline justify-between gap-3">
-              <dt className="shrink-0 text-[11px]" style={{ color: 'var(--text-muted)' }}>{r.label}</dt>
-              <dd className="truncate font-mono text-[11px]" style={{ color: 'var(--text-muted)' }}>{r.value}</dd>
-            </div>
-          ))}
-        </dl>
-      )}
-    </div>
-  );
-}
-
-/* ---------- Tarjeta Acerca de: logo + enlaces + versión·licencia·runtime (canon webapp-shell) ----------
-   Fila 1: logo + nombre + descripción a la izquierda, tiles de enlaces BAJOS a la derecha.
-   Fila 2: versión · licencia · runtime en UNA línea sin recuadros, alineada con la descripción.
-   El instalador PWA y Comprobar actualizaciones NO viven aquí (InstallCard propia / AdminBar). */
+/* ---------- Tarjeta Acerca de: logo + enlaces + versión + botones de acción (#147) ----------
+   Debajo de la versión se muestran los botones "Instalar app" (PWA) y "Notificaciones web"
+   en lugar del bloque Sistema (que era información técnica irrelevante para el usuario). */
 export function AboutCard() {
   const { t: tr } = useTranslation();
-  const [info, setInfo] = useState<SystemInfoData | null>(null);
+  const { state: installState, install } = useInstallPrompt();
+  const { soporte, estado, activar, desactivar } = usePush();
 
-  useEffect(() => {
-    let disposed = false;
-    void (async () => {
-      try {
-        const res = await fetch('/api/system/info');
-        if (!res.ok || !(res.headers.get('content-type') ?? '').includes('application/json')) {
-          throw new Error(`HTTP ${res.status}`);
-        }
-        const json = (await res.json()) as SystemInfoData;
-        if (!disposed) setInfo(json);
-      } catch {
-        if (!disposed) setInfo(null);
-      }
-    })();
-    return () => { disposed = true; };
-  }, []);
-
-  const server = info && !info.demo ? info : null;
-  const runtimeLine = `Node ${server?.nodeVersion || '—'} · React v${React.version} · ${tr('aj.aboutUptime')} ${server ? fmtUptime(server.uptimeS) : '—'}`;
+  const runtimeLine = `React v${React.version}`;
   const tiles = [
     { key: 'code', icon: Github, label: tr('aj.aboutCode'), href: REPO_URL },
     { key: 'changelog', icon: FileText, label: tr('aj.aboutCambios'), href: `${REPO_URL}/commits/main` },
@@ -786,14 +674,43 @@ export function AboutCard() {
             )}
           </div>
         </div>
-        {/* Fila 2: versión · licencia · runtime en UNA línea sin recuadros,
-            alineada con la descripción (tras el logo) en escritorio */}
+        {/* Fila 2: versión · licencia · runtime en UNA línea sin recuadros */}
         <p className="font-mono text-[11px] md:pl-[54px]" style={{ color: 'var(--text-faint)' }}>
           v{APP_VERSION} · AGPL-3.0 · {runtimeLine}
         </p>
 
-        {/* Bloque Sistema fusionado dentro de Acerca de (patrón EasyZFS) */}
-        <SystemInfoBlock info={info} />
+        {/* Botones de acción: Instalar app (PWA) | Notificaciones web */}
+        {(installState !== 'hidden' || soporte === 'ok') && (
+          <div className="flex flex-wrap items-center gap-2 md:pl-[54px]">
+            {installState !== 'hidden' && (
+              installState === 'installed' ? (
+                <span className="inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-semibold text-emerald-500"
+                  style={{ borderColor: 'rgb(16 185 129 / 0.3)', backgroundColor: 'rgb(16 185 129 / 0.1)' }}>
+                  <Check className="h-3 w-3" strokeWidth={2} /> {tr('aj.appInstalada')}
+                </span>
+              ) : installState === 'installable' ? (
+                <button type="button" onClick={() => void install()}
+                  className="brand-gradient flex h-8 items-center gap-1.5 rounded-lg px-3 text-[11px] font-semibold text-white hover:brightness-110">
+                  <Download className="h-3.5 w-3.5" strokeWidth={1.75} /> {tr('aj.instalarApp')}
+                </button>
+              ) : installState === 'ios' ? (
+                <span className="text-[11px]" style={{ color: 'var(--text-faint)' }}>{tr('aj.instalarIos')}</span>
+              ) : null
+            )}
+            {soporte === 'ok' && (
+              <button
+                type="button"
+                onClick={() => { void (estado.suscrito ? desactivar() : activar()); }}
+                disabled={estado.cargando}
+                className="inline-flex h-8 items-center gap-1.5 rounded-lg border px-3 text-[11px] font-semibold transition-colors disabled:opacity-50 hover:bg-[var(--surface-2)]"
+                style={{ borderColor: 'var(--border)', color: 'var(--text-muted)' }}
+              >
+                <Bell className="h-3.5 w-3.5" />
+                {estado.suscrito ? tr('aj.notifDesactivar') : tr('aj.notifActivar')}
+              </button>
+            )}
+          </div>
+        )}
       </div>
     </Card>
   );
