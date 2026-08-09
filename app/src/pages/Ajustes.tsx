@@ -1081,7 +1081,7 @@ export default function Ajustes() {
                 {cats.map((c) => {
                   const Icon = catIcon(c.icon);
                   return (
-                    <motion.div key={c.key} variants={itemV} className="card flex items-center gap-3 p-3">
+                    <motion.div key={c.key} variants={itemV} className="card min-w-0 flex items-center gap-3 p-3">
                       <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl" style={{ backgroundColor: 'var(--ro-chip-bg)' }}>
                         <Icon className="h-4 w-4 text-rose-500" />
                       </span>
@@ -1092,7 +1092,7 @@ export default function Ajustes() {
                             value={c.label}
                             onChange={(e) => updateCat(c.key, { label: e.target.value })}
                             placeholder={tr('aj.etiqueta')}
-                            className={cn(inputCls, 'h-9 flex-1')}
+                            className={cn(inputCls, 'h-9 min-w-0 flex-1')}
                             style={inputStyle}
                           />
                           <Select value={c.icon} onValueChange={(v) => updateCat(c.key, { icon: v })}>
