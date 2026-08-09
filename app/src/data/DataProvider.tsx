@@ -174,6 +174,7 @@ interface BootstrapData {
   categories: MaintCategory[];
   config?: { checkInTime?: string; checkOutTime?: string; batteryThreshold?: number; autoCleaning?: boolean; lookaheadDays?: number };
   sync: Record<string, { ok: boolean; at: number; count?: number; error?: string }>;
+  users?: AppUser[];
   demo?: boolean;
   demoEnabled?: boolean;
 }
@@ -252,6 +253,7 @@ export default function DataProvider({ children }: { children: ReactNode }) {
         lookaheadDays: data.config?.lookaheadDays ?? 7,
       };
       syncMap.current = data.sync ?? {};
+      users.current = data.users ?? [];
       setIsDemo(Boolean(data.demo));
       bump();
     } catch {
