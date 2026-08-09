@@ -1085,16 +1085,16 @@ export default function Ajustes() {
                     <motion.div key={c.key} variants={itemV} className="card min-w-0 flex items-center gap-3 p-3">
                       {/* Icono clicable: abre el selector de iconos */}
                       {isDemoUser ? (
-                        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl" style={{ backgroundColor: 'var(--ro-chip-bg)' }}>
-                          <Icon className="h-4 w-4 text-rose-500" />
+                        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl" style={{ backgroundColor: 'var(--sl-chip-bg)' }}>
+                          <Icon className="h-4 w-4 text-slate-500" />
                         </span>
                       ) : (
                         <Select value={c.icon} onValueChange={(v) => updateCat(c.key, { icon: v })}>
                           <SelectTrigger
                             aria-label={tr('aj.cambiarIcono')}
-                            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[var(--ro-chip-bg)] p-0 shadow-none [&_svg:last-child]:hidden"
+                            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[var(--sl-chip-bg)] p-0 shadow-none [&_svg:last-child]:hidden"
                           >
-                            <Icon className="h-4 w-4 text-rose-500" />
+                            <Icon className="h-4 w-4 text-slate-500" />
                           </SelectTrigger>
                           <SelectContent className="rounded-xl border-[var(--border)] bg-[var(--surface)]">
                             {Object.entries(CAT_ICONS).map(([name, Ico]) => (
