@@ -17,7 +17,6 @@ import {
 import KpiCard from '@/components/KpiCard';
 import PropertyCard from '@/components/PropertyCard';
 import PropertyAvatar from '@/components/PropertyAvatar';
-import StatusBadge from '@/components/StatusBadge';
 import EmptyState from '@/components/EmptyState';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
@@ -29,7 +28,7 @@ import type { Property, Reservation } from '@/data/types';
 import {
   capitalize,
   fmtDateFull,
-  fmtDateShort,
+  fmtMonth,
   fmtNumber,
   fmtPct,
   fmtRelative,
@@ -204,6 +203,11 @@ export default function Dashboard() {
     const p = data.getProperty(r.propertyId)!;
     const cleaning = kind === 'out' ? cleaningForReservation(r) : undefined;
     const needsAssignment = cleaning && cleaning.assigneeIds.length === 0 && cleaning.status !== 'archivada';
+    const date = kind === 'in' ? r.checkIn : r.checkOut;
+    const dd = dayDiff(date);
+    const isToday = dd === 0;
+    const isTomorrow = dd === 1;
+    const accent = kind === 'in' ? '#10B981' : '#F97316';
     return (
       <motion.button
         key={r.id}
@@ -214,8 +218,28 @@ export default function Dashboard() {
       >
         <PropertyAvatar property={p} size={40} />
         <span className="min-w-0 flex-1">
-          <span className="block truncate text-sm font-semibold">{r.guest.name}</span>
-          <span className="block truncate text-xs" style={{ color: 'var(--text-muted)' }}>
+          {/* Móvil: nombre en pill de color + guests */}
+          <span className="flex items-center gap-1.5 md:hidden">
+            <span
+              className="truncate rounded-full px-2 py-0.5 text-sm font-semibold"
+              style={{ backgroundColor: `${accent}1A`, color: accent }}
+            >
+              {r.guest.name}
+            </span>
+            <span className="flex shrink-0 items-center gap-0.5 text-xs font-semibold" style={{ color: accent }}>
+              <Users className="h-3.5 w-3.5" />
+              {r.guestsCount}
+            </span>
+          </span>
+          {/* Desktop: nombre plano + guests muted */}
+          <span className="hidden items-center gap-1.5 md:flex">
+            <span className="truncate text-sm font-semibold">{r.guest.name}</span>
+            <span className="flex shrink-0 items-center gap-0.5 text-xs" style={{ color: 'var(--text-muted)' }}>
+              <Users className="h-3.5 w-3.5" />
+              {r.guestsCount}
+            </span>
+          </span>
+          <span className="mt-0.5 block truncate text-xs" style={{ color: 'var(--text-muted)' }}>
             {p.name}
           </span>
           {needsAssignment && (
@@ -226,24 +250,32 @@ export default function Dashboard() {
           )}
         </span>
         <span className="flex flex-col items-end gap-1">
-          {(() => {
-            const dd = dayDiff(kind === 'in' ? r.checkIn : r.checkOut);
-            return (
-              <span
-                className="text-[11px] font-bold uppercase tracking-wide md:text-xl md:tracking-tight"
-                style={{ color: dd === 0 ? '#F43F5E' : dd === 1 ? '#F97316' : 'var(--text-faint)' }}
-              >
-                {dd === 0 ? t('dash.hoy') : dd === 1 ? t('common.manana') : fmtDateShort(kind === 'in' ? r.checkIn : r.checkOut)}
+          <span className="flex items-center gap-1.5">
+            {/* Chip calendario */}
+            <span
+              className="flex flex-col items-center justify-center rounded-lg border leading-none"
+              style={{ minWidth: '44px', padding: '3px 6px', borderColor: `${accent}40`, backgroundColor: `${accent}14` }}
+            >
+              <span className="text-xl font-bold" style={{ color: accent }}>
+                {date.getDate()}
               </span>
-            );
-          })()}
-          <StatusBadge
-            label={`${kind === 'in' ? t('common.entrada') : t('common.salida')} ${fmtTime(kind === 'in' ? r.checkIn : r.checkOut)}`}
-            tone={kind === 'in' ? 'emerald' : 'orange'}
-          />
-          <span className="flex items-center gap-1 text-xs" style={{ color: 'var(--text-muted)' }}>
-            <Users className="h-3.5 w-3.5" />
-            {r.guestsCount}
+              <span className="mt-0.5 text-[10px] font-semibold uppercase tracking-wide" style={{ color: accent }}>
+                {fmtMonth(date, true)}
+              </span>
+            </span>
+            {/* Mini-badge Hoy / Mañana */}
+            {(isToday || isTomorrow) && (
+              <span
+                className="rounded-full px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white"
+                style={{ backgroundColor: isToday ? '#F43F5E' : '#F97316' }}
+              >
+                {isToday ? t('dash.hoy') : t('common.manana')}
+              </span>
+            )}
+          </span>
+          {/* Desktop: hora pequeña (móvil: oculta) */}
+          <span className="hidden text-xs md:block" style={{ color: 'var(--text-muted)' }}>
+            {kind === 'in' ? t('common.entrada') : t('common.salida')} {fmtTime(date)}
           </span>
         </span>
       </motion.button>
