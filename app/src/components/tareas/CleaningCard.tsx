@@ -302,20 +302,22 @@ export default function CleaningCard({ cleaning: c, variants, highlight = false,
           </div>
         </div>
         {/* Fecha de la limpieza grande (chip calendario, estilo #24) + hora */}
-        <span
-          className="flex flex-col items-center justify-center rounded-lg border leading-none"
-          style={{ minWidth: '44px', padding: '3px 6px', borderColor: 'rgb(139 92 246 / 0.25)', backgroundColor: 'rgb(139 92 246 / 0.08)' }}
-        >
-          <span className="text-xl font-bold" style={{ color: '#8B5CF6' }}>
-            {c.date.getDate()}
+          <span
+            className="flex flex-col items-center justify-center rounded-lg border leading-none"
+            style={{ minWidth: '44px', padding: '3px 6px', borderColor: 'rgb(139 92 246 / 0.25)', backgroundColor: 'rgb(139 92 246 / 0.08)' }}
+          >
+            <span className="flex items-center gap-1.5">
+              <span className="text-[10px] font-semibold tnum" style={{ color: '#8B5CF6' }}>
+                {fmtTime(c.date)}
+              </span>
+              <span className="text-xl font-bold" style={{ color: '#8B5CF6' }}>
+                {c.date.getDate()}
+              </span>
+            </span>
+            <span className="mt-0.5 text-[10px] font-semibold uppercase tracking-wide" style={{ color: '#8B5CF6' }}>
+              {fmtMonth(c.date, true)}
+            </span>
           </span>
-          <span className="mt-0.5 text-[10px] font-semibold uppercase tracking-wide" style={{ color: '#8B5CF6' }}>
-            {fmtMonth(c.date, true)}
-          </span>
-          <span className="mt-0.5 text-[9px] font-medium tnum" style={{ color: '#8B5CF6' }}>
-            {fmtTime(c.date)}
-          </span>
-        </span>
       </div>
 
       {/* Meta: estado + reserva origen + trigger de expand (móvil) */}

@@ -256,15 +256,17 @@ export default function Dashboard() {
               className="flex flex-col items-center justify-center rounded-lg border leading-none"
               style={{ minWidth: '44px', padding: '3px 6px', borderColor: `${accent}40`, backgroundColor: `${accent}14` }}
             >
-              <span className="text-xl font-bold" style={{ color: accent }}>
-                {date.getDate()}
+              <span className="flex items-center gap-1.5">
+                {/* Hora a la izquierda de la fecha (solo desktop) */}
+                <span className="hidden text-[10px] font-semibold tnum md:inline" style={{ color: accent }}>
+                  {fmtTime(date)}
+                </span>
+                <span className="text-xl font-bold" style={{ color: accent }}>
+                  {date.getDate()}
+                </span>
               </span>
               <span className="mt-0.5 text-[10px] font-semibold uppercase tracking-wide" style={{ color: accent }}>
                 {fmtMonth(date, true)}
-              </span>
-              {/* Hora dentro del chip (solo desktop, #69) */}
-              <span className="mt-0.5 hidden text-[9px] font-medium tnum md:block" style={{ color: accent }}>
-                {fmtTime(date)}
               </span>
             </span>
             {/* Mini-badge Hoy / Mañana */}
