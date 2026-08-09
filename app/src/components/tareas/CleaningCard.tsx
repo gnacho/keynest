@@ -265,7 +265,7 @@ export default function CleaningCard({ cleaning: c, variants, highlight = false,
           : undefined
       }
       transition={highlight && !reduce ? { duration: 1.2, ease: 'easeOut' } : { duration: 0.3 }}
-      className="card border-l-[3px] p-4"
+      className="card min-w-0 overflow-hidden border-l-[3px] p-4"
       style={{
         borderLeftColor: STATUS_BORDER[c.status],
       }}
