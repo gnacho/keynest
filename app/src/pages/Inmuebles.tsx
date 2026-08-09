@@ -559,7 +559,7 @@ export default function Inmuebles() {
                   <button
                     type="button"
                     onClick={() => setFullEditor('checklist')}
-                    className="flex items-center gap-1 rounded-lg px-2 py-1 text-xs font-semibold transition-colors hover:bg-[var(--surface-2)]"
+                    className="hidden items-center gap-1 rounded-lg px-2 py-1 text-xs font-semibold transition-colors hover:bg-[var(--surface-2)] lg:flex"
                     style={{ color: 'var(--text-muted)' }}
                   >
                     <Pencil className="h-3 w-3" />
@@ -588,7 +588,7 @@ export default function Inmuebles() {
                   <button
                     type="button"
                     onClick={() => setFullEditor('instrucciones')}
-                    className="flex items-center gap-1 rounded-lg px-2 py-1 text-xs font-semibold transition-colors hover:bg-[var(--surface-2)]"
+                    className="hidden items-center gap-1 rounded-lg px-2 py-1 text-xs font-semibold transition-colors hover:bg-[var(--surface-2)] lg:flex"
                     style={{ color: 'var(--text-muted)' }}
                   >
                     <Pencil className="h-3 w-3" />
