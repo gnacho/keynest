@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { Bell, CheckCheck } from 'lucide-react';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { useData } from '@/data/useData';
+import { cachedUser } from '@/lib/auth';
 import { fmtRelative } from '@/lib/format';
 
 const DOT: Record<string, string> = {
@@ -16,16 +17,45 @@ const DOT: Record<string, string> = {
   indigo: '#6366F1',
 };
 
+const DISMISSED_KEY = 'keynest-dismissed-alerts';
+
+function loadDismissed(): Set<string> {
+  try {
+    const user = cachedUser();
+    if (!user) return new Set();
+    const raw = window.localStorage.getItem(`${DISMISSED_KEY}:${user.id}`);
+    if (!raw) return new Set();
+    const parsed = JSON.parse(raw) as unknown;
+    return parsed instanceof Array ? new Set(parsed.filter((x): x is string => typeof x === 'string')) : new Set();
+  } catch {
+    return new Set();
+  }
+}
+
+function saveDismissed(set: Set<string>): void {
+  try {
+    const user = cachedUser();
+    if (!user) return;
+    window.localStorage.setItem(`${DISMISSED_KEY}:${user.id}`, JSON.stringify([...set]));
+  } catch {
+    /* noop */
+  }
+}
+
 /** Campana de alertas persistente en el header (todas las vistas). */
 export default function NotificationsPopover() {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const data = useData();
-  const [dismissed, setDismissed] = useState<Set<string>>(new Set());
+  const [dismissed, setDismissed] = useState<Set<string>>(() => loadDismissed());
   const notifications = data.getNotifications().filter((n) => !dismissed.has(n.id));
 
   const clearAll = () => {
-    setDismissed((prev) => new Set([...prev, ...notifications.map((n) => n.id)]));
+    setDismissed((prev) => {
+      const next = new Set([...prev, ...notifications.map((n) => n.id)]);
+      saveDismissed(next);
+      return next;
+    });
   };
 
   return (
