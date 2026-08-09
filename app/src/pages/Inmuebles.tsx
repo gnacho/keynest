@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router';
 import { motion } from 'framer-motion';
 import type { Variants } from 'framer-motion';
@@ -119,6 +119,16 @@ export default function Inmuebles() {
   const [instructionsText, setInstructionsText] = useState('');
   // Editor a pantalla completa para checklist/instrucciones en móvil.
   const [fullEditor, setFullEditor] = useState<'checklist' | 'instrucciones' | null>(null);
+
+  // Escape cierra solo el editor, no el diálogo principal
+  useEffect(() => {
+    if (!fullEditor) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') { e.stopPropagation(); setFullEditor(null); }
+    };
+    document.addEventListener('keydown', onKey, true);
+    return () => document.removeEventListener('keydown', onKey, true);
+  }, [fullEditor]);
 
   const openEditProp = (id: string) => {
     const p = properties.find((x) => x.id === id)!;
