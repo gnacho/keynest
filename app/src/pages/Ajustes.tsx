@@ -943,37 +943,31 @@ export default function Ajustes() {
                           className="data-[state=checked]:bg-[#8B5CF6]"
                         />
                       </div>
-
-                      {/* Umbral batería */}
-                      <div className="flex min-h-14 flex-wrap items-center justify-between gap-3 py-3" style={{ borderColor: 'var(--border)' }}>
-                        <div>
-                          <p className="text-sm font-semibold">{tr('aj.umbralBateria')}</p>
-                          <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
-                            {tr('aj.umbralBateriaDesc')}
-                          </p>
-                        </div>
-                        <div className="flex w-48 items-center gap-3">
-                          <Slider
-                            value={batteryThreshold}
-                            onValueChange={(v) => { setBatteryThreshold(v); savePref({ batteryThreshold: v[0] }); }}
-                            min={10}
-                            max={50}
-                            step={5}
-                            className="flex-1"
-                          />
-                          <span className="font-display tnum w-12 text-right text-[15px] font-semibold">
-                            {batteryThreshold[0]} %
-                          </span>
-                        </div>
-                      </div>
-
-                      {/* Días de aviso en el panel (preferencia por usuario) */}
-                      <div className="flex min-h-14 items-center py-3" style={{ borderColor: 'var(--border)' }}>
-                        <LookaheadRow />
-                      </div>
                     </div>
                   </Card>
                 )}
+              </div>
+
+              {/* Fila 1b: [Alerta batería Tedee | Días de aviso] — extraídos de Operativa para igualar altura con Apariencia (#143) */}
+              <div className="grid items-start gap-4 xl:grid-cols-2">
+                <Card title={tr('aj.umbralBateria')} desc={tr('aj.umbralBateriaDesc')}>
+                  <div className="flex items-center gap-3">
+                    <Slider
+                      value={batteryThreshold}
+                      onValueChange={(v) => { setBatteryThreshold(v); savePref({ batteryThreshold: v[0] }); }}
+                      min={10}
+                      max={50}
+                      step={5}
+                      className="flex-1"
+                    />
+                    <span className="font-display tnum w-12 text-right text-[15px] font-semibold">
+                      {batteryThreshold[0]} %
+                    </span>
+                  </div>
+                </Card>
+                <Card title={tr('aj.diasAviso')} desc={tr('aj.diasAvisoDesc')}>
+                  <LookaheadRow />
+                </Card>
               </div>
 
               {/* Fila 2: Mi perfil a ancho completo, debajo de Apariencia (canon 6-Ago-2026) */}
@@ -994,7 +988,6 @@ export default function Ajustes() {
                       <ShieldCheck className="h-5 w-5" style={{ color: 'rgb(var(--warn-rgb))' }} />
                       <h3 className="font-display text-[15px] font-semibold tracking-[-0.01em]">{tr('aj.administracion')}</h3>
                     </div>
-                    <div className="hidden h-6 w-px sm:block" style={{ backgroundColor: 'var(--border)' }} />
 
                     {/* 1. Comprobar actualizaciones (widget inline) */}
                     <div className="flex flex-col gap-1">
