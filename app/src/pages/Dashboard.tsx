@@ -258,6 +258,12 @@ export default function Dashboard() {
           )}
         </span>
         <span className="flex items-center gap-1.5">
+          {/* CircleAlert si rotación (izquierda, alineado) */}
+          {rotacion && (
+            <span title={t('dash.rotacion')} className="flex shrink-0">
+              <CircleAlert className="h-4 w-4" style={{ color: '#F43F5E' }} aria-label={t('dash.rotacion')} />
+            </span>
+          )}
           {/* Chip Entrada/Salida con hora (neutro) */}
           <span
             className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold"
@@ -265,12 +271,6 @@ export default function Dashboard() {
           >
             {kind === 'in' ? t('common.entrada') : t('common.salida')} {fmtTime(date)}
           </span>
-          {/* CircleAlert si rotación (misma horizontal) */}
-            {rotacion && (
-              <span title={t('dash.rotacion')} className="flex shrink-0">
-                <CircleAlert className="h-4 w-4" style={{ color: '#F43F5E' }} aria-label={t('dash.rotacion')} />
-              </span>
-            )}
           {/* Chip fecha: día + mes */}
           <span
             className="flex flex-col items-center justify-center rounded-lg border leading-none"
