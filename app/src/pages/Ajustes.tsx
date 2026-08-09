@@ -160,6 +160,7 @@ export default function Ajustes() {
   const [syncing, setSyncing] = useState(false);
   const [editProp, setEditProp] = useState<string | 'new' | null>(null);
   const [icalCheck, setIcalCheck] = useState<{ state: 'idle' | 'checking' | 'ok' | 'error'; count?: number; code?: string; status?: number }>({ state: 'idle' });
+  const [editingIcal, setEditingIcal] = useState(false);
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const [cropFile, setCropFile] = useState<File | null>(null);
   const photoInputRef = useRef<HTMLInputElement>(null);
@@ -414,6 +415,7 @@ export default function Ajustes() {
     setChecklistText(p.checklist.join('\n'));
     setInstructionsText(p.instructions);
     setIcalCheck({ state: 'idle' });
+    setEditingIcal(false);
     setEditProp(id);
   };
 
@@ -422,6 +424,7 @@ export default function Ajustes() {
     setChecklistText('');
     setInstructionsText('');
     setIcalCheck({ state: 'idle' });
+    setEditingIcal(false);
     setEditProp('new');
   };
 
@@ -445,6 +448,14 @@ export default function Ajustes() {
       setIcalCheck({ state: 'error', code: 'fetch' });
       return false;
     }
+  };
+
+  // #93: si la URL actual está configurada y OK, avisar antes de editar.
+  const startEditIcal = () => {
+    if (propForm.icalUrl && icalCheck.state !== 'error') {
+      if (!window.confirm(tr('aj.icalWarning'))) return;
+    }
+    setEditingIcal(true);
   };
 
   const icalErrorText = (): string => {
@@ -1644,27 +1655,63 @@ export default function Ajustes() {
                 <span className="text-xs font-semibold" style={{ color: 'var(--text-muted)' }}>
                   {tr('aj.icalUrl')}
                 </span>
-                <span className="flex items-center gap-2">
-                  <input
-                    value={propForm.icalUrl}
-                    onChange={(e) => {
-                      setPropForm((f) => ({ ...f, icalUrl: e.target.value }));
-                      setIcalCheck({ state: 'idle' });
-                    }}
-                    className={cn(inputCls, 'min-w-0 flex-1')}
-                    style={inputStyle}
-                  />
-                  <button
-                    type="button"
-                    disabled={!propForm.icalUrl.trim() || icalCheck.state === 'checking'}
-                    onClick={() => void verifyIcal(propForm.icalUrl.trim())}
-                    className="flex h-10 shrink-0 items-center gap-1.5 rounded-xl border px-3 text-xs font-semibold transition-colors hover:bg-[var(--surface-2)] disabled:opacity-40"
-                    style={{ borderColor: 'var(--border)', color: 'var(--text-muted)' }}
-                  >
-                    <RefreshCw className={cn('h-3.5 w-3.5', icalCheck.state === 'checking' && 'animate-spin')} />
-                    {icalCheck.state === 'checking' ? tr('aj.verificando') : tr('aj.verificar')}
-                  </button>
-                </span>
+                {editingIcal ? (
+                  <span className="flex items-center gap-2">
+                    <input
+                      value={propForm.icalUrl}
+                      onChange={(e) => {
+                        setPropForm((f) => ({ ...f, icalUrl: e.target.value }));
+                        setIcalCheck({ state: 'idle' });
+                      }}
+                      autoFocus
+                      className={cn(inputCls, 'min-w-0 flex-1')}
+                      style={inputStyle}
+                    />
+                    <button
+                      type="button"
+                      disabled={!propForm.icalUrl.trim() || icalCheck.state === 'checking'}
+                      onClick={() => void verifyIcal(propForm.icalUrl.trim())}
+                      className="flex h-10 shrink-0 items-center gap-1.5 rounded-xl border px-3 text-xs font-semibold transition-colors hover:bg-[var(--surface-2)] disabled:opacity-40"
+                      style={{ borderColor: 'var(--border)', color: 'var(--text-muted)' }}
+                    >
+                      <RefreshCw className={cn('h-3.5 w-3.5', icalCheck.state === 'checking' && 'animate-spin')} />
+                      {icalCheck.state === 'checking' ? tr('aj.verificando') : tr('aj.verificar')}
+                    </button>
+                  </span>
+                ) : (
+                  <span className="flex items-center gap-2">
+                    <span
+                      className="flex min-w-0 flex-1 items-center gap-1.5 text-[13px] font-medium"
+                      style={{ color: propForm.icalUrl ? 'var(--text)' : 'var(--text-faint)' }}
+                    >
+                      {propForm.icalUrl ? (
+                        <Check className="h-3.5 w-3.5 shrink-0 text-emerald-500" />
+                      ) : (
+                        <Ban className="h-3.5 w-3.5 shrink-0 text-rose-500" />
+                      )}
+                      {propForm.icalUrl ? tr('aj.icalConfigurada') : tr('aj.icalSinConfigurar')}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => void verifyIcal(propForm.icalUrl)}
+                      disabled={!propForm.icalUrl.trim() || icalCheck.state === 'checking'}
+                      className="flex h-9 shrink-0 items-center gap-1.5 rounded-xl border px-3 text-xs font-semibold transition-colors hover:bg-[var(--surface-2)] disabled:opacity-40"
+                      style={{ borderColor: 'var(--border)', color: 'var(--text-muted)' }}
+                    >
+                      <RefreshCw className={cn('h-3.5 w-3.5', icalCheck.state === 'checking' && 'animate-spin')} />
+                      {icalCheck.state === 'checking' ? tr('aj.verificando') : tr('aj.verificar')}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={startEditIcal}
+                      className="flex h-9 shrink-0 items-center gap-1.5 rounded-xl border px-3 text-xs font-semibold transition-colors hover:bg-[var(--surface-2)]"
+                      style={{ borderColor: 'var(--border)', color: 'var(--text-muted)' }}
+                    >
+                      <Pencil className="h-3.5 w-3.5" />
+                      {tr('aj.editar')}
+                    </button>
+                  </span>
+                )}
                 {icalCheck.state === 'ok' && (
                   <span className="flex items-center gap-1.5 text-[11px] font-medium text-emerald-500">
                     <Check className="h-3.5 w-3.5" />

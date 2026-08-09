@@ -832,7 +832,10 @@
     "rolUsuario": "Usuario",
     "cambiarIcono": "Cambiar icono",
     "dueño": "Dueño",
-    "sinDueño": "Sin dueño"
+    "sinDueño": "Sin dueño",
+    "icalConfigurada": "iCal configurado",
+    "icalSinConfigurar": "Sin iCal",
+    "icalWarning": "La URL iCal actual funciona. ¿Editarla igualmente?"
   },
   "common2": {
     "confirmar": "Confirmar",
