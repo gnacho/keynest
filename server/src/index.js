@@ -450,7 +450,8 @@ const propertySchema = z.object({
   checklist: z.array(z.string()).default([]),
   instructions: z.string().default(''),
   owner_id: z.string().nullable().default(null),
-})
+  ownerId: z.string().nullable().optional(), // frontend envía camelCase
+}).transform((d) => ({ ...d, owner_id: d.ownerId ?? d.owner_id }))
 
 function slugify(name) {
   return name.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase()

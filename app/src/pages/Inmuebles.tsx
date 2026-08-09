@@ -83,7 +83,6 @@ export default function Inmuebles() {
   /* ---- Inmuebles: edición real contra el backend ---- */
   const properties = data.getProperties();
   const syncStatus = data.getSyncStatus();
-  const [syncing, setSyncing] = useState(false);
   const [editProp, setEditProp] = useState<string | 'new' | null>(null);
   const [icalCheck, setIcalCheck] = useState<{ state: 'idle' | 'checking' | 'ok' | 'error'; count?: number; code?: string; status?: number }>({ state: 'idle' });
   const [editingIcal, setEditingIcal] = useState(false);
@@ -188,19 +187,6 @@ export default function Inmuebles() {
     }
   };
 
-  const handleSync = async () => {
-    if (syncing) return;
-    setSyncing(true);
-    try {
-      await data.syncNow();
-      toast.success(tr('aj.syncOk'));
-    } catch {
-      toast.error(tr('aj.syncError'));
-    } finally {
-      setSyncing(false);
-    }
-  };
-
   const saveProp = async () => {
     if (!editProp) return;
     const items = checklistText
@@ -246,16 +232,6 @@ export default function Inmuebles() {
       <div className="flex flex-wrap items-center justify-end gap-2">
         {!isDemoUser && (
           <>
-            <button
-              type="button"
-              onClick={() => void handleSync()}
-              disabled={syncing}
-              className="flex h-10 items-center gap-1.5 rounded-xl border px-4 text-sm font-semibold transition-colors duration-150 hover:bg-[var(--surface-2)] disabled:opacity-50"
-              style={{ borderColor: 'var(--border)', color: 'var(--text-muted)' }}
-            >
-              <RefreshCw className={cn('h-4 w-4', syncing && 'animate-spin')} />
-              {syncing ? tr('aj.sincronizando') : tr('aj.sincronizar')}
-            </button>
             <button
               type="button"
               onClick={openNewProp}
@@ -374,10 +350,10 @@ export default function Inmuebles() {
 
       {/* ============================== Dialog edición inmueble */}
       <Dialog open={!!editProp} onOpenChange={(o) => !o && setEditProp(null)}>
-        <DialogContent className="rounded-2xl border-[var(--border)] bg-[var(--surface)] shadow-overlay sm:max-w-4xl">
+        <DialogContent className="rounded-2xl border-[var(--border)] bg-[var(--surface)] shadow-overlay sm:max-w-6xl">
           <DialogHeader>
             <DialogTitle className="font-display text-lg font-semibold">
-              {editProp === 'new' ? tr('aj.nuevoInmueble') : tr('aj.editarInmueble')}
+              {editProp === 'new' ? tr('aj.nuevoInmueble') : tr('aj.editar')}
             </DialogTitle>
             <DialogDescription style={{ color: 'var(--text-muted)' }}>
               {editProp === 'new'

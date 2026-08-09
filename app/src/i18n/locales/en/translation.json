@@ -540,7 +540,7 @@
     "syncError": "Sync failed",
     "nuevoInmueble": "New property",
     "editarInmueble": "Edit property",
-    "editar": "Edit {{name}}",
+    "editar": "Edit",
     "editarCampo": "Edit",
     "nuevoDesc": "Register it and paste the Airbnb iCal URL to sync its reservations.",
     "editarDesc": "{{name}} · the checklist applies to this property's cleanings.",
