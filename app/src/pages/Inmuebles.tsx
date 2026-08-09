@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { Link } from 'react-router';
 import { motion } from 'framer-motion';
 import type { Variants } from 'framer-motion';
@@ -631,8 +632,8 @@ export default function Inmuebles() {
         />
       )}
 
-      {/* ============================== Editor checklist/instrucciones (overlay, no Dialog anidado) */}
-      {fullEditor !== null && (
+      {/* ============================== Editor checklist/instrucciones (portal al body, sobre todo) */}
+      {fullEditor !== null && createPortal(
         <div className="fixed inset-0 z-[60] flex items-start justify-center bg-black/50 lg:p-8" onClick={() => setFullEditor(null)}>
           <div
             className="flex flex-col gap-3 bg-[var(--surface)] h-[100dvh] w-full p-4 lg:h-auto lg:max-h-[80vh] lg:max-w-3xl lg:rounded-2xl lg:border lg:border-[var(--border)] lg:shadow-overlay lg:relative lg:mt-[10vh]"
@@ -672,7 +673,7 @@ export default function Inmuebles() {
             </div>
           </div>
         </div>
-      )}
+      , document.body)}
     </div>
   );
 }
