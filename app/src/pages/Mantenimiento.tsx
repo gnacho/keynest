@@ -227,7 +227,7 @@ export default function Mantenimiento() {
           <button
             type="button"
             onClick={() => setNewOpen(true)}
-            className="ml-auto brand-gradient flex h-10 shrink-0 items-center gap-1.5 rounded-xl px-4 text-sm font-semibold text-white transition-all duration-150 hover:brightness-110 active:scale-[0.98]"
+            className="ml-auto brand-gradient flex h-9 shrink-0 items-center gap-1.5 rounded-xl px-4 text-sm font-semibold text-white transition-all duration-150 hover:brightness-110 active:scale-[0.98]"
           >
             <Plus className="h-4 w-4" />
             <span className="hidden sm:inline">{tr('mant.nuevaTarea')}</span>

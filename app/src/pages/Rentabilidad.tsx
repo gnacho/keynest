@@ -34,7 +34,6 @@ import MoneyText from '@/components/MoneyText';
 import PropertyAvatar from '@/components/PropertyAvatar';
 import FinKpiCard from '@/components/fin/FinKpiCard';
 import { EXPENSE_META, EXPENSE_TYPES } from '@/components/fin/expenseMeta';
-import { Toaster } from '@/components/ui/sonner';
 import {
   Dialog,
   DialogContent,
@@ -508,7 +507,6 @@ export default function Rentabilidad() {
 
   return (
     <div className="flex flex-col gap-5">
-      <Toaster position="top-center" />
 
       {/* ============================== Topbar */}
       <div className="flex flex-wrap items-start justify-between gap-3">
@@ -527,7 +525,7 @@ export default function Rentabilidad() {
       </div>
 
       {/* ============================== Filtros */}
-      <div className="sticky top-14 z-30 -mx-4 flex flex-wrap items-center gap-2 bg-[var(--bg)]/90 px-4 py-2 backdrop-blur-md lg:static lg:mx-0 lg:bg-transparent lg:px-0 lg:py-0 lg:backdrop-blur-none">
+      <div className="flex flex-wrap items-center gap-2">
         <Select value={inmueble} onValueChange={(v) => setParam('inmueble', v, v === 'todos')}>
           <SelectTrigger className="h-9 w-auto min-w-[180px] gap-2 rounded-xl border-[var(--border)] bg-[var(--surface)] text-sm font-medium shadow-none">
             <SelectValue placeholder={t('rent.general')} />

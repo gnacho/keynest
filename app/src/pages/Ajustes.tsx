@@ -36,7 +36,6 @@ import { toast } from 'sonner';
 import ConfirmDialog from '@/components/ConfirmDialog';
 import PersonAvatar from '@/components/PersonAvatar';
 import PhotoCropDialog from '@/components/PhotoCropDialog';
-import { Toaster } from '@/components/ui/sonner';
 import {
   Dialog,
   DialogContent,
@@ -613,7 +612,6 @@ export default function Ajustes() {
 
   return (
     <div className="flex w-full max-w-2xl flex-col gap-6 xl:max-w-4xl 2xl:max-w-5xl">
-      <Toaster position="top-center" />
 
       {/* ============================== Topbar */}
       <div>
