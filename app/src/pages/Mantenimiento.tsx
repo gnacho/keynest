@@ -180,7 +180,7 @@ export default function Mantenimiento() {
               'whitespace-nowrap rounded-lg px-3 py-1 text-xs font-semibold transition-colors duration-150',
               categoria === 'todas' ? 'text-white' : 'text-[var(--text-muted)] hover:text-[var(--text)]',
             )}
-            style={categoria === 'todas' ? { backgroundColor: '#F43F5E' } : undefined}
+            style={categoria === 'todas' ? { backgroundImage: 'linear-gradient(135deg,#6366F1,#8B5CF6)' } : undefined}
           >
             {tr('mant.todas')}
           </button>
@@ -195,7 +195,7 @@ export default function Mantenimiento() {
                 'flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-xs font-semibold transition-colors duration-150',
                 categoria === o.value ? 'text-white' : 'text-[var(--text-muted)] hover:text-[var(--text)]',
               )}
-              style={categoria === o.value ? { backgroundColor: '#F43F5E' } : undefined}
+              style={categoria === o.value ? { backgroundImage: 'linear-gradient(135deg,#6366F1,#8B5CF6)' } : undefined}
             >
               <o.icon className="h-3.5 w-3.5" />
             </button>
