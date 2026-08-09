@@ -1,5 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
-import { createPortal } from 'react-dom';
+import { useRef, useState } from 'react';
 import { Link } from 'react-router';
 import { motion } from 'framer-motion';
 import type { Variants } from 'framer-motion';
@@ -18,7 +17,6 @@ import {
   Settings2,
   Sparkles,
   TrendingUp,
-  X,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import PhotoCropDialog from '@/components/PhotoCropDialog';
@@ -120,16 +118,6 @@ export default function Inmuebles() {
   const [instructionsText, setInstructionsText] = useState('');
   // Editor a pantalla completa para checklist/instrucciones en móvil.
   const [fullEditor, setFullEditor] = useState<'checklist' | 'instrucciones' | null>(null);
-
-  // Escape cierra solo el editor, no el diálogo principal
-  useEffect(() => {
-    if (!fullEditor) return;
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') { e.stopPropagation(); setFullEditor(null); }
-    };
-    document.addEventListener('keydown', onKey, true);
-    return () => document.removeEventListener('keydown', onKey, true);
-  }, [fullEditor]);
 
   const openEditProp = (id: string) => {
     const p = properties.find((x) => x.id === id)!;
@@ -557,26 +545,48 @@ export default function Inmuebles() {
                   <span className="text-xs font-semibold" style={{ color: 'var(--text-muted)' }}>
                     {tr('aj.checklist')}
                   </span>
-                  <button
-                    type="button"
-                    onClick={() => setFullEditor('checklist')}
-                    className="hidden items-center gap-1 rounded-lg px-2 py-1 text-xs font-semibold transition-colors hover:bg-[var(--surface-2)] lg:flex"
-                    style={{ color: 'var(--text-muted)' }}
-                  >
-                    <Pencil className="h-3 w-3" />
-                    {tr('aj.editar')}
-                  </button>
+                  {fullEditor !== 'checklist' && (
+                    <button
+                      type="button"
+                      onClick={() => setFullEditor('checklist')}
+                      className="hidden items-center gap-1 rounded-lg px-2 py-1 text-xs font-semibold transition-colors hover:bg-[var(--surface-2)] lg:flex"
+                      style={{ color: 'var(--text-muted)' }}
+                    >
+                      <Pencil className="h-3 w-3" />
+                      {tr('aj.editar')}
+                    </button>
+                  )}
                 </div>
-                {/* Móvil: botón + editor full-screen */}
-                <button
-                  type="button"
-                  onClick={() => setFullEditor('checklist')}
-                  className="flex h-10 items-center justify-center gap-1.5 rounded-xl border text-sm font-semibold transition-colors hover:bg-[var(--surface-2)] lg:hidden"
-                  style={{ borderColor: 'var(--border)', color: 'var(--text-muted)' }}
-                >
-                  <Pencil className="h-3.5 w-3.5" />
-                  {tr('aj.editarCampo')}
-                </button>
+                {fullEditor === 'checklist' ? (
+                  <>
+                    <textarea
+                      autoFocus
+                      value={checklistText}
+                      onChange={(e) => setChecklistText(e.target.value)}
+                      rows={6}
+                      placeholder={tr('aj.checklistPlaceholder')}
+                      className="w-full resize-none rounded-xl border bg-[var(--surface)] px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-[#6366F1]/40"
+                      style={inputStyle}
+                    />
+                    <div className="flex gap-2">
+                      <button type="button" onClick={() => setFullEditor(null)} className="brand-gradient flex h-9 flex-1 items-center justify-center rounded-xl text-sm font-semibold text-white">
+                        {tr('common.listos')}
+                      </button>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => setFullEditor('checklist')}
+                      className="flex h-10 items-center justify-center gap-1.5 rounded-xl border text-sm font-semibold transition-colors hover:bg-[var(--surface-2)] lg:hidden"
+                      style={{ borderColor: 'var(--border)', color: 'var(--text-muted)' }}
+                    >
+                      <Pencil className="h-3.5 w-3.5" />
+                      {tr('aj.editarCampo')}
+                    </button>
+                  </>
+                )}
                 <span className="text-[11px]" style={{ color: 'var(--text-faint)' }}>
                   {tr('aj.checklistNota')}
                 </span>
@@ -586,26 +596,48 @@ export default function Inmuebles() {
                   <span className="text-xs font-semibold" style={{ color: 'var(--text-muted)' }}>
                     {tr('aj.instrucciones')}
                   </span>
-                  <button
-                    type="button"
-                    onClick={() => setFullEditor('instrucciones')}
-                    className="hidden items-center gap-1 rounded-lg px-2 py-1 text-xs font-semibold transition-colors hover:bg-[var(--surface-2)] lg:flex"
-                    style={{ color: 'var(--text-muted)' }}
-                  >
-                    <Pencil className="h-3 w-3" />
-                    {tr('aj.editar')}
-                  </button>
+                  {fullEditor !== 'instrucciones' && (
+                    <button
+                      type="button"
+                      onClick={() => setFullEditor('instrucciones')}
+                      className="hidden items-center gap-1 rounded-lg px-2 py-1 text-xs font-semibold transition-colors hover:bg-[var(--surface-2)] lg:flex"
+                      style={{ color: 'var(--text-muted)' }}
+                    >
+                      <Pencil className="h-3 w-3" />
+                      {tr('aj.editar')}
+                    </button>
+                  )}
                 </div>
-                {/* Móvil: botón + editor full-screen */}
-                <button
-                  type="button"
-                  onClick={() => setFullEditor('instrucciones')}
-                  className="flex h-10 items-center justify-center gap-1.5 rounded-xl border text-sm font-semibold transition-colors hover:bg-[var(--surface-2)] lg:hidden"
-                  style={{ borderColor: 'var(--border)', color: 'var(--text-muted)' }}
-                >
-                  <Pencil className="h-3.5 w-3.5" />
-                  {tr('aj.editarCampo')}
-                </button>
+                {fullEditor === 'instrucciones' ? (
+                  <>
+                    <textarea
+                      autoFocus
+                      value={instructionsText}
+                      onChange={(e) => setInstructionsText(e.target.value)}
+                      rows={5}
+                      placeholder={tr('aj.instruccionesPlaceholder')}
+                      className="w-full resize-none rounded-xl border bg-[var(--surface)] px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-[#6366F1]/40"
+                      style={inputStyle}
+                    />
+                    <div className="flex gap-2">
+                      <button type="button" onClick={() => setFullEditor(null)} className="brand-gradient flex h-9 flex-1 items-center justify-center rounded-xl text-sm font-semibold text-white">
+                        {tr('common.listos')}
+                      </button>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => setFullEditor('instrucciones')}
+                      className="flex h-10 items-center justify-center gap-1.5 rounded-xl border text-sm font-semibold transition-colors hover:bg-[var(--surface-2)] lg:hidden"
+                      style={{ borderColor: 'var(--border)', color: 'var(--text-muted)' }}
+                    >
+                      <Pencil className="h-3.5 w-3.5" />
+                      {tr('aj.editarCampo')}
+                    </button>
+                  </>
+                )}
                 <span className="text-[11px]" style={{ color: 'var(--text-faint)' }}>
                   {tr('aj.instruccionesNota')}
                 </span>
@@ -632,48 +664,6 @@ export default function Inmuebles() {
         />
       )}
 
-      {/* ============================== Editor checklist/instrucciones (portal al body, sobre todo) */}
-      {fullEditor !== null && createPortal(
-        <div className="fixed inset-0 z-[60] flex items-start justify-center bg-black/50 lg:p-8" onClick={() => setFullEditor(null)}>
-          <div
-            className="flex flex-col gap-3 bg-[var(--surface)] h-[100dvh] w-full p-4 lg:h-auto lg:max-h-[80vh] lg:max-w-3xl lg:rounded-2xl lg:border lg:border-[var(--border)] lg:shadow-overlay lg:relative lg:mt-[10vh]"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="flex items-center justify-between">
-              <h2 className="font-display text-lg font-semibold">
-                {fullEditor === 'checklist' ? tr('aj.checklist') : tr('aj.instrucciones')}
-              </h2>
-              <button
-                type="button"
-                onClick={() => setFullEditor(null)}
-                className="flex h-8 w-8 items-center justify-center rounded-lg transition-colors hover:bg-[var(--surface-2)]"
-                aria-label="Cerrar"
-              >
-                <X className="h-4 w-4" />
-              </button>
-            </div>
-            <textarea
-              autoFocus
-              value={fullEditor === 'checklist' ? checklistText : instructionsText}
-              onChange={(e) =>
-                fullEditor === 'checklist' ? setChecklistText(e.target.value) : setInstructionsText(e.target.value)
-              }
-              placeholder={fullEditor === 'checklist' ? tr('aj.checklistPlaceholder') : tr('aj.instruccionesPlaceholder')}
-              className="min-h-0 flex-1 w-full resize-none rounded-xl border bg-[var(--surface)] px-3 py-2 text-[15px] outline-none focus:ring-2 focus:ring-[#6366F1]/40 lg:min-h-[300px]"
-              style={inputStyle}
-            />
-            <div className="flex gap-2">
-              <button
-                type="button"
-                onClick={() => setFullEditor(null)}
-                className="brand-gradient flex h-11 flex-1 items-center justify-center rounded-xl text-sm font-semibold text-white"
-              >
-                {tr('common.listos')}
-              </button>
-            </div>
-          </div>
-        </div>
-      , document.body)}
     </div>
   );
 }
