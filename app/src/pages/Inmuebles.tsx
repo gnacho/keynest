@@ -441,33 +441,34 @@ export default function Inmuebles() {
                   />
                 </label>
               </div>
-              {!isDemoUser && (
-                <label className="flex flex-col gap-1.5 sm:col-span-2">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:col-span-2">
+                {!isDemoUser && (
+                  <label className="flex flex-col gap-1.5">
+                    <span className="text-xs font-semibold" style={{ color: 'var(--text-muted)' }}>
+                      {tr('aj.dueño')}
+                    </span>
+                    <Select
+                      value={propForm.ownerId ?? 'none'}
+                      onValueChange={(v) => setPropForm((f) => ({ ...f, ownerId: v === 'none' ? null : v }))}
+                    >
+                      <SelectTrigger className="h-9 w-full rounded-xl border-[var(--border)] bg-[var(--surface)] text-sm shadow-none">
+                        <SelectValue placeholder={tr('aj.sinDueño')} />
+                      </SelectTrigger>
+                      <SelectContent className="rounded-xl border-[var(--border)] bg-[var(--surface)]">
+                        <SelectItem value="none">{tr('aj.sinDueño')}</SelectItem>
+                        {data.getUsers().map((u) => (
+                          <SelectItem key={u.id} value={u.id}>
+                            {u.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </label>
+                )}
+                <label className={`flex flex-col gap-1.5 ${!isDemoUser ? '' : 'sm:col-span-2'}`}>
                   <span className="text-xs font-semibold" style={{ color: 'var(--text-muted)' }}>
-                    {tr('aj.dueño')}
+                    {tr('aj.icalUrl')}
                   </span>
-                  <Select
-                    value={propForm.ownerId ?? 'none'}
-                    onValueChange={(v) => setPropForm((f) => ({ ...f, ownerId: v === 'none' ? null : v }))}
-                  >
-                    <SelectTrigger className="h-9 w-full rounded-xl border-[var(--border)] bg-[var(--surface)] text-sm shadow-none">
-                      <SelectValue placeholder={tr('aj.sinDueño')} />
-                    </SelectTrigger>
-                    <SelectContent className="rounded-xl border-[var(--border)] bg-[var(--surface)]">
-                      <SelectItem value="none">{tr('aj.sinDueño')}</SelectItem>
-                      {data.getUsers().map((u) => (
-                        <SelectItem key={u.id} value={u.id}>
-                          {u.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </label>
-              )}
-              <label className="flex flex-col gap-1.5 sm:col-span-2">
-                <span className="text-xs font-semibold" style={{ color: 'var(--text-muted)' }}>
-                  {tr('aj.icalUrl')}
-                </span>
                 {editingIcal ? (
                   <span className="flex items-center gap-2">
                     <input
@@ -538,6 +539,7 @@ export default function Inmuebles() {
                   </span>
                 )}
               </label>
+              </div>
               <label className="flex flex-col gap-1.5 sm:col-span-2">
                 <div className="flex items-center justify-between gap-2">
                   <span className="text-xs font-semibold" style={{ color: 'var(--text-muted)' }}>
@@ -626,46 +628,48 @@ export default function Inmuebles() {
         />
       )}
 
-      {/* ============================== Editor checklist/instrucciones (modal desktop, full-screen móvil) */}
-      <Dialog open={fullEditor !== null} onOpenChange={(o) => !o && setFullEditor(null)}>
-        <DialogContent
-          className="flex flex-col gap-3 rounded-none border-0 bg-[var(--surface)] p-4 h-[100dvh] max-h-none w-full max-w-none translate-x-0 translate-y-0 sm:max-w-none sm:rounded-none lg:relative lg:inset-auto lg:h-auto lg:max-h-[80vh] lg:w-full lg:max-w-3xl lg:translate-x-0 lg:translate-y-0 lg:rounded-2xl lg:border lg:border-[var(--border)] lg:shadow-overlay"
-          showCloseButton={false}
-        >
-          <DialogHeader>
-            <DialogTitle className="font-display text-lg font-semibold">
-              {fullEditor === 'checklist' ? tr('aj.checklist') : tr('aj.instrucciones')}
-            </DialogTitle>
-          </DialogHeader>
-          <textarea
-            autoFocus
-            value={fullEditor === 'checklist' ? checklistText : instructionsText}
-            onChange={(e) =>
-              fullEditor === 'checklist' ? setChecklistText(e.target.value) : setInstructionsText(e.target.value)
-            }
-            placeholder={fullEditor === 'checklist' ? tr('aj.checklistPlaceholder') : tr('aj.instruccionesPlaceholder')}
-            className="min-h-0 flex-1 w-full resize-none rounded-xl border bg-[var(--surface)] px-3 py-2 text-[15px] outline-none focus:ring-2 focus:ring-[#6366F1]/40 lg:min-h-[300px]"
-            style={inputStyle}
-          />
-          <div className="flex gap-2">
-            <button
-              type="button"
-              onClick={() => setFullEditor(null)}
-              className="flex h-11 flex-1 items-center justify-center rounded-xl border text-sm font-semibold transition-colors hover:bg-[var(--surface-2)]"
-              style={{ borderColor: 'var(--border)', color: 'var(--text-muted)' }}
-            >
-              {tr('common.cancelar')}
-            </button>
-            <button
-              type="button"
-              onClick={() => setFullEditor(null)}
-              className="brand-gradient flex h-11 flex-1 items-center justify-center rounded-xl text-sm font-semibold text-white"
-            >
-              {tr('common.listos')}
-            </button>
+      {/* ============================== Editor checklist/instrucciones (overlay, no Dialog anidado) */}
+      {fullEditor !== null && (
+        <div className="fixed inset-0 z-[60] flex items-start justify-center bg-black/50 lg:p-8" onClick={() => setFullEditor(null)}>
+          <div
+            className="flex flex-col gap-3 bg-[var(--surface)] h-[100dvh] w-full p-4 lg:h-auto lg:max-h-[80vh] lg:max-w-3xl lg:rounded-2xl lg:border lg:border-[var(--border)] lg:shadow-overlay lg:relative lg:mt-[10vh]"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between">
+              <h2 className="font-display text-lg font-semibold">
+                {fullEditor === 'checklist' ? tr('aj.checklist') : tr('aj.instrucciones')}
+              </h2>
+            </div>
+            <textarea
+              autoFocus
+              value={fullEditor === 'checklist' ? checklistText : instructionsText}
+              onChange={(e) =>
+                fullEditor === 'checklist' ? setChecklistText(e.target.value) : setInstructionsText(e.target.value)
+              }
+              placeholder={fullEditor === 'checklist' ? tr('aj.checklistPlaceholder') : tr('aj.instruccionesPlaceholder')}
+              className="min-h-0 flex-1 w-full resize-none rounded-xl border bg-[var(--surface)] px-3 py-2 text-[15px] outline-none focus:ring-2 focus:ring-[#6366F1]/40 lg:min-h-[300px]"
+              style={inputStyle}
+            />
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => setFullEditor(null)}
+                className="flex h-11 flex-1 items-center justify-center rounded-xl border text-sm font-semibold transition-colors hover:bg-[var(--surface-2)]"
+                style={{ borderColor: 'var(--border)', color: 'var(--text-muted)' }}
+              >
+                {tr('common.cancelar')}
+              </button>
+              <button
+                type="button"
+                onClick={() => setFullEditor(null)}
+                className="brand-gradient flex h-11 flex-1 items-center justify-center rounded-xl text-sm font-semibold text-white"
+              >
+                {tr('common.listos')}
+              </button>
+            </div>
           </div>
-        </DialogContent>
-      </Dialog>
+        </div>
+      )}
     </div>
   );
 }
