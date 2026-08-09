@@ -519,22 +519,29 @@ export default function Rentabilidad() {
 
       {/* ============================== Topbar */}
       <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <p className="mt-0.5 text-[13px]" style={{ color: 'var(--text-muted)' }}>
-            {label} · {selectedProperty ? selectedProperty.name : t('rent.todosInmuebles')}
-          </p>
-        </div>
+        <button
+          type="button"
+          onClick={goEsteMes}
+          disabled={isEsteMes}
+          className={cn(
+            'h-9 rounded-full border px-3.5 text-[13px] font-semibold transition-all',
+            isEsteMes ? 'cursor-not-allowed opacity-50' : 'hover:bg-[var(--surface-2)] active:scale-95',
+          )}
+          style={{ borderColor: 'var(--border)', color: '#6366F1' }}
+        >
+          {t('rent.esteMes')}
+        </button>
         <div className="flex items-center gap-2">
           {!data.isDemo && (
             <>
               <button
                 type="button"
                 onClick={sync}
-                className="flex h-9 items-center gap-2 rounded-xl border px-3 text-sm font-semibold transition-colors duration-150 hover:bg-[var(--surface-2)]"
+                className="hidden h-9 items-center gap-2 rounded-xl border px-3 text-sm font-semibold transition-colors duration-150 hover:bg-[var(--surface-2)] sm:flex"
                 style={{ borderColor: 'var(--border)' }}
               >
                 <RefreshCw className={cn('h-4 w-4', syncing && 'animate-spin')} style={{ color: 'var(--text-muted)' }} />
-                <span className="hidden sm:inline">{t('rent.sincronizar')}</span>
+                <span>{t('rent.sincronizar')}</span>
               </button>
               <button
                 type="button"
@@ -652,19 +659,6 @@ export default function Rentabilidad() {
             </button>
           </div>
         )}
-
-        <button
-          type="button"
-          onClick={goEsteMes}
-          disabled={isEsteMes}
-          className={cn(
-            'h-9 rounded-full border px-3.5 text-[13px] font-semibold transition-all',
-            isEsteMes ? 'cursor-not-allowed opacity-50' : 'hover:bg-[var(--surface-2)] active:scale-95',
-          )}
-          style={{ borderColor: 'var(--border)', color: '#6366F1' }}
-        >
-          {t('rent.esteMes')}
-        </button>
       </div>
 
       {/* ============================== KPIs */}
