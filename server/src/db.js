@@ -55,6 +55,9 @@ const MIGRATIONS = [
   `ALTER TABLE reservations ADD COLUMN guests INTEGER`,
   // 16: dueño del inmueble (filtro de rentabilidad por usuario, #76).
   `ALTER TABLE properties ADD COLUMN owner_id TEXT`,
+  // 17: IDs de notificaciones de campana descartadas por usuario (persistencia
+  //     multi-dispositivo, #140). JSON array de strings tipo ["not-out-uuid",...].
+  `ALTER TABLE users ADD COLUMN dismissed_notifs TEXT DEFAULT '[]'`,
 ]
 
 export function migrate(db) {

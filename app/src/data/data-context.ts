@@ -44,6 +44,7 @@ export interface AppSettings {
   autoCleaning: boolean;
   lookaheadDays: number;
   nDays: number;
+  dismissedNotifs: string[];
 }
 
 export interface PersonInput {
