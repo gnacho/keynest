@@ -7,7 +7,6 @@ import { useTranslation } from 'react-i18next';
 import { useData } from '@/data/useData';
 import type { Reservation } from '@/data/types';
 import { capitalize, fmtDateLong, startOfDay } from '@/lib/format';
-import { nightsOf } from './calendar-utils';
 import { requestIcon } from './request-icon';
 
 const CLEANING_LABEL_KEY: Record<string, string> = {
@@ -36,23 +35,17 @@ export default function ReservationDetail({ reservation: r }: { reservation: Res
   const { t } = useTranslation();
   const data = useData();
   const [creating, setCreating] = useState(false);
-  const [amountStr, setAmountStr] = useState(() => (r.amount > 0 ? String(r.amount).replace('.', ',') : ''));
   const [notesStr, setNotesStr] = useState(() => r.notes ?? '');
   const [saving, setSaving] = useState(false);
   useEffect(() => {
-    setAmountStr(r.amount > 0 ? String(r.amount).replace('.', ',') : '');
     setNotesStr(r.notes ?? '');
-  }, [r.id, r.amount, r.notes]);
+  }, [r.id, r.notes]);
 
-  const dirty =
-    (Number(amountStr.replace(',', '.')) || 0) !== r.amount || notesStr !== (r.notes ?? '');
+  const dirty = notesStr !== (r.notes ?? '');
 
   const save = async () => {
     setSaving(true);
-    await data.updateReservation(r.id, {
-      amount: Math.max(0, Number(amountStr.replace(',', '.')) || 0),
-      notes: notesStr,
-    });
+    await data.updateReservation(r.id, { notes: notesStr });
     setSaving(false);
     toast.success(t('res.reservaActualizada'));
   };
@@ -66,35 +59,20 @@ export default function ReservationDetail({ reservation: r }: { reservation: Res
       className="grid gap-4 rounded-xl p-4 lg:grid-cols-3"
       style={{ backgroundColor: 'var(--surface-2)' }}
     >
-      {/* Detalles */}
-      <div className="flex flex-col gap-1.5">
-        <SectionTitle>{t('res.detalles')}</SectionTitle>
-        <p className="text-[13px]">
-          <span className="font-display tnum font-medium">{nightsOf(r)}</span> {t('cal.noches', { count: nightsOf(r) })} ·{' '}
-          {t('cal.huesped', { count: r.guestsCount })}
-        </p>
-        <p className="text-[13px]" style={{ color: 'var(--text-muted)' }}>
-          {t('res.edades', { ages: r.guestAges.length ? r.guestAges.join(', ') : '—' })}
-        </p>
-        {r.bookedDate && (
+      {/* Detalles — solo la fecha de reserva (noches y huéspedes ya están en la tarjeta; edades y canal se retiraron) */}
+      {r.bookedDate && (
+        <div className="flex flex-col gap-1.5">
+          <SectionTitle>{t('res.detalles')}</SectionTitle>
           <p className="text-[13px]" style={{ color: 'var(--text-muted)' }}>
             {t('res.reservadaEl', { date: fmtDateLong(new Date(`${r.bookedDate}T12:00:00`)) })}
           </p>
-        )}
-        <p className="text-[13px]" style={{ color: 'var(--text-muted)' }}>
-          {t('res.canal')}
-        </p>
-        {r.notes && (
-          <p className="whitespace-pre-line text-[13px]" style={{ color: 'var(--text-muted)' }}>
-            {r.notes}
-          </p>
-        )}
-      </div>
+        </div>
+      )}
 
-      {/* Peticiones especiales */}
-      <div className="flex flex-col gap-1.5">
-        <SectionTitle>{t('res.peticionesEspeciales')}</SectionTitle>
-        {r.specialRequest && ReqIcon ? (
+      {/* Peticiones especiales — solo si existen */}
+      {r.specialRequest && ReqIcon && (
+        <div className="flex flex-col gap-1.5">
+          <SectionTitle>{t('res.peticionesEspeciales')}</SectionTitle>
           <div
             className="flex items-center gap-2 rounded-xl border px-3 py-2 text-xs font-semibold"
             style={{
@@ -107,32 +85,11 @@ export default function ReservationDetail({ reservation: r }: { reservation: Res
             <ReqIcon className="h-4 w-4 shrink-0" />
             {capitalize(r.specialRequest)}
           </div>
-        ) : (
-          <p className="text-[13px]" style={{ color: 'var(--text-muted)' }}>
-            {t('res.sinPeticiones')}
-          </p>
-        )}
-      </div>
+        </div>
+      )}
 
-      {/* Importe manual + notas */}
+      {/* Notas de la reserva (el importe manual se oculta: el scraper ya trae el amount bien) */}
       <div className="flex flex-col gap-2">
-        <SectionTitle>{t('res.importeManual')}</SectionTitle>
-        {data.isDemo ? (
-          <p className="tnum h-9 w-full rounded-xl border bg-[var(--surface)] px-3 text-sm leading-9"
-             style={{ borderColor: 'var(--border)' }}>
-            {amountStr || '—'}
-          </p>
-        ) : (
-          <input
-            value={amountStr}
-            onChange={(e) => setAmountStr(e.target.value)}
-            inputMode="decimal"
-            placeholder="0,00"
-            aria-label={t('res.importeManual')}
-            className="tnum h-9 w-full rounded-xl border bg-[var(--surface)] px-3 text-sm outline-none focus:ring-2 focus:ring-[#6366F1]/40"
-            style={{ borderColor: 'var(--border)' }}
-          />
-        )}
         <SectionTitle>{t('res.notasReserva')}</SectionTitle>
         {data.isDemo ? (
           <p className="w-full rounded-xl border bg-[var(--surface)] px-3 py-2 text-sm"
@@ -207,7 +164,7 @@ export default function ReservationDetail({ reservation: r }: { reservation: Res
         )}
         <div className="mt-1 flex flex-wrap gap-2">
           <Link
-            to={`/calendario?inmueble=${p?.slug ?? ''}`}
+            to={`/calendario?inmueble=${p?.slug ?? ''}&reserva=${r.id}`}
             className="flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-xs font-semibold"
             style={{ backgroundColor: 'var(--bl-chip-bg)', color: 'var(--bl-chip-text)' }}
           >
