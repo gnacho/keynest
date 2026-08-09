@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import KpiCard from '@/components/KpiCard';
 import PropertyCard from '@/components/PropertyCard';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import PropertyAvatar from '@/components/PropertyAvatar';
 import EmptyState from '@/components/EmptyState';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
@@ -256,9 +257,16 @@ export default function Dashboard() {
         <span className="flex items-center gap-1.5">
           {/* CircleAlert si rotación (izquierda, alineado) */}
           {rotacion && (
-            <span title={t('dash.rotacion')} className="flex shrink-0">
-              <CircleAlert className="h-4 w-4" style={{ color: '#F43F5E' }} aria-label={t('dash.rotacion')} />
-            </span>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <span className="flex shrink-0">
+                  <CircleAlert className="h-4 w-4" style={{ color: '#F43F5E' }} aria-label={t('dash.rotacion')} />
+                </span>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>{t('dash.rotacion')}</p>
+              </TooltipContent>
+            </Tooltip>
           )}
           {/* Chip Entrada/Salida con hora — oculto en móvil (el color de la tarjeta ya distingue) */}
           <span
