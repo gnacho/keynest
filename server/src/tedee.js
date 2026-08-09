@@ -49,11 +49,17 @@ export async function tedeeFetch(db, path, cloudPath) {
   return res.json()
 }
 
-/** Lista de cerraduras: [{id, name, battery, online, rssi, state, serial}]
- *  Bridge: GET /v1.0/lock. Cloud: GET /api/v37/my/lock (PAK). */
+/** Lista de cerraduras: [{id, name, battery, online, rssi, state, serial, propertyId}]
+ *  Bridge: GET /v1.0/lock. Cloud: GET /api/v37/my/lock (PAK).
+ *  propertyId se cruza con properties.tedee_lock_id (si hay match). */
 export async function tedeeLocks(db) {
   const cloud = isCloudUrl(tedeeConfig(db).url)
   const raw = await tedeeFetch(db, '/v1.0/lock', '/api/v37/my/lock')
+  // lock_id Tedee → property_id de Keynest (para asociar accesos a inmuebles)
+  const propByLock = new Map()
+  for (const p of db.prepare('SELECT id, tedee_lock_id FROM properties WHERE tedee_lock_id IS NOT NULL').all()) {
+    propByLock.set(Number(p.tedee_lock_id), p.id)
+  }
   if (cloud) {
     const list = Array.isArray(raw?.result) ? raw.result : []
     return list.map((l) => ({
@@ -65,6 +71,7 @@ export async function tedeeLocks(db) {
       state: l.deviceState?.state ?? null,
       jammed: false,
       serial: l.serialNumber ?? '',
+      propertyId: propByLock.get(Number(l.id)) ?? '',
     }))
   }
   if (!Array.isArray(raw)) return []
@@ -77,5 +84,47 @@ export async function tedeeLocks(db) {
     state: l.state ?? null,
     jammed: Boolean(l.jammed),
     serial: l.serialNumber ?? '',
+    propertyId: propByLock.get(Number(l.id)) ?? '',
   }))
+}
+
+/** Eventos de deviceactivity que suponen un ACCESO real (abrir/cerrar por persona).
+ *  Unlock/pull por PIN, huella o app → entrada; lock por PIN/teclado → salida;
+ *  acciones remotas desde la app → remota. Los eventos de sistema (batería,
+ *  calibración, jammed…) se ignoran. Fuente: docs oficiales event-type. */
+const ACCESS_EVENT_TYPE = {
+  32: 'remota', 33: 'remota', 34: 'remota', 35: 'remota', // lock/unlock botón
+  51: 'remota', 52: 'remota', 53: 'remota', // pull spring
+  61: 'entrada', 63: 'entrada', 64: 'entrada', 76: 'entrada', // pin unlock/pull
+  65: 'salida', 66: 'salida', // locked by keypad (con/sin pin)
+  77: 'entrada', 78: 'entrada', 79: 'entrada', 80: 'entrada', 81: 'entrada', // huella
+}
+
+/** Log de accesos reales desde la cloud (GET /api/v37/my/deviceactivity?deviceId=).
+ *  Devuelve [{id, at, actorName, actorRole, type, lockId}] — NUNCA el PIN en claro.
+ *  Solo cloud: el bridge local no expone deviceactivity. */
+export async function tedeeAccesses(db) {
+  if (!isCloudUrl(tedeeConfig(db).url)) return []
+  const locks = await tedeeLocks(db)
+  const out = []
+  for (const l of locks) {
+    const raw = await tedeeFetch(db, null, `/api/v37/my/deviceactivity?deviceId=${l.id}&elements=50`)
+    const list = Array.isArray(raw?.result) ? raw.result : []
+    for (const ev of list) {
+      const type = ACCESS_EVENT_TYPE[ev.event]
+      if (!type) continue
+      // pinAlias = nombre de la persona asignada al PIN; nunca el código.
+      const actorName = ev.pinAlias || ev.username || ev.accessLinkName || ''
+      out.push({
+        id: `td-${ev.id}`,
+        at: ev.date ? new Date(ev.date) : new Date(),
+        actorName,
+        actorRole: ev.pinAlias || ev.username || ev.accessLinkName ? 'huésped' : 'propietario',
+        type,
+        propertyId: l.propertyId ?? '',
+        lockId: String(l.id),
+      })
+    }
+  }
+  return out.sort((a, b) => b.at.getTime() - a.at.getTime())
 }

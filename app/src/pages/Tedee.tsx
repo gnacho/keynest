@@ -95,7 +95,8 @@ function LockCard({
   const { t } = useTranslation();
   const { getProperty } = useData();
   const reduce = useReducedMotion();
-  const property = getProperty(lock.propertyId)!;
+  // Lock sin inmueble asociado (propertyId vacío): fallback para no romper el render.
+  const property = getProperty(lock.propertyId) ?? { id: '', slug: '', name: lock.name, address: '', bedrooms: 0, bathrooms: 0, area: 0, photo: '', checklist: [], instructions: '' };
   const tone = batteryTone(lock.battery);
   const lowBattery = lock.battery < 30;
   const BatteryIcon = tone.icon;
@@ -360,11 +361,11 @@ export default function Tedee() {
             <span style={{ color: 'var(--text-muted)' }}>
               {problemLocks
                 .map((l) => {
-                  const p = data.getProperty(l.propertyId)!;
+                  const p = data.getProperty(l.propertyId);
                   const reasons = [!l.online && 'offline', l.battery < 30 && t('ted.bateriaPct', { pct: l.battery })]
                     .filter(Boolean)
                     .join(' · ');
-                  return `${p.name} (${reasons})`;
+                  return `${p?.name ?? l.name} (${reasons})`;
                 })
                 .join(', ')}
             </span>
@@ -392,7 +393,8 @@ export default function Tedee() {
                 highlighted={highlightLock === lock.id}
                 onOpen={() => setDetailLock(lock)}
                 onBatteryTask={() => {
-                  const p = data.getProperty(lock.propertyId)!;
+                  const p = data.getProperty(lock.propertyId);
+                  if (!p) return;
                   toast.success(t('ted.tareaPilasCreada', { name: p.name }));
                   navigate(`/mantenimiento?inmueble=${p.slug}`);
                 }}
