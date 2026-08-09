@@ -483,6 +483,40 @@ guarded.put('/properties/:id', async (c) => {
   return c.json({ ok: true, property: { ...property, checklist: JSON.parse(property.checklist) } })
 })
 
+/* Crear una reserva manual (guest + fechas). El uid se genera local para no
+   colisionar con los del sync iCal/CSV. */
+guarded.post('/reservations', async (c) => {
+  const body = await c.req.json().catch(() => null)
+  const parsed = z
+    .object({
+      propertyId: z.string().min(1),
+      guestName: z.string().min(1),
+      checkin: z.string(),
+      checkout: z.string(),
+      guests: z.number().int().min(1).max(16).optional(),
+      amount: z.number().min(0).optional(),
+    })
+    .safeParse(body)
+  if (!parsed.success) return c.json({ error: 'formato inválido' }, 400)
+  const d = parsed.data
+  const db = c.get('db')
+  if (!db.prepare('SELECT id FROM properties WHERE id = ?').get(d.propertyId)) {
+    return c.json({ error: 'inmueble no encontrado' }, 404)
+  }
+  const id = crypto.randomUUID()
+  const hoy = new Date().toISOString().slice(0, 10)
+  db.prepare(
+    `INSERT INTO reservations (id, property_id, uid, checkin, checkout, summary, confirmation_code, phone_last4, amount, guest_name, booked_date, guests, created_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+  ).run(
+    id, d.propertyId, `manual-${id}`, d.checkin, d.checkout, 'Manual', '', '',
+    d.amount ?? 0, d.guestName, hoy, d.guests ?? null, Date.now(),
+  )
+  const reservation = db.prepare('SELECT * FROM reservations WHERE id = ?').get(id)
+  aud(c, 'create', 'reservation', id, d.guestName)
+  return c.json({ ok: true, reservation }, 201)
+})
+
 /* Validador de URL iCal: descarga y comprueba que sea un calendario usable.
    Devuelve códigos de error para que el frontend los traduzca. */
 const icalSchema = z.object({ url: z.string().url() })

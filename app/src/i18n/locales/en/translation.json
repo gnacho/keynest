@@ -200,7 +200,8 @@
     "importeManual": "Amount (€, manual)",
     "notasReserva": "Notes",
     "notasReservaPlaceholder": "Free text about this reservation…",
-    "reservaActualizada": "Reservation updated"
+    "reservaActualizada": "Reservation updated",
+    "errorCrearReserva": "Could not create the reservation"
   },
   "estadoReserva": {
     "confirmada": "Confirmed",

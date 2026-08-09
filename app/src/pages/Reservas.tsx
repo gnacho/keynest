@@ -85,7 +85,6 @@ export default function Reservas() {
 
   const [loading, setLoading] = useState(true);
   const [painted, setPainted] = useState(false);
-  const [localNew, setLocalNew] = useState<Reservation[]>([]);
   const [expandedId, setExpandedId] = useState<string | null>(null);
   type SortKey = 'guest' | 'property' | 'checkin' | 'checkout' | 'guests' | 'status' | 'amount';
   const [sortKey, setSortKey] = useState<SortKey>('checkin');
@@ -103,7 +102,6 @@ export default function Reservas() {
   const [toast, setToast] = useState<string | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [flashId, setFlashId] = useState<string | null>(null);
-  const seq = useRef(1);
   const rowRefs = useRef(new Map<string, HTMLElement>());
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -132,11 +130,7 @@ export default function Reservas() {
   const reservaParam = params.get('reserva');
   const filteredProp = inmueble !== 'todos' ? data.getProperty(inmueble) : undefined;
 
-  const base = useMemo(
-    () => [...data.getReservations(), ...localNew],
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [data.version, localNew],
-  );
+  const base = useMemo(() => data.getReservations(), [data.version]);
 
   const activasAhora = base.filter((r) => categoryOf(r, today) === 'activa').length;
 
@@ -258,43 +252,33 @@ export default function Reservas() {
     setParams(new URLSearchParams(), { replace: true });
   };
 
-  const saveReservation = () => {
+  const saveReservation = async () => {
     const prop = data.getProperty(form.propertyId);
     const ci = new Date(`${form.checkIn}T15:00:00`);
     const co = new Date(`${form.checkOut}T11:00:00`);
-    if (!prop || !form.name.trim() || Number.isNaN(ci.getTime()) || Number.isNaN(co.getTime()) || co <= ci)
-      return;
+    if (!prop || !form.name.trim() || Number.isNaN(ci.getTime()) || Number.isNaN(co.getTime()) || co <= ci) return;
     const name = form.name.trim();
-    const r: Reservation = {
-      id: `res-local-${seq.current++}`,
-      propertyId: prop.id,
-      guest: {
-        name,
-        country: t('res.entradaManual'),
-        initials: name
-          .split(' ')
-          .map((w) => w[0])
-          .slice(0, 2)
-          .join('')
-          .toUpperCase(),
-      },
-      checkIn: ci,
-      checkOut: co,
-      guestsCount: Math.max(1, Math.min(8, Number(form.guests) || 1)),
-      guestAges: [],
-      status: 'confirmada',
-      amount: Math.max(0, Number(form.amount) || 0),
-    };
-    setLocalNew((prev) => [...prev, r]);
-    setFlashId(r.id);
-    setExpandedId(r.id);
-    setDialogOpen(false);
-    setForm((f) => ({ ...f, name: '' }));
-    setTimeout(() => {
-      rowRefs.current.get(r.id)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    }, 300);
-    setTimeout(() => setFlashId(null), 1400);
-    showToast(t('res.reservaCreada'));
+    try {
+      const created = await data.addReservation({
+        propertyId: prop.id,
+        guestName: name,
+        checkin: form.checkIn,
+        checkout: form.checkOut,
+        guests: Math.max(1, Math.min(8, Number(form.guests) || 1)),
+        amount: Math.max(0, Number(form.amount) || 0),
+      });
+      setFlashId(created.id);
+      setExpandedId(created.id);
+      setDialogOpen(false);
+      setForm((f) => ({ ...f, name: '' }));
+      setTimeout(() => {
+        rowRefs.current.get(created.id)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }, 300);
+      setTimeout(() => setFlashId(null), 1400);
+      showToast(t('res.reservaCreada'));
+    } catch {
+      showToast(t('res.errorCrearReserva'));
+    }
   };
 
   const toggleExpand = (id: string) => setExpandedId((cur) => (cur === id ? null : id));
