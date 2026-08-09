@@ -10,6 +10,7 @@ import {
   ChevronsLeft,
   ChevronsRight,
   LayoutDashboard,
+  Lock,
   Moon,
   Settings,
   Sparkles,
@@ -55,13 +56,14 @@ const NAV_ITEMS: NavItem[] = [
   { to: '/mantenimiento', labelKey: 'mantenimiento', icon: Wrench },
   { to: '/rentabilidad', labelKey: 'rentabilidad', icon: TrendingUp },
   { to: '/inmuebles', labelKey: 'inmuebles', icon: Building2 },
+  { to: '/tedee', labelKey: 'tedee', icon: Lock },
 ];
 
 /* Desktop: todos los de dominio */
 const DESKTOP_NAV: NavItem[] = NAV_ITEMS;
 
 /* Móvil (bottom-nav): solo los esenciales + Ajustes */
-const HIDDEN_ROUTES = ['/calendario', '/mantenimiento'];
+const HIDDEN_ROUTES = ['/calendario', '/mantenimiento', '/tedee'];
 const VISIBLE_NAV: NavItem[] = NAV_ITEMS.filter((i) => !HIDDEN_ROUTES.includes(i.to));
 
 const SETTINGS_ITEM: NavItem = { to: '/ajustes', labelKey: 'ajustes', icon: Settings };
