@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router';
 import { motion, useReducedMotion } from 'framer-motion';
 import type { Variants } from 'framer-motion';
@@ -231,6 +231,15 @@ export default function Tedee() {
   const [visibleCount, setVisibleCount] = useState(8);
   const [highlightLock, setHighlightLock] = useState<string | null>(null);
   const listRef = useRef<HTMLDivElement>(null);
+
+  // Deep-link desde notificaciones: ?lock=<id> resalta esa cerradura un instante.
+  useEffect(() => {
+    const lockId = params.get('lock');
+    if (!lockId) return;
+    setHighlightLock(lockId);
+    const t = setTimeout(() => setHighlightLock(null), 1400);
+    return () => clearTimeout(t);
+  }, [params]);
 
   const problemLocks = locks.filter((l) => !l.online || l.battery < 30);
 

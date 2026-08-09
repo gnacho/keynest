@@ -44,17 +44,17 @@ export function checkReservasHoy(db, notifyFn = notifyAll) {
   const hoy = hoyLocal()
   const filas = db
     .prepare(
-      `SELECT r.checkin, r.checkout, r.summary, p.name AS propiedad
+      `SELECT r.id, r.checkin, r.checkout, r.summary, p.name AS propiedad
        FROM reservations r JOIN properties p ON p.id = r.property_id
        WHERE r.checkin = ? OR r.checkout = ?`
     )
     .all(hoy, hoy)
   for (const r of filas) {
     if (r.checkin === hoy) {
-      notifyFn(db, 'checkin_hoy', { propiedad: r.propiedad, resumen: r.summary }, { severity: 'normal', url: '/reservas' })
+      notifyFn(db, 'checkin_hoy', { propiedad: r.propiedad, resumen: r.summary }, { severity: 'normal', url: `/reservas?reserva=${r.id}` })
     }
     if (r.checkout === hoy) {
-      notifyFn(db, 'checkout_hoy', { propiedad: r.propiedad, resumen: r.summary }, { severity: 'normal', url: '/reservas' })
+      notifyFn(db, 'checkout_hoy', { propiedad: r.propiedad, resumen: r.summary }, { severity: 'normal', url: `/reservas?reserva=${r.id}` })
     }
   }
   return filas.length
@@ -100,11 +100,17 @@ export function notifyReservasNuevas(db, propiedad, items, notifyFn = notifyAll)
     return
   }
   for (const i of items) {
+    // Deep-link: la reserva ya está en BD (el upsert ocurre antes de onNews);
+    // se busca por uid o confirmation_code para llevar la reserva concreta.
+    const fila = db
+      .prepare('SELECT id FROM reservations WHERE uid = ? OR (confirmation_code IS NOT NULL AND confirmation_code = ?)')
+      .get(i.uid ?? '', i.confirmation_code ?? '')
+    const url = fila?.id ? `/reservas?reserva=${fila.id}` : '/reservas'
     notifyFn(
       db,
       'reserva_nueva',
       { propiedad, resumen: i.summary, ...detalleReserva(db, i) },
-      { severity: 'normal', url: '/reservas' }
+      { severity: 'normal', url }
     )
   }
 }
@@ -133,7 +139,7 @@ export function checkTransacciones(db, notifyFn = notifyAll) {
       db,
       'transaccion',
       { propiedad: f.propiedad, resumen: f.summary, importe: f.amount, huesped: f.guest_name || null },
-      { severity: 'normal', url: '/rentabilidad' }
+      { severity: 'normal', url: `/reservas?reserva=${f.id}` }
     )
     kvSet(db, key, '1')
     avisos++
@@ -169,7 +175,7 @@ export function createTedeeChecker({ db, notifyFn = notifyAll, locksFn = tedeeLo
         e.mal++
         if (!e.alertadoOff && e.mal >= TICKS_TEDEE_OFFLINE) {
           e.alertadoOff = true
-          notifyFn(db, 'tedee_offline', { nombre: e.nombre }, { severity: 'critical', url: '/tedee' })
+          notifyFn(db, 'tedee_offline', { nombre: e.nombre }, { severity: 'critical', url: `/tedee?lock=${e.id}` })
         }
       }
       return
@@ -182,12 +188,12 @@ export function createTedeeChecker({ db, notifyFn = notifyAll, locksFn = tedeeLo
         e.mal++
         if (!e.alertadoOff && e.mal >= TICKS_TEDEE_OFFLINE) {
           e.alertadoOff = true
-          notifyFn(db, 'tedee_offline', { nombre: e.nombre }, { severity: 'critical', url: '/tedee' })
+          notifyFn(db, 'tedee_offline', { nombre: e.nombre }, { severity: 'critical', url: `/tedee?lock=${e.id}` })
         }
       } else {
         if (e.alertadoOff) {
           e.alertadoOff = false
-          notifyFn(db, 'tedee_ok', { nombre: e.nombre }, { severity: 'normal', url: '/tedee' })
+          notifyFn(db, 'tedee_ok', { nombre: e.nombre }, { severity: 'normal', url: `/tedee?lock=${e.id}` })
         }
         e.mal = 0
       }
@@ -195,7 +201,7 @@ export function createTedeeChecker({ db, notifyFn = notifyAll, locksFn = tedeeLo
       if (l.online && l.battery > 0) {
         if (!e.alertadoBat && l.battery <= TEDEE_BAT_BAJA) {
           e.alertadoBat = true
-          notifyFn(db, 'tedee_bateria', { nombre: e.nombre, nivel: l.battery }, { severity: 'high', url: '/tedee' })
+          notifyFn(db, 'tedee_bateria', { nombre: e.nombre, nivel: l.battery }, { severity: 'high', url: `/tedee?lock=${e.id}` })
         } else if (e.alertadoBat && l.battery > TEDEE_BAT_REARME) {
           e.alertadoBat = false
         }
@@ -220,7 +226,7 @@ export function checkLimpiezas(db, notifyFn = notifyAll) {
   for (const f of filas) {
     const key = `push_clean_${f.id}`
     if (kvGet(db, key) === hoy) continue // ya avisada hoy
-    notifyFn(db, 'limpieza_pendiente', { propiedad: f.propiedad, fecha: f.date }, { severity: 'high', url: '/limpieza' })
+    notifyFn(db, 'limpieza_pendiente', { propiedad: f.propiedad, fecha: f.date }, { severity: 'high', url: `/limpieza?tarea=${f.id}` })
     kvSet(db, key, hoy)
     avisos++
   }
