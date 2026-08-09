@@ -1090,15 +1090,11 @@ export default function Ajustes() {
                         </span>
                       ) : (
                         <Select value={c.icon} onValueChange={(v) => updateCat(c.key, { icon: v })}>
-                          <SelectTrigger asChild>
-                            <button
-                              type="button"
-                              aria-label={tr('aj.cambiarIcono')}
-                              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl transition-colors hover:brightness-95"
-                              style={{ backgroundColor: 'var(--ro-chip-bg)' }}
-                            >
-                              <Icon className="h-4 w-4 text-rose-500" />
-                            </button>
+                          <SelectTrigger
+                            aria-label={tr('aj.cambiarIcono')}
+                            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[var(--ro-chip-bg)] p-0 shadow-none [&>svg]:hidden"
+                          >
+                            <Icon className="h-4 w-4 text-rose-500" />
                           </SelectTrigger>
                           <SelectContent className="rounded-xl border-[var(--border)] bg-[var(--surface)]">
                             {Object.entries(CAT_ICONS).map(([name, Ico]) => (
