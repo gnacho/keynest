@@ -169,7 +169,7 @@ export default function KpiCard({
   const up = (deltaPct ?? 0) >= 0;
 
   const rootCls = cn(
-    'card flex flex-col gap-2 p-4',
+    'card flex h-full flex-col gap-2 p-4',
     to && 'transition-all duration-150 hover:-translate-y-0.5 hover:shadow-overlay',
     className,
   );
@@ -199,7 +199,7 @@ export default function KpiCard({
         {prefix}
         {formatted}
         {unit && (
-          <span className="font-medium" style={{ fontSize: '0.6em', color: 'var(--text-faint)', marginLeft: 2 }}>
+          <span className="whitespace-nowrap font-medium" style={{ fontSize: '0.6em', color: 'var(--text-faint)', marginLeft: 2 }}>
             {unit}
           </span>
         )}
