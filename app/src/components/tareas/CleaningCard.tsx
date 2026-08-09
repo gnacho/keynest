@@ -69,6 +69,8 @@ export default function CleaningCard({ cleaning: c, variants, highlight = false,
   const [instrEditing, setInstrEditing] = useState(false);
   const [instrDraft, setInstrDraft] = useState(c.instructions);
   const [deleteOpen, setDeleteOpen] = useState(false);
+  // En móvil el checklist se pliega en un desplegable; en desktop siempre visible.
+  const [checksOpen, setChecksOpen] = useState(false);
 
   const done = c.checks.filter((k) => k.done).length;
   const total = c.checks.length;
@@ -303,17 +305,28 @@ export default function CleaningCard({ cleaning: c, variants, highlight = false,
       <div className="mt-3 flex flex-col gap-3">
         {/* 1) CHECKLIST DEL INMUEBLE — lo primero que mira la persona de limpieza */}
         <div className="rounded-2xl border p-3" style={{ borderColor: 'var(--border)', backgroundColor: 'var(--surface-2)' }}>
-          <div className="mb-1.5 flex items-center justify-between">
+          <button
+            type="button"
+            onClick={() => setChecksOpen((o) => !o)}
+            aria-expanded={checksOpen}
+            className="mb-1.5 flex w-full items-center justify-between text-left lg:cursor-default"
+          >
             <p
               className="text-[11px] font-semibold uppercase tracking-[0.08em]"
               style={{ color: 'var(--text-faint)' }}
             >
               {t('tok.checklist', { name: property.name })}
             </p>
-            <span className="tnum text-xs font-semibold text-violet-500">
-              {done}/{total}
+            <span className="flex items-center gap-1.5">
+              <span className="tnum text-xs font-semibold text-violet-500">
+                {done}/{total}
+              </span>
+              <ChevronDown
+                className={cn('h-4 w-4 transition-transform duration-200 lg:hidden', checksOpen && 'rotate-180')}
+                style={{ color: 'var(--text-faint)' }}
+              />
             </span>
-          </div>
+          </button>
           <div className="h-1.5 overflow-hidden rounded-full" style={{ backgroundColor: 'var(--border)' }}>
             <motion.div
               className="h-full rounded-full bg-violet-500"
@@ -322,7 +335,8 @@ export default function CleaningCard({ cleaning: c, variants, highlight = false,
               transition={{ duration: 0.3 }}
             />
           </div>
-          <div className="mt-2 grid grid-cols-2 gap-1.5">
+          {/* Contenido: en móvil colapsable, en desktop siempre expandido */}
+          <div className={cn('mt-2 grid grid-cols-2 gap-1.5', !checksOpen && 'hidden lg:grid')}>
             {c.checks.map((k) => {
               const checkInner = (
                 <>
