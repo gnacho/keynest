@@ -260,9 +260,9 @@ export default function Dashboard() {
               <CircleAlert className="h-4 w-4" style={{ color: '#F43F5E' }} aria-label={t('dash.rotacion')} />
             </span>
           )}
-          {/* Chip Entrada/Salida con hora (neutro) */}
+          {/* Chip Entrada/Salida con hora — oculto en móvil (el color de la tarjeta ya distingue) */}
           <span
-            className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold"
+            className="hidden items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold sm:inline-flex"
             style={{ backgroundColor: 'var(--sl-chip-bg)', color: 'var(--sl-chip-text)' }}
           >
             {kind === 'in' ? t('common.entrada') : t('common.salida')} {fmtTime(date)}
@@ -334,7 +334,7 @@ export default function Dashboard() {
 
       {/* ============================== Sección 2 — Hoy: entradas y salidas */}
       <motion.section
-        className="hidden gap-5 lg:grid lg:grid-cols-2"
+        className="grid gap-5 lg:grid-cols-2"
         variants={containerV}
         initial="hidden"
         whileInView="show"

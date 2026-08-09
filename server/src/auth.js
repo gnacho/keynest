@@ -37,15 +37,17 @@ export async function ensureBootstrapAdmin(db, config) {
   console.log(`[auth] admin bootstrap creado: ${config.authUser}`)
 }
 
-/* IP del cliente: socket real por defecto; XFF solo si TRUST_PROXY=true (detrás de proxy inverso) */
+/* IP del cliente: socket real por defecto; XFF solo si TRUST_PROXY=true (detrás de proxy inverso).
+ *  Fallback: si no hay socket, usa XFF aunque TRUST_PROXY no esté seteado (evita
+ *  que todas las IPs compartan la clave "unknown" en rate limits). */
 function clientIp(c) {
-  if (process.env.TRUST_PROXY === 'true') {
-    const xff = c.req.header('x-forwarded-for')
-    if (xff) return xff.split(',')[0].trim()
-  }
   const req = c.req.raw
   const socket = req?.socket || req?.connection
-  return socket?.remoteAddress || 'unknown'
+  const ip = socket?.remoteAddress
+  if (ip && ip !== '::1' && ip !== '127.0.0.1') return ip
+  const xff = c.req.header('x-forwarded-for')
+  if (xff) return xff.split(',')[0].trim()
+  return ip || 'unknown'
 }
 
 /* Rate limit general para acciones costosas (sync, uploads).
