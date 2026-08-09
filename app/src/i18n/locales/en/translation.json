@@ -360,7 +360,9 @@
     "editarTitulo": "Edit task",
     "editarDesc": "Edit the work order details; the provider will see them updated in their link.",
     "guardar": "Save",
-    "checksProgreso": "Checks ({{done}}/{{total}})"
+    "checksProgreso": "Checks ({{done}}/{{total}})",
+    "mostrarAntiguas": "Show +{{dias}} days",
+    "ocultarAntiguas": "Hide old"
   },
   "cat": {
     "cerradura": "Lock/batteries",

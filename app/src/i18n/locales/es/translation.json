@@ -360,7 +360,9 @@
     "editarTitulo": "Editar tarea",
     "editarDesc": "Modifica los datos de la orden; el proveedor los verá actualizados en su enlace.",
     "guardar": "Guardar",
-    "checksProgreso": "Checks ({{done}}/{{total}})"
+    "checksProgreso": "Checks ({{done}}/{{total}})",
+    "mostrarAntiguas": "Mostrar +{{dias}} días",
+    "ocultarAntiguas": "Ocultar antiguas"
   },
   "cat": {
     "cerradura": "Cerradura/pilas",

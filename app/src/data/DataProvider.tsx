@@ -172,7 +172,7 @@ interface BootstrapData {
   maintenance: ApiMaintenance[];
   people: ApiPerson[];
   categories: MaintCategory[];
-  config?: { checkInTime?: string; checkOutTime?: string; batteryThreshold?: number; autoCleaning?: boolean; lookaheadDays?: number };
+  config?: { checkInTime?: string; checkOutTime?: string; batteryThreshold?: number; autoCleaning?: boolean; lookaheadDays?: number; nDays?: number };
   sync: Record<string, { ok: boolean; at: number; count?: number; error?: string }>;
   users?: AppUser[];
   demo?: boolean;
@@ -223,7 +223,7 @@ export default function DataProvider({ children }: { children: ReactNode }) {
   const people = useRef<Person[]>([]);
   const users = useRef<AppUser[]>([]);
   const categories = useRef<MaintCategory[]>([]);
-  const settings = useRef<AppSettings>({ checkInTime: '15:00', checkOutTime: '11:00', batteryThreshold: 30, autoCleaning: true, lookaheadDays: 7 });
+  const settings = useRef<AppSettings>({ checkInTime: '15:00', checkOutTime: '11:00', batteryThreshold: 30, autoCleaning: true, lookaheadDays: 7, nDays: 7 });
   const locks = useRef<Lock[]>([]);
   const accesses = useRef<TedeeAccess[]>([]);
   const monthlyFinance = useRef<MonthlyFinance[]>([]);
@@ -251,6 +251,7 @@ export default function DataProvider({ children }: { children: ReactNode }) {
         batteryThreshold: data.config?.batteryThreshold ?? 30,
         autoCleaning: data.config?.autoCleaning ?? true,
         lookaheadDays: data.config?.lookaheadDays ?? 7,
+        nDays: data.config?.nDays ?? 7,
       };
       syncMap.current = data.sync ?? {};
       users.current = data.users ?? [];

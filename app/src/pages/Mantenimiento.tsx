@@ -84,6 +84,12 @@ export default function Mantenimiento() {
   const inmueble = params.get('inmueble') ?? 'todos';
   const all = data.getMaintenance();
   const urgentes = all.filter((t) => t.urgent && t.status !== 'finalizada').length;
+  const avisoDias = data.getSettings().nDays;
+  const [mostrarAntiguas, setMostrarAntiguas] = useState(false);
+  const umbralAntiguas = Date.now() - avisoDias * 86400000;
+  const antiguasOcultas = all.filter(
+    (t) => t.status === 'finalizada' && t.scheduledDate && t.scheduledDate.getTime() < umbralAntiguas,
+  ).length;
 
   const filtered = useMemo(
     () =>
@@ -91,10 +97,11 @@ export default function Mantenimiento() {
         if (inmueble !== 'todos' && data.getProperty(t.propertyId)?.slug !== inmueble) return false;
         if (categoria !== 'todas' && t.category !== categoria) return false;
         if (soloUrgentes && !t.urgent) return false;
+        if (!mostrarAntiguas && t.status === 'finalizada' && t.scheduledDate && t.scheduledDate.getTime() < umbralAntiguas) return false;
         return true;
       }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [all, inmueble, categoria, soloUrgentes, data.version],
+    [all, inmueble, categoria, soloUrgentes, mostrarAntiguas, data.version],
   );
 
   const byStatus = (s: MaintenanceStatus) =>
@@ -214,6 +221,16 @@ export default function Mantenimiento() {
           <span className={cn('h-1.5 w-1.5 rounded-full', soloUrgentes ? 'bg-white' : 'animate-dot-pulse bg-rose-500')} />
           {tr('mant.soloUrgentes')}
         </button>
+        {antiguasOcultas > 0 && (
+          <button
+            type="button"
+            onClick={() => setMostrarAntiguas((v) => !v)}
+            className="flex items-center gap-1 rounded-full border px-3 py-1.5 text-xs font-semibold transition-colors"
+            style={{ borderColor: 'var(--border)', color: 'var(--text-muted)' }}
+          >
+            {mostrarAntiguas ? tr('mant.ocultarAntiguas') : tr('mant.mostrarAntiguas', { dias: avisoDias })}
+          </button>
+        )}
         {!data.isDemo && (
           <button
             type="button"
