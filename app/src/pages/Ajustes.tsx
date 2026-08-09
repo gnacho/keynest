@@ -893,7 +893,7 @@ export default function Ajustes() {
           {tab === 'preferencias' && (
             <div className="flex flex-col gap-4">
               {/* Fila 1: [Apariencia | Operativa (solo admin)] — canon webapp-shell 6-Ago-2026 */}
-              <div className={cn('grid items-start gap-4', isAdmin && 'xl:grid-cols-2')}>
+              <div className={cn('grid items-stretch gap-4', isAdmin && 'xl:grid-cols-2')}>
                 <AppearanceCard />
                 {isAdmin && (
                   <Card title={tr('aj.operativa')} desc={tr('aj.operativaDesc')}>
@@ -943,31 +943,33 @@ export default function Ajustes() {
                           className="data-[state=checked]:bg-[#8B5CF6]"
                         />
                       </div>
+
+                      {/* Umbral batería Tedee — compacto, sin descripción */}
+                      <div className="flex min-h-14 items-center justify-between gap-3 py-3" style={{ borderColor: 'var(--border)' }}>
+                        <p className="text-sm font-semibold">{tr('aj.umbralBateria')}</p>
+                        <div className="flex w-48 items-center gap-3">
+                          <Slider
+                            value={batteryThreshold}
+                            onValueChange={(v) => { setBatteryThreshold(v); savePref({ batteryThreshold: v[0] }); }}
+                            min={10}
+                            max={50}
+                            step={5}
+                            className="flex-1"
+                          />
+                          <span className="font-display tnum w-12 text-right text-[15px] font-semibold">
+                            {batteryThreshold[0]} %
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Días de aviso — compacto, sin descripción */}
+                      <div className="flex min-h-14 items-center justify-between gap-3 py-3" style={{ borderColor: 'var(--border)' }}>
+                        <p className="text-sm font-semibold">{tr('aj.diasAviso')}</p>
+                        <LookaheadRow />
+                      </div>
                     </div>
                   </Card>
                 )}
-              </div>
-
-              {/* Fila 1b: [Alerta batería Tedee | Días de aviso] — extraídos de Operativa para igualar altura con Apariencia (#143) */}
-              <div className="grid items-start gap-4 xl:grid-cols-2">
-                <Card title={tr('aj.umbralBateria')} desc={tr('aj.umbralBateriaDesc')}>
-                  <div className="flex items-center gap-3">
-                    <Slider
-                      value={batteryThreshold}
-                      onValueChange={(v) => { setBatteryThreshold(v); savePref({ batteryThreshold: v[0] }); }}
-                      min={10}
-                      max={50}
-                      step={5}
-                      className="flex-1"
-                    />
-                    <span className="font-display tnum w-12 text-right text-[15px] font-semibold">
-                      {batteryThreshold[0]} %
-                    </span>
-                  </div>
-                </Card>
-                <Card title={tr('aj.diasAviso')} desc={tr('aj.diasAvisoDesc')}>
-                  <LookaheadRow />
-                </Card>
               </div>
 
               {/* Fila 2: Mi perfil a ancho completo, debajo de Apariencia (canon 6-Ago-2026) */}
@@ -1109,7 +1111,7 @@ export default function Ajustes() {
                   )}
 
                   {/* Dominio: Tedee | Import (Operativa subió al lado de Apariencia) */}
-                  <div className="grid items-start gap-4 xl:grid-cols-2">
+                  <div className="grid items-stretch gap-4 xl:grid-cols-2">
                   {/* Conexión Tedee: una fila compacta; cuando está configurada solo
                        muestra el botón de editar (la tuerca) y una burbuja de estado */}
                   <div className="card p-4 md:p-6">

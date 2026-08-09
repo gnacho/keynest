@@ -188,38 +188,30 @@ export function LookaheadRow() {
   const [days, setDays] = useState(() => getSettings().lookaheadDays);
   const isDemo = Boolean(cachedUser()?.is_demo);
   return (
-    <div className="flex flex-wrap items-center justify-between gap-3">
-      <div>
-        <p className="text-sm font-semibold">{tr('aj.diasAviso')}</p>
-        <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
-          {tr('aj.diasAvisoDesc')}
-        </p>
-      </div>
-      <div className="flex items-center gap-2">
-        {isDemo ? (
-          <span className="font-display tnum w-20 text-center text-sm font-semibold">{days}</span>
-        ) : (
-          <input
-            type="number"
-            min={1}
-            max={30}
-            value={days}
-            onChange={(e) => {
-              const v = Number(e.target.value);
-              if (Number.isFinite(v) && v >= 1 && v <= 30) {
-                setDays(v);
-                void saveSettings({ lookaheadDays: v });
-              }
-            }}
-            aria-label={tr('aj.diasAviso')}
-            className="h-9 w-20 rounded-xl border bg-[var(--surface)] px-3 text-center text-sm outline-none focus:ring-2 focus:ring-[#6366F1]/40"
-            style={{ borderColor: 'var(--border)' }}
-          />
-        )}
-        <span className="text-xs" style={{ color: 'var(--text-faint)' }}>
-          {tr('aj.dias')}
-        </span>
-      </div>
+    <div className="flex items-center gap-2">
+      {isDemo ? (
+        <span className="font-display tnum w-20 text-center text-sm font-semibold">{days}</span>
+      ) : (
+        <input
+          type="number"
+          min={1}
+          max={30}
+          value={days}
+          onChange={(e) => {
+            const v = Number(e.target.value);
+            if (Number.isFinite(v) && v >= 1 && v <= 30) {
+              setDays(v);
+              void saveSettings({ lookaheadDays: v });
+            }
+          }}
+          aria-label={tr('aj.diasAviso')}
+          className="h-9 w-20 rounded-xl border bg-[var(--surface)] px-3 text-center text-sm outline-none focus:ring-2 focus:ring-[#6366F1]/40"
+          style={{ borderColor: 'var(--border)' }}
+        />
+      )}
+      <span className="text-xs" style={{ color: 'var(--text-faint)' }}>
+        {tr('aj.dias')}
+      </span>
     </div>
   );
 }
