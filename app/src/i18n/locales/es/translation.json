@@ -105,7 +105,9 @@
     "reservasProximas": "Reservas próximas",
     "reparacionesAbiertas": "Reparaciones abiertas",
     "sinAccesos": "Sin accesos registrados",
-    "rotacion": "Entrada y salida el mismo día"
+    "rotacion": "Entrada y salida el mismo día",
+    "limpiarAlertas": "Limpiar alertas",
+    "sinAlertas": "Sin alertas"
   },
   "cal": {
     "titulo": "Calendario",

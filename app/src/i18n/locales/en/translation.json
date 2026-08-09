@@ -105,7 +105,9 @@
     "reservasProximas": "Upcoming reservations",
     "reparacionesAbiertas": "Open repairs",
     "sinAccesos": "No recorded accesses",
-    "rotacion": "Check-in and check-out on the same day"
+    "rotacion": "Check-in and check-out on the same day",
+    "limpiarAlertas": "Clear alerts",
+    "sinAlertas": "No alerts"
   },
   "cal": {
     "titulo": "Calendar",

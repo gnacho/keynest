@@ -23,6 +23,7 @@ import PersonAvatar from '@/components/PersonAvatar';
 import UpdateRibbon from '@/components/UpdateRibbon';
 import AirbnbSessionRibbon from '@/components/AirbnbSessionRibbon';
 import PullToRefresh from '@/components/PullToRefresh';
+import NotificationsPopover from '@/components/NotificationsPopover';
 import { useUpdateAvailable } from '@/hooks/useUpdateAvailable';
 import { useTheme } from '@/theme/ThemeProvider';
 import { useData } from '@/data/useData';
@@ -346,6 +347,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
             {title}
           </h1>
           <div className="flex w-auto items-center gap-1.5">
+            <NotificationsPopover />
             <ThemeToggle />
             <Link to={SETTINGS_ITEM.to} aria-label={t(`nav.${SETTINGS_ITEM.labelKey}`)}>
               <PersonAvatar name={sessionName} initials={sessionInitials} size={32} />
@@ -363,13 +365,16 @@ export default function AppShell({ children }: { children: ReactNode }) {
           <header className="sticky top-0 z-30 hidden h-14 items-center justify-between border-b px-6 backdrop-blur-md md:flex"
             style={{ borderColor: 'var(--border)', backgroundColor: 'color-mix(in srgb, var(--surface) 85%, transparent)' }}>
             <h1 className="font-display text-xl font-semibold tracking-[-0.01em]">{title}</h1>
-            <NavLink
-              to={SETTINGS_ITEM.to}
-              className="flex items-center gap-2.5 rounded-xl p-1.5 transition-colors duration-150 hover:bg-[var(--surface-2)]"
-            >
-              <PersonAvatar name={sessionName} initials={sessionInitials} size={30} />
-              <span className="hidden text-[13px] font-semibold lg:inline">{sessionName}</span>
-            </NavLink>
+            <div className="flex items-center gap-2">
+              <NotificationsPopover />
+              <NavLink
+                to={SETTINGS_ITEM.to}
+                className="flex items-center gap-2.5 rounded-xl p-1.5 transition-colors duration-150 hover:bg-[var(--surface-2)]"
+              >
+                <PersonAvatar name={sessionName} initials={sessionInitials} size={30} />
+                <span className="hidden text-[13px] font-semibold lg:inline">{sessionName}</span>
+              </NavLink>
+            </div>
           </header>
 
           <main className="mx-auto w-full max-w-[1440px] px-4 pb-24 pt-[72px] md:px-8 md:pb-10 md:pt-7">

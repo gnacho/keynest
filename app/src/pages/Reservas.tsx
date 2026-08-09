@@ -11,7 +11,6 @@ import {
   Euro,
   MoonStar,
   Plus,
-  RefreshCw,
   Search,
   Users,
 } from 'lucide-react';
@@ -98,7 +97,6 @@ export default function Reservas() {
     }
   };
   const [search, setSearch] = useState('');
-  const [syncing, setSyncing] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [flashId, setFlashId] = useState<string | null>(null);
@@ -237,16 +235,6 @@ export default function Reservas() {
     toastTimer.current = setTimeout(() => setToast(null), 2600);
   };
 
-  const onSync = () => {
-    if (syncing) return;
-    setSyncing(true);
-    data
-      .syncNow()
-      .then(() => showToast(t('res.syncOk')))
-      .catch(() => showToast(t('res.syncError')))
-      .finally(() => setSyncing(false));
-  };
-
   const clearFilters = () => {
     setSearch('');
     setParams(new URLSearchParams(), { replace: true });
@@ -342,21 +330,6 @@ export default function Reservas() {
         <div className="flex items-center gap-2">
           {!data.isDemo && (
             <>
-              <button
-                type="button"
-                onClick={onSync}
-                className="flex h-9 items-center gap-1.5 rounded-xl border px-3.5 text-sm font-semibold transition-colors duration-150 hover:bg-[var(--surface-2)]"
-                style={{ borderColor: 'var(--border)', backgroundColor: 'var(--surface)' }}
-              >
-                <motion.span
-                  animate={{ rotate: syncing ? 360 : 0 }}
-                  transition={{ duration: 0.6, ease: 'easeInOut' }}
-                  className="flex"
-                >
-                  <RefreshCw className="h-4 w-4" />
-                </motion.span>
-                {syncing ? t('res.sincronizando') : t('res.sincronizar')}
-              </button>
               <button
                 type="button"
                 onClick={() => setDialogOpen(true)}

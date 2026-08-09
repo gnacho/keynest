@@ -6,7 +6,6 @@ import type { Variants } from 'framer-motion';
 import {
   ArrowRight,
   BedDouble,
-  Bell,
   CalendarCheck2,
   CircleAlert,
   Euro,
@@ -19,7 +18,6 @@ import KpiCard from '@/components/KpiCard';
 import PropertyCard from '@/components/PropertyCard';
 import PropertyAvatar from '@/components/PropertyAvatar';
 import EmptyState from '@/components/EmptyState';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { addDays, startOfDay } from 'date-fns';
 import { useTranslation } from 'react-i18next';
@@ -134,7 +132,6 @@ export default function Dashboard() {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const data = useData();
-  const [notifOpen, setNotifOpen] = useState(false);
   const [statsProp, setStatsProp] = useState<Property | null>(null);
 
   // Al abrir el sheet de asignación: previsión por defecto 2 h (o la ya guardada)
@@ -150,7 +147,6 @@ export default function Dashboard() {
   const cleanings = data.getCleanings();
   const maintenance = data.getMaintenance();
   const tedeeAccess = data.getTedeeAccess();
-  const notifications = data.getNotifications();
 
   /* ---- KPIs computados ---- */
   const occupiedToday = properties.filter((p) => data.getActiveReservation(p.id, today)).length;
@@ -310,48 +306,6 @@ export default function Dashboard() {
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <Popover open={notifOpen} onOpenChange={setNotifOpen}>
-            <PopoverTrigger asChild>
-              <button
-                type="button"
-                aria-label={t('dash.notificaciones')}
-                className="relative flex h-9 w-9 items-center justify-center rounded-xl border transition-colors hover:bg-[var(--surface-2)]"
-                style={{ borderColor: 'var(--border)', color: 'var(--text-muted)' }}
-              >
-                <Bell className="h-[18px] w-[18px]" />
-                {notifications.length > 0 && (
-                  <span className="absolute right-2 top-2 h-2 w-2 rounded-full bg-rose-500" />
-                )}
-              </button>
-            </PopoverTrigger>
-            <PopoverContent
-              align="end"
-              className="w-80 rounded-2xl border-[var(--border)] bg-[var(--surface)] p-2 shadow-overlay"
-            >
-              <p className="px-2 py-1.5 text-[11px] font-semibold uppercase tracking-[0.08em]" style={{ color: 'var(--text-faint)' }}>
-                Notificaciones
-              </p>
-              {notifications.map((n) => (
-                <button
-                  key={n.id}
-                  type="button"
-                  onClick={() => navigate(n.to)}
-                  className="flex w-full items-start gap-2.5 rounded-xl px-2 py-2 text-left transition-colors hover:bg-[var(--surface-2)]"
-                >
-                  <span
-                    className="mt-1.5 h-2 w-2 shrink-0 rounded-full"
-                    style={{ backgroundColor: { orange: '#F97316', rose: '#F43F5E', blue: '#3B82F6', emerald: '#10B981', slate: '#64748B', violet: '#8B5CF6', indigo: '#6366F1' }[n.tone] }}
-                  />
-                  <div className="min-w-0">
-                    <p className="text-sm font-medium leading-5">{n.text}</p>
-                    <p className="text-xs" style={{ color: 'var(--text-faint)' }}>
-                      {fmtRelative(n.time)}
-                    </p>
-                  </div>
-                </button>
-              ))}
-            </PopoverContent>
-          </Popover>
         </div>
       </div>
 
