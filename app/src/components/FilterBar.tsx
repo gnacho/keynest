@@ -15,18 +15,20 @@ interface FilterBarProps {
   typeOptions?: { value: string; label: string }[];
   typeParam?: string; // nombre del query param (default "tipo")
   className?: string;
+  /** Oculta la opción "todos" (el filtro siempre tiene un estado concreto) */
+  hideAll?: boolean;
 }
 
 /**
  * Select de inmueble ("Todos los inmuebles" + 5) + chips de tipo.
  * Lee/escribe query params (?inmueble=<slug>&tipo=…). Sticky bajo el topbar en móvil.
  */
-export default function FilterBar({ typeOptions, typeParam = 'tipo', className }: FilterBarProps) {
+export default function FilterBar({ typeOptions, typeParam = 'tipo', className, hideAll = false }: FilterBarProps) {
   const { t } = useTranslation();
   const { getProperties } = useData();
   const [params, setParams] = useSearchParams();
   const inmueble = params.get('inmueble') ?? 'todos';
-  const tipo = params.get(typeParam) ?? 'todos';
+  const tipo = params.get(typeParam) ?? (hideAll ? typeOptions?.[0]?.value ?? 'todos' : 'todos');
 
   const setParam = (key: string, value: string, isDefault: boolean) => {
     const next = new URLSearchParams(params);
@@ -58,17 +60,19 @@ export default function FilterBar({ typeOptions, typeParam = 'tipo', className }
 
       {typeOptions && (
         <div className="flex max-w-full flex-wrap items-center gap-1 rounded-xl border p-1" style={{ borderColor: 'var(--border)', backgroundColor: 'var(--surface)' }}>
-          <button
-            type="button"
-            onClick={() => setParam(typeParam, 'todos', true)}
-            className={cn(
-              'rounded-lg px-3 py-1 text-xs font-semibold transition-colors duration-150',
-              tipo === 'todos' ? 'text-white' : 'text-[var(--text-muted)] hover:text-[var(--text)]',
-            )}
-            style={tipo === 'todos' ? { backgroundImage: 'linear-gradient(135deg,#6366F1,#8B5CF6)' } : undefined}
-          >
-            {t('cal.todos')}
-          </button>
+          {!hideAll && (
+            <button
+              type="button"
+              onClick={() => setParam(typeParam, 'todos', true)}
+              className={cn(
+                'rounded-lg px-3 py-1 text-xs font-semibold transition-colors duration-150',
+                tipo === 'todos' ? 'text-white' : 'text-[var(--text-muted)] hover:text-[var(--text)]',
+              )}
+              style={tipo === 'todos' ? { backgroundImage: 'linear-gradient(135deg,#6366F1,#8B5CF6)' } : undefined}
+            >
+              {t('cal.todos')}
+            </button>
+          )}
           {typeOptions.map((o) => (
             <button
               key={o.value}

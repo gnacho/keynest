@@ -128,7 +128,7 @@ export default function Reservas() {
   }, []);
 
   const inmueble = params.get('inmueble') ?? 'todos';
-  const tipo = params.get('tipo') ?? 'todos';
+  const tipo = params.get('tipo') ?? 'activas';
   const reservaParam = params.get('reserva');
   const filteredProp = inmueble !== 'todos' ? data.getProperty(inmueble) : undefined;
 
@@ -388,7 +388,7 @@ export default function Reservas() {
 
       {/* FilterBar + buscador */}
       <div className="flex flex-wrap items-center gap-2">
-        <FilterBar typeOptions={STATUS_OPTIONS.map((o) => ({ value: o.value, label: t(o.labelKey) }))} />
+        <FilterBar hideAll typeOptions={STATUS_OPTIONS.map((o) => ({ value: o.value, label: t(o.labelKey) }))} />
         <div className="relative">
           <Search
             className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2"

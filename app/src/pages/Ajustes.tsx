@@ -1528,7 +1528,7 @@ export default function Ajustes() {
 
       {/* ============================== Dialog edición inmueble */}
       <Dialog open={!!editProp} onOpenChange={(o) => !o && setEditProp(null)}>
-        <DialogContent className="rounded-2xl border-[var(--border)] bg-[var(--surface)] shadow-overlay sm:max-w-md">
+        <DialogContent className="overflow-hidden rounded-2xl border-[var(--border)] bg-[var(--surface)] shadow-overlay sm:max-w-md">
           <DialogHeader>
             <DialogTitle className="font-display text-lg font-semibold">
               {editProp === 'new' ? tr('aj.nuevoInmueble') : tr('aj.editarInmueble')}
