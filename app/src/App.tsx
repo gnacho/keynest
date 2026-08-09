@@ -17,6 +17,7 @@ const Tedee = lazyRetry(() => import('@/pages/Tedee'));
 const Limpieza = lazyRetry(() => import('@/pages/Limpieza'));
 const Mantenimiento = lazyRetry(() => import('@/pages/Mantenimiento'));
 const Rentabilidad = lazyRetry(() => import('@/pages/Rentabilidad'));
+const Inmuebles = lazyRetry(() => import('@/pages/Inmuebles'));
 const Ajustes = lazyRetry(() => import('@/pages/Ajustes'));
 const TokenView = lazyRetry(() => import('@/pages/TokenView'));
 
@@ -82,6 +83,7 @@ function Root() {
           <Route path="/limpieza" element={<Limpieza />} />
           <Route path="/mantenimiento" element={<Mantenimiento />} />
           <Route path="/rentabilidad" element={<Rentabilidad />} />
+          <Route path="/inmuebles" element={<Inmuebles />} />
           <Route path="/ajustes" element={<Ajustes />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
