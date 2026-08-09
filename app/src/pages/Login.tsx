@@ -63,7 +63,15 @@ function LoginForm() {
       window.dispatchEvent(new Event('keynest-authed'));
       navigate('/');
     } catch (err) {
-      setError(err instanceof Error && err.message.includes('conectar') ? t('login.errorConexion') : t('login.errorCredenciales'));
+      const msg = err instanceof Error ? err.message : '';
+      if (!msg || /failed to fetch|network|conectar/i.test(msg)) {
+        setError(t('login.errorConexion'));
+      } else if (msg === 'credenciales incorrectas' || msg === 'no autorizado') {
+        setError(t('login.errorCredenciales'));
+      } else {
+        // Mensaje del servidor (rate-limit 'demasiados intentos...', formato inválido, etc.)
+        setError(msg);
+      }
       setLoading(false);
     }
   };
