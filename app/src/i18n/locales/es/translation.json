@@ -442,7 +442,8 @@
     "hasta": "Hasta",
     "periodAria": "Granularidad del periodo",
     "prevAria": "Periodo anterior",
-    "nextAria": "Periodo siguiente"
+    "nextAria": "Periodo siguiente",
+    "todosUsuarios": "Todos los usuarios"
   },
   "gastoTipo": {
     "agua": "Agua",
@@ -822,7 +823,9 @@
     "pushRequiereHttps": "Las notificaciones push necesitan HTTPS (o localhost). Con acceso por IP local (http) están dormidas y se activarán solas cuando la app se sirva por HTTPS.",
     "guardando": "Guardando…",
     "rolUsuario": "Usuario",
-    "cambiarIcono": "Cambiar icono"
+    "cambiarIcono": "Cambiar icono",
+    "dueño": "Dueño",
+    "sinDueño": "Sin dueño"
   },
   "common2": {
     "confirmar": "Confirmar",

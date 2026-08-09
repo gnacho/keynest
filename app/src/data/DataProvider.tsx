@@ -27,7 +27,7 @@ import { addDays, isSameDay, startOfDay } from '@/lib/format';
 /* -------------------------------------------------- mapeos API → dominio */
 interface ApiProperty {
   id: string; slug: string; name: string; address: string; bedrooms: number; bathrooms: number; area: number;
-  photo: string; ical_url: string; checklist: string[]; instructions: string;
+  photo: string; ical_url: string; checklist: string[]; instructions: string; owner_id?: string | null;
 }
 interface ApiReservation {
   id: string; property_id: string; uid: string; checkin: string; checkout: string;
@@ -49,6 +49,7 @@ function mapProperty(row: ApiProperty): Property {
     checklist: row.checklist ?? [],
     instructions: row.instructions ?? '',
     icalUrl: row.ical_url ?? '',
+    ownerId: row.owner_id ?? null,
   };
 }
 

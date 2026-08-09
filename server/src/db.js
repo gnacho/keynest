@@ -53,6 +53,8 @@ const MIGRATIONS = [
   // 15: número de huéspedes por reserva (feature airbnb-sync). En el CT se añadió
   //     a mano en su día; aquí se garantiza en instalaciones nuevas.
   `ALTER TABLE reservations ADD COLUMN guests INTEGER`,
+  // 16: dueño del inmueble (filtro de rentabilidad por usuario, #76).
+  `ALTER TABLE properties ADD COLUMN owner_id TEXT`,
 ]
 
 export function migrate(db) {

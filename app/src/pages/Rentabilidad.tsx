@@ -269,13 +269,18 @@ export default function Rentabilidad() {
   const [params, setParams] = useSearchParams();
 
   const inmueble = params.get('inmueble') ?? 'todos';
+  const usuarioParam = params.get('usuario') ?? 'todos';
   const g = (params.get('g') as Granularity) || 'mes';
   const anclaParam = params.get('ancla');
   const anchor = anclaParam ? new Date(`${anclaParam}T12:00:00`) : new Date();
   const desde = params.get('desde') ?? '';
   const hasta = params.get('hasta') ?? '';
 
-  const properties = data.getProperties();
+  const allProperties = data.getProperties();
+  const users = data.getUsers();
+  // Filtro de rentabilidad por usuario (dueño del inmueble); por defecto todos.
+  const properties =
+    usuarioParam === 'todos' ? allProperties : allProperties.filter((p) => p.ownerId === usuarioParam);
   const reservations = data.getReservations();
   const expenses = data.getExpenses();
 
@@ -543,9 +548,24 @@ export default function Rentabilidad() {
           </SelectTrigger>
           <SelectContent className="rounded-xl border-[var(--border)] bg-[var(--surface)]">
             <SelectItem value="todos">{t('rent.general')}</SelectItem>
-            {properties.map((p) => (
+            {allProperties.map((p) => (
               <SelectItem key={p.slug} value={p.slug}>
                 {p.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+
+        {/* Filtro por usuario (dueño del inmueble) */}
+        <Select value={usuarioParam} onValueChange={(v) => setParam('usuario', v, v === 'todos')}>
+          <SelectTrigger className="h-9 w-auto min-w-[150px] gap-2 rounded-xl border-[var(--border)] bg-[var(--surface)] text-sm font-medium shadow-none">
+            <SelectValue placeholder={t('rent.todosUsuarios')} />
+          </SelectTrigger>
+          <SelectContent className="rounded-xl border-[var(--border)] bg-[var(--surface)]">
+            <SelectItem value="todos">{t('rent.todosUsuarios')}</SelectItem>
+            {users.map((u) => (
+              <SelectItem key={u.id} value={u.id}>
+                {u.name}
               </SelectItem>
             ))}
           </SelectContent>

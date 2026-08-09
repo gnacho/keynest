@@ -130,6 +130,7 @@ interface PropertyOverride {
   bathrooms: number;
   area: number;
   icalUrl: string;
+  ownerId: string | null;
 }
 
 interface ExpenseTypeConfig {
@@ -185,7 +186,7 @@ export default function Ajustes() {
       setUploadingPhoto(false);
     }
   };
-  const [propForm, setPropForm] = useState<PropertyOverride>({ name: '', address: '', bedrooms: 1, bathrooms: 1, area: 0, icalUrl: '' });
+  const [propForm, setPropForm] = useState<PropertyOverride>({ name: '', address: '', bedrooms: 1, bathrooms: 1, area: 0, icalUrl: '', ownerId: null });
   const [flashProp, setFlashProp] = useState<string | null>(null);
 
   /* ---- Personas: BD real vía provider ---- */
@@ -409,6 +410,7 @@ export default function Ajustes() {
       bathrooms: p.bathrooms,
       area: p.area,
       icalUrl: p.icalUrl ?? '',
+      ownerId: p.ownerId ?? null,
     });
     setChecklistText(p.checklist.join('\n'));
     setInstructionsText(p.instructions);
@@ -417,7 +419,7 @@ export default function Ajustes() {
   };
 
   const openNewProp = () => {
-    setPropForm({ name: '', address: '', bedrooms: 1, bathrooms: 1, area: 0, icalUrl: '' });
+    setPropForm({ name: '', address: '', bedrooms: 1, bathrooms: 1, area: 0, icalUrl: '', ownerId: null });
     setChecklistText('');
     setInstructionsText('');
     setIcalCheck({ state: 'idle' });
@@ -486,6 +488,7 @@ export default function Ajustes() {
       icalUrl: propForm.icalUrl.trim(),
       checklist: items,
       instructions: instructionsText.trim(),
+      ownerId: propForm.ownerId,
     };
     if (!input.name) return;
     if (input.icalUrl) {
@@ -1616,6 +1619,29 @@ export default function Ajustes() {
                   />
                 </label>
               </div>
+              {isAdmin && (
+                <label className="flex flex-col gap-1.5">
+                  <span className="text-xs font-semibold" style={{ color: 'var(--text-muted)' }}>
+                    {tr('aj.dueño')}
+                  </span>
+                  <Select
+                    value={propForm.ownerId ?? 'none'}
+                    onValueChange={(v) => setPropForm((f) => ({ ...f, ownerId: v === 'none' ? null : v }))}
+                  >
+                    <SelectTrigger className="h-9 w-full rounded-xl border-[var(--border)] bg-[var(--surface)] text-sm shadow-none">
+                      <SelectValue placeholder={tr('aj.sinDueño')} />
+                    </SelectTrigger>
+                    <SelectContent className="rounded-xl border-[var(--border)] bg-[var(--surface)]">
+                      <SelectItem value="none">{tr('aj.sinDueño')}</SelectItem>
+                      {data.getUsers().map((u) => (
+                        <SelectItem key={u.id} value={u.id}>
+                          {u.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </label>
+              )}
               <label className="flex flex-col gap-1.5">
                 <span className="text-xs font-semibold" style={{ color: 'var(--text-muted)' }}>
                   {tr('aj.icalUrl')}
