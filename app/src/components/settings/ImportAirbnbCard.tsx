@@ -121,9 +121,6 @@ export default function ImportAirbnbCard() {
             {tr('aj.seleccionarCsv')}
           </button>
         </div>
-        <p className="mt-1 text-[13px]" style={{ color: 'var(--text-muted)' }}>
-          {tr('aj.importarCsvDesc')}
-        </p>
       </div>
       {fileName && !done && (
         <p className="mt-2 truncate text-xs" style={{ color: 'var(--text-faint)' }}>

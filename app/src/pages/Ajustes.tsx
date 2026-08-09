@@ -50,7 +50,7 @@ import { cachedUser, demoStatus, setDemoMode } from '@/lib/auth';
 import { api } from '@/lib/api';
 import { copyText } from '@/lib/clipboard';
 import { catIcon, CAT_ICONS } from '@/lib/cat-icons';
-import { AppearanceCard, AboutCard, Card, InstallCard, SessionCard } from '@/components/settings/settings-cards';
+import { AppearanceCard, AboutCard, Card, InstallCard, LookaheadRow, SessionCard } from '@/components/settings/settings-cards';
 import UsersManager from '@/components/settings/UsersManager';
 import ImportAirbnbCard from '@/components/settings/ImportAirbnbCard';
 import BackupCard from '@/components/settings/BackupCard';
@@ -966,6 +966,11 @@ export default function Ajustes() {
                           </span>
                         </div>
                       </div>
+
+                      {/* Días de aviso en el panel (preferencia por usuario) */}
+                      <div className="flex min-h-14 items-center py-3" style={{ borderColor: 'var(--border)' }}>
+                        <LookaheadRow />
+                      </div>
                     </div>
                   </Card>
                 )}
@@ -982,14 +987,6 @@ export default function Ajustes() {
                   className="flex flex-col gap-4 rounded-2xl border p-4 sm:p-5"
                   style={{ borderColor: 'rgb(var(--warn-rgb) / 0.35)', backgroundColor: 'rgb(var(--warn-rgb) / 0.04)' }}
                 >
-                  <header className="flex items-start gap-2.5">
-                    <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0" style={{ color: 'rgb(var(--warn-rgb))' }} />
-                    <div>
-                      <h2 className="font-display text-[15px] font-semibold tracking-[-0.01em]">{tr('aj.zonaAdmin')}</h2>
-                      <p className="text-xs" style={{ color: 'var(--text-muted)' }}>{tr('aj.zonaAdminDesc')}</p>
-                    </div>
-                  </header>
-
                   {/* AdminBar canónica: Actualizaciones → Respaldos → Usuarios →
                       Auditoría; Modo demo a la derecha. Paneles debajo. */}
                   <div className="flex flex-wrap items-start gap-3">
@@ -1122,7 +1119,7 @@ export default function Ajustes() {
                   <div className="grid items-start gap-4 xl:grid-cols-2">
                   {/* Conexión Tedee: una fila compacta; cuando está configurada solo
                       muestra el botón de editar (la tuerca) y una burbuja de estado */}
-                  <Card title={tr('aj.tedeeApi')} desc={tr('aj.tedeeApiDesc')}>
+                  <Card title={tr('aj.tedeeApi')}>
                   <div className="flex items-center gap-2.5">
                     {tedeeState.state === 'checking' && (
                       <span className="inline-flex items-center gap-2 rounded-full border px-2.5 py-1 text-xs font-semibold" style={{ borderColor: 'var(--border)', color: 'var(--text-muted)' }}>
@@ -1134,9 +1131,6 @@ export default function Ajustes() {
                       <span className="inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-semibold text-emerald-500" style={{ borderColor: 'rgb(16 185 129 / 0.3)', backgroundColor: 'rgb(16 185 129 / 0.1)' }}>
                         <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
                         {tr('aj.tedeeConectada')}
-                        {tedeeState.locks && tedeeState.locks.length > 0 && (
-                          <> · {tr('aj.tedeeCerraduras', { count: tedeeState.locks.length })}</>
-                        )}
                       </span>
                     )}
                     {tedeeState.state === 'error' && (

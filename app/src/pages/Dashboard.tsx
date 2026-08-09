@@ -334,7 +334,7 @@ export default function Dashboard() {
 
       {/* ============================== Sección 2 — Hoy: entradas y salidas */}
       <motion.section
-        className="grid gap-5 lg:grid-cols-2"
+        className="hidden gap-5 lg:grid lg:grid-cols-2"
         variants={containerV}
         initial="hidden"
         whileInView="show"

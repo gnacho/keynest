@@ -177,15 +177,12 @@ export function AppearanceCard() {
           })}
         </div>
       </div>
-
-      {/* Días de aviso en el panel (preferencia por usuario) */}
-      <LookaheadRow />
     </Card>
   );
 }
 
 /* ---------- Fila "Días de aviso en el panel" (por usuario) ---------- */
-function LookaheadRow() {
+export function LookaheadRow() {
   const { t: tr } = useTranslation();
   const { getSettings, saveSettings } = useData();
   const [days, setDays] = useState(() => getSettings().lookaheadDays);
@@ -403,8 +400,8 @@ export function SessionCard({ isDemo }: { isDemo: boolean }) {
 
   return (
     <Card title={tr('aj.miPerfil')}>
-      {/* Línea horizontal con flex-wrap (envuelve a 2 líneas en móvil) */}
-      <div className="flex min-w-0 flex-wrap items-center gap-3 sm:gap-4">
+      {/* Línea horizontal con flex-wrap (envuelve a 2 líneas en móvil; una sola en lg) */}
+      <div className="flex min-w-0 flex-wrap items-center gap-3 sm:gap-4 lg:flex-nowrap">
         {/* Avatar */}
         <div className="h-11 w-11 shrink-0 overflow-hidden rounded-full" style={{ backgroundColor: 'var(--accent-soft, #e3f0e9)' }}>
           {avatarSrc ? (
