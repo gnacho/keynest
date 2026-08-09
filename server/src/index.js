@@ -13,7 +13,7 @@ import { audit, openDb, kvGet, kvSet, encryptSecret, decryptSecret, hydrateClean
 import { syncAll, syncStatus } from './sync.js'
 import { fetchIcs, icsToReservations, parseIcs } from './ical.js'
 import { seedDemo } from './seed-demo.js'
-import { saveTedeeConfig, tedeeConfig, tedeeLocks } from './tedee.js'
+import { saveTedeeConfig, tedeeConfig, tedeeLocks, tedeeAccesses } from './tedee.js'
 import { applyUpdate, currentId, updateStatus } from './update.js'
 import { importAirbnb, parseAirbnbCsv } from './import-airbnb.js'
 import { syncAirbnb, airbnbStatus } from './airbnb-sync.js'
@@ -405,7 +405,7 @@ guarded.get('/events', (c) => {
   })
 })
 
-guarded.get('/bootstrap', (c) => {
+guarded.get('/bootstrap', async (c) => {
   const db = c.get('db')
   const properties = db.prepare('SELECT * FROM properties ORDER BY created_at').all()
     .map((p) => ({ ...p, checklist: JSON.parse(p.checklist || '[]') }))
@@ -427,7 +427,16 @@ guarded.get('/bootstrap', (c) => {
     lookaheadDays: c.get('user').lookahead_days || Number(kvGet(db, 'set_lookahead') || 7),
   }
   const users = db.prepare('SELECT id, username AS name, phone, role FROM users').all()
-  return c.json({ properties, reservations, cleanings, maintenance, people, categories: JSON.parse(categories), config: { ...settings }, sync: syncStatus(db), users, demo: c.get('user').is_demo, demoEnabled: auth.demoEnabled(prodDb) })
+  // Tedee (best-effort): cerraduras + accesos reales desde la cloud; si falla
+  // o no está configurado, arrays vacíos (la página Tedee muestra vacío).
+  let locks = []
+  let accesses = []
+  try {
+    const [lk, ac] = await Promise.all([tedeeLocks(db), tedeeAccesses(db)])
+    locks = lk
+    accesses = ac
+  } catch { /* tedee no configurado o caído */ }
+  return c.json({ properties, reservations, cleanings, maintenance, people, categories: JSON.parse(categories), config: { ...settings }, sync: syncStatus(db), users, locks, accesses, demo: c.get('user').is_demo, demoEnabled: auth.demoEnabled(prodDb) })
 })
 
 const propertySchema = z.object({

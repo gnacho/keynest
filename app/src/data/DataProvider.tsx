@@ -165,6 +165,41 @@ interface ApiCleaning {
   materials?: number | null;
 }
 
+interface ApiTedeeLock {
+  id: number; name: string; battery: number; online: boolean;
+  rssi: number | null; state: number | null; jammed: boolean;
+  serial: string; propertyId: string;
+}
+
+interface ApiTedeeAccess {
+  id: string; at: string; actorName: string;
+  actorRole: TedeeAccess['actorRole']; type: TedeeAccess['type'];
+  propertyId: string; lockId: string;
+}
+
+function mapLock(row: ApiTedeeLock): Lock {
+  return {
+    id: String(row.id),
+    propertyId: row.propertyId ?? '',
+    name: row.name,
+    battery: row.battery ?? 0,
+    online: Boolean(row.online),
+    lastSeen: new Date(),
+  };
+}
+
+function mapAccess(row: ApiTedeeAccess): TedeeAccess {
+  return {
+    id: row.id,
+    at: new Date(row.at),
+    actorName: row.actorName ?? '',
+    actorRole: row.actorRole,
+    type: row.type,
+    propertyId: row.propertyId ?? '',
+    lockId: row.lockId,
+  };
+}
+
 interface BootstrapData {
   properties: ApiProperty[];
   reservations: ApiReservation[];
@@ -177,6 +212,8 @@ interface BootstrapData {
   users?: AppUser[];
   demo?: boolean;
   demoEnabled?: boolean;
+  locks?: ApiTedeeLock[];
+  accesses?: ApiTedeeAccess[];
 }
 
 function mapCleaning(row: ApiCleaning): Cleaning {
@@ -255,6 +292,8 @@ export default function DataProvider({ children }: { children: ReactNode }) {
       };
       syncMap.current = data.sync ?? {};
       users.current = data.users ?? [];
+      locks.current = (data.locks ?? []).map(mapLock);
+      accesses.current = (data.accesses ?? []).map(mapAccess);
       setIsDemo(Boolean(data.demo));
       bump();
     } catch {
