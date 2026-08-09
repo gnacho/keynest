@@ -1604,7 +1604,7 @@ export default function Ajustes() {
                       setPropForm((f) => ({ ...f, icalUrl: e.target.value }));
                       setIcalCheck({ state: 'idle' });
                     }}
-                    className={cn(inputCls, 'flex-1')}
+                    className={cn(inputCls, 'min-w-0 flex-1')}
                     style={inputStyle}
                   />
                   <button
