@@ -318,7 +318,7 @@ export default function Reservas() {
   );
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex flex-col gap-5">
       <Toaster position="top-center" />
       {/* Filtros + buscador + botón añadir (misma fila) */}
       <div className="flex flex-wrap items-center gap-2">

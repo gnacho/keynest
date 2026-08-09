@@ -276,7 +276,7 @@ export default function Calendario() {
   };
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex flex-col gap-5">
       {/* FilterBar + chips de tipo (leyenda) + chip removible de inmueble + selector de mes */}
       <div className="sticky top-14 z-30 -mx-4 flex flex-wrap items-center gap-2 bg-[var(--bg)]/90 px-4 py-2 backdrop-blur-md lg:static lg:mx-0 lg:bg-transparent lg:px-0 lg:py-0 lg:backdrop-blur-none">
         <FilterBar className="static z-0 -mx-0 bg-transparent px-0 py-0 backdrop-blur-none" />

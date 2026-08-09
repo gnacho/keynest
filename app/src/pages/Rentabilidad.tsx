@@ -507,7 +507,7 @@ export default function Rentabilidad() {
   const noExpenses = byType.length === 0;
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-5">
       <Toaster position="top-center" />
 
       {/* ============================== Topbar */}
