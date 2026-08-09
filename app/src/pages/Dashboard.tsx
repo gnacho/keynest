@@ -266,9 +266,11 @@ export default function Dashboard() {
             {kind === 'in' ? t('common.entrada') : t('common.salida')} {fmtTime(date)}
           </span>
           {/* CircleAlert si rotación (misma horizontal) */}
-          {rotacion && (
-            <CircleAlert className="h-4 w-4 shrink-0" style={{ color: '#F43F5E' }} aria-label={t('dash.rotacion')} />
-          )}
+            {rotacion && (
+              <span title={t('dash.rotacion')} className="flex shrink-0">
+                <CircleAlert className="h-4 w-4" style={{ color: '#F43F5E' }} aria-label={t('dash.rotacion')} />
+              </span>
+            )}
           {/* Chip fecha: día + mes */}
           <span
             className="flex flex-col items-center justify-center rounded-lg border leading-none"
