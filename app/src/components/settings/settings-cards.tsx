@@ -501,10 +501,6 @@ export function SessionCard({ isDemo }: { isDemo: boolean }) {
               )}
             </button>
           )}
-          <p className="mt-0.5 truncate text-[11px]" style={{ color: 'var(--text-faint)' }}>
-            @{user?.username}
-            {user?.role ? ` · ${user.role === 'admin' ? tr('aj.rolAdmin') : tr('aj.rolUsuario')}` : ''}
-          </p>
         </div>
 
         {/* Idioma */}
