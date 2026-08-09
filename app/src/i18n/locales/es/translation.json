@@ -504,7 +504,9 @@
     "sinInstruccionesAnadir": "Sin instrucciones para esta limpieza.",
     "eliminar": "Eliminar",
     "eliminarTitulo": "Eliminar limpieza",
-    "eliminarDesc": "Esta limpieza se eliminará definitivamente. No se puede deshacer."
+    "eliminarDesc": "Esta limpieza se eliminará definitivamente. No se puede deshacer.",
+    "verDetalles": "Ver detalles",
+    "ocultarDetalles": "Ocultar"
   },
   "aj": {
     "inmuebles": "Inmuebles",
