@@ -199,7 +199,7 @@ describe('alertas: check-in / check-out', () => {
     expect(tipos).toContain('checkout_hoy')
     expect(llamadas.find((l) => l.tipo === 'checkin_hoy').datos).toEqual({ propiedad: 'Ruzafa', resumen: 'Airbnb (HMK3)' })
     expect(llamadas.find((l) => l.tipo === 'checkout_hoy').datos.resumen).toBe('Booking (9912)')
-    expect(llamadas.every((l) => l.opciones.url === '/reservas')).toBe(true)
+    expect(llamadas.every((l) => l.opciones.url.startsWith('/reservas?reserva='))).toBe(true)
   })
 })
 
@@ -285,7 +285,7 @@ describe('alertas: transacción abonada (24h post check-in)', () => {
     expect(n1).toBe(1)
     expect(llamadas[0].tipo).toBe('transaccion')
     expect(llamadas[0].datos).toMatchObject({ propiedad: 'Ruzafa', importe: 450, huesped: 'María' })
-    expect(llamadas[0].opciones.url).toBe('/rentabilidad')
+    expect(llamadas[0].opciones.url).toBe(`/reservas?reserva=${id}`)
 
     llamadas.length = 0
     const n2 = checkTransacciones(db, notifyFn)

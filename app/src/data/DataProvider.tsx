@@ -584,7 +584,7 @@ export default function DataProvider({ children }: { children: ReactNode }) {
             text: i18n.t('notif.salidaHoy', { name: p.name }),
             time: r.checkOut,
             tone: 'orange',
-            to: '/limpieza',
+            to: `/reservas?reserva=${r.id}`,
           });
         }
         for (const l of locks.current.filter((x) => x.battery < 30 || !x.online)) {
@@ -595,7 +595,7 @@ export default function DataProvider({ children }: { children: ReactNode }) {
             text: i18n.t('notif.bateriaBaja', { name: p.name, pct: l.battery }),
             time: l.lastSeen,
             tone: 'rose',
-            to: '/tedee',
+            to: `/tedee?lock=${l.id}`,
           });
         }
         const newest = reservations.current
@@ -609,7 +609,7 @@ export default function DataProvider({ children }: { children: ReactNode }) {
               text: i18n.t('notif.nuevaReserva', { name: p.name }),
               time: addDays(today, -1),
               tone: 'blue',
-              to: '/reservas',
+              to: `/reservas?reserva=${newest.id}`,
             });
           }
         }
