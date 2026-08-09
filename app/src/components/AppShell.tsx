@@ -21,6 +21,7 @@ import { useTranslation } from 'react-i18next';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import PersonAvatar from '@/components/PersonAvatar';
 import UpdateRibbon from '@/components/UpdateRibbon';
+import AirbnbSessionRibbon from '@/components/AirbnbSessionRibbon';
 import { useUpdateAvailable } from '@/hooks/useUpdateAvailable';
 import { useTheme } from '@/theme/ThemeProvider';
 import { useData } from '@/data/useData';
@@ -390,6 +391,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
               </div>
             )}
             {sessionUser?.role === 'admin' && <UpdateRibbon />}
+            <AirbnbSessionRibbon />
             {sessionUser?.is_demo && (
               <div
                 role="status"

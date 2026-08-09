@@ -50,6 +50,9 @@ const MIGRATIONS = [
   //     limpieza y a partir de ahí es editable de forma independiente (nunca toca
   //     el maestro). El checklist ya vivía por limpieza en `checks`.
   `ALTER TABLE cleanings ADD COLUMN instructions TEXT DEFAULT ''`,
+  // 15: número de huéspedes por reserva (feature airbnb-sync). En el CT se añadió
+  //     a mano en su día; aquí se garantiza en instalaciones nuevas.
+  `ALTER TABLE reservations ADD COLUMN guests INTEGER`,
 ]
 
 export function migrate(db) {
@@ -76,7 +79,17 @@ export function migrate(db) {
   }
   for (let i = current; i < MIGRATIONS.length; i++) {
     const tx = db.transaction(() => {
-      db.exec(MIGRATIONS[i])
+      try {
+        db.exec(MIGRATIONS[i])
+      } catch (err) {
+        // ADD COLUMN puede fallar si la columna ya existe (p. ej. guests, añadida
+        // a mano en el CT). Si la columna está presente, la migración se da por aplicada.
+        const m = MIGRATIONS[i].match(/ALTER TABLE (\w+) ADD COLUMN (\w+)/)
+        if (!m) throw err
+        const has = db.prepare('PRAGMA table_info(' + m[1] + ')').all().some((c) => c.name === m[2])
+        if (!has) throw err
+        console.log(`[db] migración ${i + 1} ya aplicada (columna ${m[2]} presente)`)
+      }
       db.prepare('INSERT INTO schema_version (version, applied_at) VALUES (?, ?)').run(i + 1, Date.now())
     })
     tx()
