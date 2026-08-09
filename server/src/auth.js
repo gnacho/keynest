@@ -111,7 +111,7 @@ export function currentUser(prodDb, demoDb, c) {
   const s = sessionFromCookie(prodDb, c)
   if (!s) return null
   const dataDb = s.is_demo ? demoDb : prodDb
-  const user = dataDb.prepare('SELECT id, username, email, phone, language, role, lookahead_days, display_name, avatar, created_at FROM users WHERE id = ?').get(s.user_id) || null
+  const user = dataDb.prepare('SELECT id, username, email, phone, language, role, lookahead_days, display_name, avatar, dismissed_notifs, created_at FROM users WHERE id = ?').get(s.user_id) || null
   if (!user) return null
   return { ...user, is_demo: Boolean(s.is_demo) }
 }

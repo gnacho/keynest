@@ -425,6 +425,10 @@ guarded.get('/bootstrap', async (c) => {
     autoCleaning: kvGet(db, 'set_autoclean') !== '0',
     // Días de aviso del panel: preferencia POR USUARIO (0 = defecto global)
     lookaheadDays: c.get('user').lookahead_days || Number(kvGet(db, 'set_lookahead') || 7),
+    // IDs de notificaciones de campana descartadas por este usuario (#140)
+    dismissedNotifs: (() => {
+      try { return JSON.parse(c.get('user').dismissed_notifs || '[]') } catch { return [] }
+    })(),
   }
   const users = db.prepare('SELECT id, username AS name, phone, role FROM users').all()
   // Tedee (best-effort): cerraduras + accesos reales desde la cloud; si falla
@@ -1206,6 +1210,24 @@ app.get('/api/version', (c) =>
     build: currentId() || process.env.BUILD_SHA || pkgJson.version,
   }),
 )
+
+// Persistencia de alertas descartadas en servidor (multi-dispositivo, #140).
+// El cliente envía los IDs de notificaciones que quiere descartar; el servidor
+// los fusiona con los ya guardados en `users.dismissed_notifs`.
+app.put('/api/notifications/dismiss', auth.requireAuth(prodDb, demoDb), async (c) => {
+  const body = await c.req.json().catch(() => null)
+  if (!body || !Array.isArray(body.ids)) return c.json({ error: 'ids requerido (array)' }, 400)
+  const ids = body.ids.filter((x) => typeof x === 'string')
+  if (ids.length === 0) return c.json({ ok: true, count: 0 })
+  const db = c.get('db')
+  const user = c.get('user')
+  const current = db.prepare('SELECT dismissed_notifs FROM users WHERE id = ?').get(user.id)
+  const existing = new Set(current?.dismissed_notifs ? JSON.parse(current.dismissed_notifs) : [])
+  for (const id of ids) existing.add(id)
+  const merged = JSON.stringify([...existing])
+  db.prepare('UPDATE users SET dismissed_notifs = ? WHERE id = ?').run(merged, user.id)
+  return c.json({ ok: true, count: ids.length })
+})
 
 app.route('/api', guarded)
 

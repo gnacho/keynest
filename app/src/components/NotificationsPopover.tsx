@@ -1,9 +1,10 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router';
 import { useTranslation } from 'react-i18next';
 import { Bell, CheckCheck } from 'lucide-react';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { useData } from '@/data/useData';
+import { api } from '@/lib/api';
 import { cachedUser } from '@/lib/auth';
 import { fmtRelative } from '@/lib/format';
 
@@ -19,7 +20,7 @@ const DOT: Record<string, string> = {
 
 const DISMISSED_KEY = 'keynest-dismissed-alerts';
 
-function loadDismissed(): Set<string> {
+function loadLocalDismissed(): Set<string> {
   try {
     const user = cachedUser();
     if (!user) return new Set();
@@ -32,7 +33,7 @@ function loadDismissed(): Set<string> {
   }
 }
 
-function saveDismissed(set: Set<string>): void {
+function saveLocalDismissed(set: Set<string>): void {
   try {
     const user = cachedUser();
     if (!user) return;
@@ -42,20 +43,54 @@ function saveDismissed(set: Set<string>): void {
   }
 }
 
+async function syncToServer(ids: string[]): Promise<void> {
+  if (ids.length === 0) return;
+  try {
+    await api('/api/notifications/dismiss', {
+      method: 'PUT',
+      body: JSON.stringify({ ids }),
+    });
+  } catch {
+    /* servidor no alcanzable: localStorage ya lo guardó */
+  }
+}
+
 /** Campana de alertas persistente en el header (todas las vistas). */
 export default function NotificationsPopover() {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const data = useData();
-  const [dismissed, setDismissed] = useState<Set<string>>(() => loadDismissed());
+  const [dismissed, setDismissed] = useState<Set<string>>(() => loadLocalDismissed());
+  const merged = useRef(false);
+
+  // Merge server-side dismissed IDs on first bootstrap load (multi-device sync, #140)
+  useEffect(() => {
+    if (merged.current) return;
+    const serverIds = data.getSettings().dismissedNotifs;
+    if (!serverIds || serverIds.length === 0) return;
+    setDismissed((prev) => {
+      let added = false;
+      const next = new Set(prev);
+      for (const id of serverIds) {
+        if (!next.has(id)) { next.add(id); added = true; }
+      }
+      if (added) saveLocalDismissed(next);
+      return next;
+    });
+    merged.current = true;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [data.version]);
+
   const notifications = data.getNotifications().filter((n) => !dismissed.has(n.id));
 
   const clearAll = () => {
+    const newIds = notifications.map((n) => n.id);
     setDismissed((prev) => {
-      const next = new Set([...prev, ...notifications.map((n) => n.id)]);
-      saveDismissed(next);
+      const next = new Set([...prev, ...newIds]);
+      saveLocalDismissed(next);
       return next;
     });
+    void syncToServer(newIds);
   };
 
   return (
