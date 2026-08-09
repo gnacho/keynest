@@ -20,7 +20,6 @@ import FilterBar from '@/components/FilterBar';
 import StatusBadge from '@/components/StatusBadge';
 import PersonAvatar from '@/components/PersonAvatar';
 import PropertyAvatar from '@/components/PropertyAvatar';
-import ConfirmDialog from '@/components/ConfirmDialog';
 import {
   Dialog,
   DialogContent,
@@ -225,9 +224,6 @@ export default function Tedee() {
   const [refreshKey, setRefreshKey] = useState(0);
   const [spinning, setSpinning] = useState(false);
   const [detailLock, setDetailLock] = useState<LockT | null>(null);
-  const [confirmOpen, setConfirmOpen] = useState(false);
-  const [opening, setOpening] = useState(false);
-  const [extraAccesses, setExtraAccesses] = useState<TedeeAccess[]>([]);
   const [visibleCount, setVisibleCount] = useState(8);
   const [highlightLock, setHighlightLock] = useState<string | null>(null);
   const listRef = useRef<HTMLDivElement>(null);
@@ -244,15 +240,15 @@ export default function Tedee() {
   const problemLocks = locks.filter((l) => !l.online || l.battery < 30);
 
   const allAccesses = useMemo(() => {
-    const combined = [...extraAccesses, ...data.getTedeeAccess()];
-    return combined
+    const accesses = data.getTedeeAccess();
+    return accesses
       .filter((a) => {
         if (inmueble !== 'todos' && data.getProperty(a.propertyId)?.slug !== inmueble) return false;
         if (tipo !== 'todos' && a.type !== tipo) return false;
         return true;
       })
       .sort((a, b) => b.at.getTime() - a.at.getTime());
-  }, [data, extraAccesses, inmueble, tipo]);
+  }, [data, inmueble, tipo]);
 
   const visible = allAccesses.slice(0, visibleCount);
 
@@ -284,32 +280,6 @@ export default function Tedee() {
     el?.scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block: 'center' });
     setHighlightLock(lockId);
     setTimeout(() => setHighlightLock(null), 1400);
-  };
-
-  const openNow = () => {
-    if (!detailLock) return;
-    setConfirmOpen(false);
-    setOpening(true);
-    setTimeout(() => {
-      const now = new Date();
-      setExtraAccesses((prev) => [
-        {
-          id: `acc-extra-${now.getTime()}`,
-          at: now,
-          actorName: t('ted.tu', { name: 'Keynest' }),
-          actorRole: 'propietario',
-          type: 'remota',
-          propertyId: detailLock.propertyId,
-          lockId: detailLock.id,
-        },
-        ...prev,
-      ]);
-      setOpening(false);
-      setDetailLock(null);
-      setVisibleCount((c) => c + 1);
-      toast.success(t('ted.puertaAbierta'));
-      listRef.current?.scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block: 'start' });
-    }, 800);
   };
 
   const detailAccesses = detailLock
@@ -566,35 +536,10 @@ export default function Tedee() {
                   </div>
                 )}
               </div>
-
-              {!data.isDemo && (
-                <button
-                  type="button"
-                  disabled={!detailLock.online || opening}
-                  onClick={() => setConfirmOpen(true)}
-                  className="brand-gradient flex h-11 items-center justify-center gap-2 rounded-xl text-sm font-semibold text-white transition-all duration-150 hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-40"
-                >
-                  {opening ? (
-                    <RefreshCw className="h-4 w-4 animate-spin" />
-                  ) : (
-                    <Lock className="h-4 w-4" />
-                  )}
-                  {opening ? t('ted.abriendo') : detailLock.online ? t('ted.abrirAhora') : t('ted.cerraduraOffline')}
-                </button>
-              )}
             </>
           )}
         </DialogContent>
       </Dialog>
-
-      <ConfirmDialog
-        open={confirmOpen}
-        onOpenChange={setConfirmOpen}
-        title={t('ted.confirmTitulo')}
-        description={detailLock ? t('ted.confirmDesc', { name: detailLock.name }) : undefined}
-        confirmLabel={t('ted.abrirAhora')}
-        onConfirm={openNow}
-      />
 
     </div>
   );
