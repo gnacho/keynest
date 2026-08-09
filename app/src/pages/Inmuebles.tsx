@@ -518,6 +518,15 @@ export default function Inmuebles() {
                     </span>
                     <button
                       type="button"
+                      onClick={startEditIcal}
+                      className="flex h-9 shrink-0 items-center gap-1.5 rounded-xl border px-3 text-xs font-semibold transition-colors hover:brightness-110"
+                      style={{ borderColor: 'rgb(244 63 94 / 0.4)', color: '#F43F5E' }}
+                    >
+                      <Pencil className="h-3.5 w-3.5" />
+                      {tr('aj.editar')}
+                    </button>
+                    <button
+                      type="button"
                       onClick={() => void verifyIcal(propForm.icalUrl)}
                       disabled={!propForm.icalUrl.trim() || icalCheck.state === 'checking'}
                       className="flex h-9 shrink-0 items-center gap-1.5 rounded-xl border px-3 text-xs font-semibold transition-colors hover:bg-[var(--surface-2)] disabled:opacity-40"
@@ -525,15 +534,6 @@ export default function Inmuebles() {
                     >
                       <RefreshCw className={cn('h-3.5 w-3.5', icalCheck.state === 'checking' && 'animate-spin')} />
                       {icalCheck.state === 'checking' ? tr('aj.verificando') : tr('aj.verificar')}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={startEditIcal}
-                      className="flex h-9 shrink-0 items-center gap-1.5 rounded-xl border px-3 text-xs font-semibold transition-colors hover:bg-[var(--surface-2)]"
-                      style={{ borderColor: 'var(--border)', color: 'var(--text-muted)' }}
-                    >
-                      <Pencil className="h-3.5 w-3.5" />
-                      {tr('aj.editar')}
                     </button>
                   </span>
                 )}
@@ -566,10 +566,6 @@ export default function Inmuebles() {
                     {tr('aj.editar')}
                   </button>
                 </div>
-                {/* Desktop: preview colapsado; click en Editar abre modal */}
-                <span className="hidden max-h-12 overflow-hidden text-[13px] lg:block" style={{ color: 'var(--text)' }}>
-                  {checklistText || <span style={{ color: 'var(--text-faint)' }}>{tr('aj.checklistPlaceholder')}</span>}
-                </span>
                 {/* Móvil: botón + editor full-screen */}
                 <button
                   type="button"
@@ -599,10 +595,6 @@ export default function Inmuebles() {
                     {tr('aj.editar')}
                   </button>
                 </div>
-                {/* Desktop: preview colapsado */}
-                <span className="hidden max-h-12 overflow-hidden text-[13px] lg:block" style={{ color: 'var(--text)' }}>
-                  {instructionsText || <span style={{ color: 'var(--text-faint)' }}>{tr('aj.instruccionesPlaceholder')}</span>}
-                </span>
                 {/* Móvil: botón + editor full-screen */}
                 <button
                   type="button"
