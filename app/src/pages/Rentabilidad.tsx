@@ -507,7 +507,7 @@ export default function Rentabilidad() {
   const noExpenses = byType.length === 0;
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-5">
       <Toaster position="top-center" />
 
       {/* ============================== Topbar */}
@@ -524,20 +524,6 @@ export default function Rentabilidad() {
         >
           {t('rent.esteMes')}
         </button>
-        <div className="flex items-center gap-2">
-          {!data.isDemo && (
-            <>
-              <button
-                type="button"
-                onClick={openDialog}
-                className="brand-gradient flex h-9 items-center gap-2 rounded-xl px-3.5 text-sm font-semibold text-white transition-all duration-150 hover:brightness-110 active:scale-[0.98]"
-              >
-                <Plus className="h-4 w-4" />
-                {t('rent.anadirGasto')}
-              </button>
-            </>
-          )}
-        </div>
       </div>
 
       {/* ============================== Filtros */}
@@ -657,6 +643,16 @@ export default function Rentabilidad() {
               <ChevronRight size={16} />
             </button>
           </div>
+        )}
+        {!data.isDemo && (
+          <button
+            type="button"
+            onClick={openDialog}
+            className="ml-auto brand-gradient flex h-9 items-center gap-2 rounded-xl px-3.5 text-sm font-semibold text-white transition-all duration-150 hover:brightness-110 active:scale-[0.98]"
+          >
+            <Plus className="h-4 w-4" />
+            {t('rent.anadirGasto')}
+          </button>
         )}
       </div>
 

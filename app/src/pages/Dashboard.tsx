@@ -294,7 +294,7 @@ export default function Dashboard() {
   };
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-5">
       {/* ============================== Topbar */}
       <div className="flex items-start justify-between gap-3">
         <div>

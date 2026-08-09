@@ -276,15 +276,23 @@ export default function Calendario() {
   };
 
   return (
-    <div className="flex flex-col gap-4">
-      {/* Topbar */}
-      <div className="flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <p className="text-[13px] font-medium" style={{ color: 'var(--text-muted)' }}>
-            {t('cal.subtitulo')}
-          </p>
-        </div>
-        <div className="flex items-center gap-1.5">
+    <div className="flex flex-col gap-5">
+      {/* FilterBar + chips de tipo (leyenda) + chip removible de inmueble + selector de mes */}
+      <div className="sticky top-14 z-30 -mx-4 flex flex-wrap items-center gap-2 bg-[var(--bg)]/90 px-4 py-2 backdrop-blur-md lg:static lg:mx-0 lg:bg-transparent lg:px-0 lg:py-0 lg:backdrop-blur-none">
+        <FilterBar className="static z-0 -mx-0 bg-transparent px-0 py-0 backdrop-blur-none" />
+        <TipoChips />
+        {filteredProp && (
+          <button
+            type="button"
+            onClick={clearInmueble}
+            className="flex h-8 items-center gap-1.5 rounded-full px-3 text-xs font-semibold text-white"
+            style={{ backgroundImage: 'linear-gradient(135deg,#6366F1,#8B5CF6)' }}
+          >
+            {t('cal.filtrado', { name: filteredProp.name })}
+            <X className="h-3.5 w-3.5" />
+          </button>
+        )}
+        <div className="ml-auto flex items-center gap-1.5">
           <button
             type="button"
             aria-label={t('cal.mesAnterior')}
@@ -315,23 +323,6 @@ export default function Calendario() {
             {t('cal.hoy')}
           </button>
         </div>
-      </div>
-
-      {/* FilterBar + chips de tipo (leyenda) + chip removible de inmueble */}
-      <div className="sticky top-14 z-30 -mx-4 flex flex-wrap items-center gap-2 bg-[var(--bg)]/90 px-4 py-2 backdrop-blur-md lg:static lg:mx-0 lg:bg-transparent lg:px-0 lg:py-0 lg:backdrop-blur-none">
-        <FilterBar className="static z-0 -mx-0 bg-transparent px-0 py-0 backdrop-blur-none" />
-        <TipoChips />
-        {filteredProp && (
-          <button
-            type="button"
-            onClick={clearInmueble}
-            className="flex h-8 items-center gap-1.5 rounded-full px-3 text-xs font-semibold text-white"
-            style={{ backgroundImage: 'linear-gradient(135deg,#6366F1,#8B5CF6)' }}
-          >
-            {t('cal.filtrado', { name: filteredProp.name })}
-            <X className="h-3.5 w-3.5" />
-          </button>
-        )}
       </div>
 
       {/* Cabecera de semana lun–dom */}
@@ -505,6 +496,10 @@ export default function Calendario() {
         properties={scopedProps}
         onlyDesocupado={onlyDesocupado}
       />
+
+      <p className="text-center text-[13px] font-medium" style={{ color: 'var(--text-muted)' }}>
+        {t('cal.subtitulo')}
+      </p>
     </div>
   );
 }

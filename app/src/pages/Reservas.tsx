@@ -318,34 +318,11 @@ export default function Reservas() {
   );
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex flex-col gap-5">
       <Toaster position="top-center" />
-      {/* Topbar */}
-      <div className="flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <p className="text-[13px] font-medium" style={{ color: 'var(--text-muted)' }}>
-            {t('res.reservas', { count: base.length })} · {t('res.activasAhora', { count: activasAhora })}
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          {!data.isDemo && (
-            <>
-              <button
-                type="button"
-                onClick={() => setDialogOpen(true)}
-                className="brand-gradient flex h-9 items-center gap-1.5 rounded-xl px-3.5 text-sm font-semibold text-white"
-              >
-                <Plus className="h-4 w-4" />
-                {t('res.nuevaReserva')}
-              </button>
-            </>
-          )}
-        </div>
-      </div>
-
-      {/* FilterBar + buscador */}
+      {/* Filtros + buscador + botón añadir (misma fila) */}
       <div className="flex flex-wrap items-center gap-2">
-        <FilterBar hideAll typeOptions={STATUS_OPTIONS.map((o) => ({ value: o.value, label: t(o.labelKey) }))} />
+        <FilterBar hideAll className="mx-0 px-0" typeOptions={STATUS_OPTIONS.map((o) => ({ value: o.value, label: t(o.labelKey) }))} />
         <div className="relative">
           <Search
             className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2"
@@ -372,6 +349,16 @@ export default function Reservas() {
             style={{ backgroundImage: 'linear-gradient(135deg,#6366F1,#8B5CF6)' }}
           >
             {t('res.filtrado', { name: filteredProp.name })} ×
+          </button>
+        )}
+        {!data.isDemo && (
+          <button
+            type="button"
+            onClick={() => setDialogOpen(true)}
+            className="ml-auto brand-gradient flex h-9 items-center gap-1.5 rounded-xl px-3.5 text-sm font-semibold text-white"
+          >
+            <Plus className="h-4 w-4" />
+            {t('res.nuevaReserva')}
           </button>
         )}
       </div>
@@ -652,6 +639,10 @@ export default function Reservas() {
           })
         )}
       </div>
+
+      <p className="text-center text-[13px] font-medium" style={{ color: 'var(--text-muted)' }}>
+        {t('res.reservas', { count: base.length })} · {t('res.activasAhora', { count: activasAhora })}
+      </p>
 
       {/* Dialog: nueva reserva (mock) */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>

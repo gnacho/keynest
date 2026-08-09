@@ -86,6 +86,7 @@ export default function Mantenimiento() {
   const urgentes = all.filter((t) => t.urgent && t.status !== 'finalizada').length;
   const avisoDias = data.getSettings().nDays;
   const [mostrarAntiguas, setMostrarAntiguas] = useState(false);
+  // eslint-disable-next-line react-hooks/purity -- umbral de días: necesita la hora actual
   const umbralAntiguas = Date.now() - avisoDias * 86400000;
   const antiguasOcultas = all.filter(
     (t) => t.status === 'finalizada' && t.scheduledDate && t.scheduledDate.getTime() < umbralAntiguas,
@@ -165,15 +166,6 @@ export default function Mantenimiento() {
 
   return (
     <div className="flex flex-col gap-5">
-      {/* ============================== Topbar */}
-      <div className="flex items-start justify-between gap-3">
-        <div>
-          <p className="mt-0.5 text-[13px]" style={{ color: 'var(--text-muted)' }}>
-            {tr('mant.tareas', { count: all.length })} · {tr('mant.urgentes', { count: urgentes })}
-          </p>
-        </div>
-      </div>
-
       {/* ============================== FilterBar + chips de categoría + urgentes */}
       <div className="flex flex-wrap items-center gap-2">
         <FilterBar className="mx-0 px-0" />
@@ -188,7 +180,7 @@ export default function Mantenimiento() {
               'whitespace-nowrap rounded-lg px-3 py-1 text-xs font-semibold transition-colors duration-150',
               categoria === 'todas' ? 'text-white' : 'text-[var(--text-muted)] hover:text-[var(--text)]',
             )}
-            style={categoria === 'todas' ? { backgroundColor: '#F43F5E' } : undefined}
+            style={categoria === 'todas' ? { backgroundImage: 'linear-gradient(135deg,#6366F1,#8B5CF6)' } : undefined}
           >
             {tr('mant.todas')}
           </button>
@@ -203,7 +195,7 @@ export default function Mantenimiento() {
                 'flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-xs font-semibold transition-colors duration-150',
                 categoria === o.value ? 'text-white' : 'text-[var(--text-muted)] hover:text-[var(--text)]',
               )}
-              style={categoria === o.value ? { backgroundColor: '#F43F5E' } : undefined}
+              style={categoria === o.value ? { backgroundImage: 'linear-gradient(135deg,#6366F1,#8B5CF6)' } : undefined}
             >
               <o.icon className="h-3.5 w-3.5" />
             </button>
@@ -235,7 +227,7 @@ export default function Mantenimiento() {
           <button
             type="button"
             onClick={() => setNewOpen(true)}
-            className="ml-auto flex h-10 shrink-0 items-center gap-1.5 rounded-xl bg-rose-500 px-4 text-sm font-semibold text-white transition-all duration-150 hover:brightness-110 active:scale-[0.98]"
+            className="ml-auto brand-gradient flex h-10 shrink-0 items-center gap-1.5 rounded-xl px-4 text-sm font-semibold text-white transition-all duration-150 hover:brightness-110 active:scale-[0.98]"
           >
             <Plus className="h-4 w-4" />
             <span className="hidden sm:inline">{tr('mant.nuevaTarea')}</span>
@@ -400,6 +392,10 @@ export default function Mantenimiento() {
       />
 
       <ToastHost toasts={toasts} />
+
+      <p className="text-center text-[13px]" style={{ color: 'var(--text-muted)' }}>
+        {tr('mant.tareas', { count: all.length })} · {tr('mant.urgentes', { count: urgentes })}
+      </p>
     </div>
   );
 }

@@ -108,7 +108,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
   const location = useLocation();
   const navigate = useNavigate();
   const reduce = useReducedMotion();
-  const { getPendingCleanings, getUrgentMaintenance } = useData();
+  const { getUrgentMaintenance } = useData();
   const [collapsed, setCollapsed] = useState(() => {
     try {
       return window.localStorage.getItem(COLLAPSE_KEY) === '1';
@@ -125,7 +125,6 @@ export default function AppShell({ children }: { children: ReactNode }) {
     }
   }, [collapsed]);
 
-  const pendingCleanings = getPendingCleanings().length;
   const urgentMaintenance = getUrgentMaintenance().length;
 
   const sessionUser = cachedUser();
@@ -144,7 +143,6 @@ export default function AppShell({ children }: { children: ReactNode }) {
   const isSecondary = HIDDEN_ROUTES.includes(location.pathname);
 
   const badgeFor = (to: string): number => {
-    if (to === '/limpieza') return pendingCleanings;
     if (to === '/mantenimiento') return urgentMaintenance;
     return 0;
   };
