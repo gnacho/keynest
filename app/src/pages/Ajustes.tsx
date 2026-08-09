@@ -51,6 +51,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Switch } from '@/components/ui/switch';
 import { Slider } from '@/components/ui/slider';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -1089,24 +1090,33 @@ export default function Ajustes() {
                           <Icon className="h-4 w-4 text-slate-500" />
                         </span>
                       ) : (
-                        <Select value={c.icon} onValueChange={(v) => updateCat(c.key, { icon: v })}>
-                          <SelectTrigger
-                            aria-label={tr('aj.cambiarIcono')}
-                            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[var(--sl-chip-bg)] p-0 shadow-none [&_svg:last-child]:hidden"
-                          >
-                            <Icon className="h-4 w-4 text-slate-500" />
-                          </SelectTrigger>
-                          <SelectContent className="rounded-xl border-[var(--border)] bg-[var(--surface)]">
-                            {Object.entries(CAT_ICONS).map(([name, Ico]) => (
-                              <SelectItem key={name} value={name}>
-                                <span className="flex items-center gap-2">
-                                  <Ico className="h-3.5 w-3.5" />
-                                  {name}
-                                </span>
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
+                        <Popover>
+                          <PopoverTrigger asChild>
+                            <button
+                              type="button"
+                              aria-label={tr('aj.cambiarIcono')}
+                              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[var(--sl-chip-bg)] transition-colors hover:brightness-95"
+                            >
+                              <Icon className="h-4 w-4 text-slate-500" />
+                            </button>
+                          </PopoverTrigger>
+                          <PopoverContent align="start" className="w-44 rounded-xl border-[var(--border)] bg-[var(--surface)] p-2">
+                            <div className="grid grid-cols-4 gap-1.5">
+                              {Object.entries(CAT_ICONS).map(([name, Ico]) => (
+                                <button
+                                  key={name}
+                                  type="button"
+                                  onClick={() => updateCat(c.key, { icon: name })}
+                                  aria-label={name}
+                                  className="flex h-9 w-9 items-center justify-center rounded-lg transition-colors hover:bg-[var(--surface-2)]"
+                                  style={c.icon === name ? { backgroundColor: 'var(--sl-chip-bg)' } : undefined}
+                                >
+                                  <Ico className="h-4 w-4 text-slate-500" />
+                                </button>
+                              ))}
+                            </div>
+                          </PopoverContent>
+                        </Popover>
                       )}
                       {/* Texto: editable con icono de lápiz */}
                       {isDemoUser ? (
