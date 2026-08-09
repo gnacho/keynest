@@ -262,6 +262,10 @@ export default function Dashboard() {
               <span className="mt-0.5 text-[10px] font-semibold uppercase tracking-wide" style={{ color: accent }}>
                 {fmtMonth(date, true)}
               </span>
+              {/* Hora dentro del chip (solo desktop, #69) */}
+              <span className="mt-0.5 hidden text-[9px] font-medium tnum md:block" style={{ color: accent }}>
+                {fmtTime(date)}
+              </span>
             </span>
             {/* Mini-badge Hoy / Mañana */}
             {(isToday || isTomorrow) && (
@@ -272,10 +276,6 @@ export default function Dashboard() {
                 {isToday ? t('dash.hoy') : t('common.manana')}
               </span>
             )}
-          </span>
-          {/* Desktop: hora pequeña (móvil: oculta) */}
-          <span className="hidden text-xs md:block" style={{ color: 'var(--text-muted)' }}>
-            {kind === 'in' ? t('common.entrada') : t('common.salida')} {fmtTime(date)}
           </span>
         </span>
       </motion.button>
