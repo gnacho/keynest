@@ -8,6 +8,7 @@ import {
   BedDouble,
   Bell,
   CalendarCheck2,
+  CircleAlert,
   Euro,
   LogIn,
   LogOut,
@@ -208,6 +209,13 @@ export default function Dashboard() {
     const isToday = dd === 0;
     const isTomorrow = dd === 1;
     const accent = kind === 'in' ? '#10B981' : '#F97316';
+    // Rotación: entrada y salida el mismo día en el mismo inmueble → limpieza sin margen.
+    const rotacion = reservations.some(
+      (x) =>
+        x.propertyId === r.propertyId
+        && x.status !== 'completada'
+        && (kind === 'in' ? isSameDay(x.checkOut, date) : isSameDay(x.checkIn, date)),
+    );
     return (
       <motion.button
         key={r.id}
@@ -251,28 +259,16 @@ export default function Dashboard() {
         </span>
         <span className="flex flex-col items-end gap-1">
           <span className="flex items-center gap-1.5">
-            {/* Chip calendario */}
+            {/* Chip fecha: día + mes */}
             <span
-              className="flex items-center gap-2 rounded-lg border px-2 py-1 leading-none"
-              style={{ borderColor: `${accent}40`, backgroundColor: `${accent}14` }}
+              className="flex flex-col items-center justify-center rounded-lg border leading-none"
+              style={{ minWidth: '44px', padding: '3px 6px', borderColor: `${accent}40`, backgroundColor: `${accent}14` }}
             >
-              {/* Horas de salida y entrada */}
-              <span className="flex flex-col items-end gap-1">
-                <span className="text-[11px] font-semibold tnum" style={{ color: kind === 'out' ? accent : 'var(--text-faint)' }}>
-                  S {fmtTime(r.checkOut)}
-                </span>
-                <span className="text-[11px] font-semibold tnum" style={{ color: kind === 'in' ? accent : 'var(--text-faint)' }}>
-                  E {fmtTime(r.checkIn)}
-                </span>
+              <span className="text-xl font-bold" style={{ color: accent }}>
+                {date.getDate()}
               </span>
-              {/* Fecha: día grande + mes a la derecha */}
-              <span className="flex flex-col items-end">
-                <span className="text-xl font-bold" style={{ color: accent }}>
-                  {date.getDate()}
-                </span>
-                <span className="text-[10px] font-semibold uppercase tracking-wide" style={{ color: accent }}>
-                  {fmtMonth(date, true)}
-                </span>
+              <span className="mt-0.5 text-[10px] font-semibold uppercase tracking-wide" style={{ color: accent }}>
+                {fmtMonth(date, true)}
               </span>
             </span>
             {/* Mini-badge Hoy / Mañana */}
@@ -283,6 +279,18 @@ export default function Dashboard() {
               >
                 {isToday ? t('dash.hoy') : t('common.manana')}
               </span>
+            )}
+          </span>
+          {/* Fila 2: chip Entrada/Salida con hora + alerta de rotación */}
+          <span className="flex items-center gap-1.5">
+            <span
+              className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold"
+              style={{ backgroundColor: `${accent}1A`, color: accent }}
+            >
+              {kind === 'in' ? t('common.entrada') : t('common.salida')} {fmtTime(date)}
+            </span>
+            {rotacion && (
+              <CircleAlert className="h-4 w-4 shrink-0" style={{ color: '#F43F5E' }} aria-label={t('dash.rotacion')} />
             )}
           </span>
         </span>
