@@ -17,6 +17,7 @@ import {
   Settings2,
   Sparkles,
   TrendingUp,
+  X,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import PhotoCropDialog from '@/components/PhotoCropDialog';
@@ -639,6 +640,14 @@ export default function Inmuebles() {
               <h2 className="font-display text-lg font-semibold">
                 {fullEditor === 'checklist' ? tr('aj.checklist') : tr('aj.instrucciones')}
               </h2>
+              <button
+                type="button"
+                onClick={() => setFullEditor(null)}
+                className="flex h-8 w-8 items-center justify-center rounded-lg transition-colors hover:bg-[var(--surface-2)]"
+                aria-label="Cerrar"
+              >
+                <X className="h-4 w-4" />
+              </button>
             </div>
             <textarea
               autoFocus
@@ -651,14 +660,6 @@ export default function Inmuebles() {
               style={inputStyle}
             />
             <div className="flex gap-2">
-              <button
-                type="button"
-                onClick={() => setFullEditor(null)}
-                className="flex h-11 flex-1 items-center justify-center rounded-xl border text-sm font-semibold transition-colors hover:bg-[var(--surface-2)]"
-                style={{ borderColor: 'var(--border)', color: 'var(--text-muted)' }}
-              >
-                {tr('common.cancelar')}
-              </button>
               <button
                 type="button"
                 onClick={() => setFullEditor(null)}
