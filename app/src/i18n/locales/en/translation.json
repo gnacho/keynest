@@ -504,7 +504,8 @@
     "sinInstruccionesAnadir": "No instructions for this cleaning.",
     "eliminar": "Delete",
     "eliminarTitulo": "Delete cleaning",
-    "eliminarDesc": "This cleaning will be permanently deleted. This cannot be undone."
+    "eliminarDesc": "This cleaning will be permanently deleted. This cannot be undone.",
+    "detalles": "Details"
   },
   "aj": {
     "inmuebles": "Properties",
