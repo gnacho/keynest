@@ -57,7 +57,7 @@ export default function FilterBar({ typeOptions, typeParam = 'tipo', className }
       </Select>
 
       {typeOptions && (
-        <div className="flex items-center gap-1 rounded-xl border p-1" style={{ borderColor: 'var(--border)', backgroundColor: 'var(--surface)' }}>
+        <div className="flex max-w-full flex-wrap items-center gap-1 rounded-xl border p-1" style={{ borderColor: 'var(--border)', backgroundColor: 'var(--surface)' }}>
           <button
             type="button"
             onClick={() => setParam(typeParam, 'todos', true)}
