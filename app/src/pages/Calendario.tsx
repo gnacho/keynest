@@ -105,16 +105,35 @@ export default function Calendario() {
   }, []);
 
   const inmueble = params.get('inmueble') ?? 'todos';
+  const reservaParam = params.get('reserva');
   const typeFilters = parseTipoParam(params.get('tipo'));
   // Modo "solo desocupado": el único filtro activo — los inmuebles LIBRES generan entradas.
   const onlyDesocupado =
     typeFilters.desocupado && !typeFilters.entrada && !typeFilters.salida && !typeFilters.estancia;
   const allProps = data.getProperties();
-  const scopedProps =
-    inmueble === 'todos' ? allProps : allProps.filter((p) => p.slug === inmueble);
-  const filteredProp = inmueble !== 'todos' ? data.getProperty(inmueble) : undefined;
-  const single = scopedProps.length === 1;
   const reservations = data.getReservations();
+  // ?reserva=<id> (deep-link desde el detalle de reserva): reserva objetivo + sus
+  // adyacentes del mismo inmueble (previous/next por check-in) para ver solapes.
+  const selectedRes = reservaParam ? reservations.find((r) => r.id === reservaParam) : undefined;
+  const scopedSlug =
+    inmueble !== 'todos'
+      ? inmueble
+      : selectedRes
+        ? (allProps.find((p) => p.id === selectedRes.propertyId)?.slug ?? 'todos')
+        : 'todos';
+  const scopedProps =
+    scopedSlug === 'todos' ? allProps : allProps.filter((p) => p.slug === scopedSlug);
+  const filteredProp = scopedSlug !== 'todos' ? data.getProperty(scopedSlug) : undefined;
+  const single = scopedProps.length === 1;
+  const adjacentIds = useMemo(() => {
+    if (!selectedRes) return [];
+    const same = reservations
+      .filter((r) => r.propertyId === selectedRes.propertyId)
+      .sort((a, b) => a.checkIn.getTime() - b.checkIn.getTime());
+    const idx = same.findIndex((r) => r.id === selectedRes.id);
+    if (idx < 0) return [];
+    return [same[idx - 1]?.id, same[idx + 1]?.id].filter(Boolean) as string[];
+  }, [selectedRes, reservations]);
 
   const weeks = useMemo(
     () => monthGrid(cursor.getFullYear(), cursor.getMonth()),
@@ -163,6 +182,18 @@ export default function Calendario() {
 
   /** Marcador de la vista filtrada: barra gruesa + huésped (desktop), pill ENT/SAL (móvil) */
   const singleMarker = (info: DayInfo) => {
+    // Deep-link del detalle de reserva: la reserva objetivo se destaca y sus
+    // adyacentes (previous/next del mismo inmueble) se atenúan para ver solapes.
+    const resId =
+      info.kind === 'entrada'
+        ? info.checkIn?.id
+        : info.kind === 'salida'
+          ? info.checkOut?.id
+          : info.kind === 'rotacion'
+            ? info.checkIn?.id
+            : info.stay?.id;
+    const isSel = !!selectedRes && !!resId && resId === selectedRes.id;
+    const isAdj = !isSel && !!resId && adjacentIds.includes(resId);
     if (info.kind === 'libre') {
       // Modo "solo desocupado": el inmueble libre SÍ genera marcador
       if (!onlyDesocupado) return null;
@@ -182,9 +213,12 @@ export default function Calendario() {
     if (info.kind === 'rotacion') {
       const guest = info.checkIn?.guest.name ?? '';
       return (
-        <div className={cn('flex flex-col gap-[3px]', dim && 'opacity-25')}>
+        <div className={cn('flex flex-col gap-[3px]', dim && 'opacity-25', isAdj && 'opacity-40')}>
           <div
-            className="hidden h-[18px] items-center truncate rounded-md px-1.5 text-[11px] font-semibold lg:flex"
+            className={cn(
+              'hidden h-[18px] items-center truncate rounded-md px-1.5 text-[11px] font-semibold lg:flex',
+              isSel && 'ring-2 ring-inset ring-[#6366F1]',
+            )}
             style={{
               backgroundImage:
                 'linear-gradient(90deg, var(--or-chip-bg) 0 50%, var(--em-chip-bg) 50% 100%)',
@@ -218,9 +252,12 @@ export default function Calendario() {
     const kt = KIND_TEXT[kind];
     const guest = (info.checkIn ?? info.checkOut ?? info.stay)?.guest.name ?? '';
     return (
-      <div className={cn('flex flex-col gap-[3px]', dim && 'opacity-25')}>
+      <div className={cn('flex flex-col gap-[3px]', dim && 'opacity-25', isAdj && 'opacity-40')}>
         <div
-          className="hidden h-[18px] items-center truncate rounded-md px-1.5 text-[11px] font-semibold lg:flex"
+          className={cn(
+            'hidden h-[18px] items-center truncate rounded-md px-1.5 text-[11px] font-semibold lg:flex',
+            isSel && 'ring-2 ring-inset ring-[#6366F1]',
+          )}
           style={{ backgroundColor: kt.bg, color: kt.text }}
         >
           {guest}
