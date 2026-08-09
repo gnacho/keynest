@@ -189,15 +189,16 @@ export default function Mantenimiento() {
             <button
               key={o.value}
               type="button"
+              title={o.label}
+              aria-label={o.label}
               onClick={() => setCategoria(categoria === o.value ? 'todas' : o.value)}
               className={cn(
-                'flex items-center gap-1 whitespace-nowrap rounded-lg px-2.5 py-1 text-xs font-semibold transition-colors duration-150',
+                'flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-xs font-semibold transition-colors duration-150',
                 categoria === o.value ? 'text-white' : 'text-[var(--text-muted)] hover:text-[var(--text)]',
               )}
               style={categoria === o.value ? { backgroundColor: '#F43F5E' } : undefined}
             >
               <o.icon className="h-3.5 w-3.5" />
-              {o.label}
             </button>
           ))}
         </div>
