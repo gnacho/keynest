@@ -5,6 +5,7 @@ import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 import {
   ArrowLeft,
   BookOpen,
+  Building2,
   CalendarDays,
   ChevronsLeft,
   ChevronsRight,
@@ -53,6 +54,7 @@ const NAV_ITEMS: NavItem[] = [
   { to: '/limpieza', labelKey: 'limpieza', icon: Sparkles },
   { to: '/mantenimiento', labelKey: 'mantenimiento', icon: Wrench },
   { to: '/rentabilidad', labelKey: 'rentabilidad', icon: TrendingUp },
+  { to: '/inmuebles', labelKey: 'inmuebles', icon: Building2 },
 ];
 
 /* Desktop: todos los de dominio */
@@ -75,6 +77,7 @@ const TITLE_KEYS: Record<string, string> = {
   '/limpieza': 'limpieza',
   '/mantenimiento': 'mantenimiento',
   '/rentabilidad': 'rentabilidad',
+  '/inmuebles': 'inmuebles',
   '/tedee': 'tedee',
   '/ajustes': 'ajustes',
 };
@@ -454,7 +457,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
             paddingBottom: 'env(safe-area-inset-bottom)',
           }}
         >
-          <div className="grid h-16 grid-cols-4">
+          <div className="grid h-16 grid-cols-5">
             {BOTTOM_ITEMS.map((item) => {
               const active = isActive(item.to);
               const badge = badgeFor(item.to);
