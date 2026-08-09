@@ -162,10 +162,10 @@ export default function ReservationDetail({ reservation: r }: { reservation: Res
             )}
           </div>
         )}
-        <div className="mt-1 flex flex-wrap gap-2">
+        <div className="mt-1 flex gap-2">
           <Link
             to={`/calendario?inmueble=${p?.slug ?? ''}&reserva=${r.id}`}
-            className="flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-xs font-semibold"
+            className="flex flex-1 items-center justify-center gap-1.5 rounded-xl px-3 py-1.5 text-xs font-semibold"
             style={{ backgroundColor: 'var(--bl-chip-bg)', color: 'var(--bl-chip-text)' }}
           >
             <CalendarDays className="h-3.5 w-3.5" />
@@ -173,7 +173,7 @@ export default function ReservationDetail({ reservation: r }: { reservation: Res
           </Link>
           <Link
             to={`/rentabilidad?inmueble=${p?.slug ?? ''}`}
-            className="flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-xs font-semibold"
+            className="flex flex-1 items-center justify-center gap-1.5 rounded-xl px-3 py-1.5 text-xs font-semibold"
             style={{ backgroundColor: 'rgb(99 102 241 / 0.12)', color: '#6366F1' }}
           >
             <TrendingUp className="h-3.5 w-3.5" />
