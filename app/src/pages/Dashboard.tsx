@@ -253,20 +253,26 @@ export default function Dashboard() {
           <span className="flex items-center gap-1.5">
             {/* Chip calendario */}
             <span
-              className="flex flex-col items-center justify-center rounded-lg border leading-none"
-              style={{ minWidth: '44px', padding: '3px 6px', borderColor: `${accent}40`, backgroundColor: `${accent}14` }}
+              className="flex items-center gap-2 rounded-lg border px-2 py-1 leading-none"
+              style={{ borderColor: `${accent}40`, backgroundColor: `${accent}14` }}
             >
-              <span className="flex items-center gap-1.5">
-                {/* Hora a la izquierda de la fecha (solo desktop) */}
-                <span className="hidden text-[10px] font-semibold tnum md:inline" style={{ color: accent }}>
-                  {fmtTime(date)}
+              {/* Horas de salida y entrada */}
+              <span className="flex flex-col items-end gap-1">
+                <span className="text-[11px] font-semibold tnum" style={{ color: kind === 'out' ? accent : 'var(--text-faint)' }}>
+                  S {fmtTime(r.checkOut)}
                 </span>
+                <span className="text-[11px] font-semibold tnum" style={{ color: kind === 'in' ? accent : 'var(--text-faint)' }}>
+                  E {fmtTime(r.checkIn)}
+                </span>
+              </span>
+              {/* Fecha: día grande + mes a la derecha */}
+              <span className="flex flex-col items-end">
                 <span className="text-xl font-bold" style={{ color: accent }}>
                   {date.getDate()}
                 </span>
-              </span>
-              <span className="mt-0.5 text-[10px] font-semibold uppercase tracking-wide" style={{ color: accent }}>
-                {fmtMonth(date, true)}
+                <span className="text-[10px] font-semibold uppercase tracking-wide" style={{ color: accent }}>
+                  {fmtMonth(date, true)}
+                </span>
               </span>
             </span>
             {/* Mini-badge Hoy / Mañana */}
