@@ -165,17 +165,6 @@ export default function Mantenimiento() {
             {tr('mant.tareas', { count: all.length })} · {tr('mant.urgentes', { count: urgentes })}
           </p>
         </div>
-        {!data.isDemo && (
-          <button
-            type="button"
-            onClick={() => setNewOpen(true)}
-            className="flex h-10 shrink-0 items-center gap-1.5 rounded-xl bg-rose-500 px-4 text-sm font-semibold text-white transition-all duration-150 hover:brightness-110 active:scale-[0.98]"
-          >
-            <Plus className="h-4 w-4" />
-            <span className="hidden sm:inline">{tr('mant.nuevaTarea')}</span>
-            <span className="sm:hidden">{tr('mant.nueva')}</span>
-          </button>
-        )}
       </div>
 
       {/* ============================== FilterBar + chips de categoría + urgentes */}
@@ -200,15 +189,16 @@ export default function Mantenimiento() {
             <button
               key={o.value}
               type="button"
+              title={o.label}
+              aria-label={o.label}
               onClick={() => setCategoria(categoria === o.value ? 'todas' : o.value)}
               className={cn(
-                'flex items-center gap-1 whitespace-nowrap rounded-lg px-2.5 py-1 text-xs font-semibold transition-colors duration-150',
+                'flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-xs font-semibold transition-colors duration-150',
                 categoria === o.value ? 'text-white' : 'text-[var(--text-muted)] hover:text-[var(--text)]',
               )}
               style={categoria === o.value ? { backgroundColor: '#F43F5E' } : undefined}
             >
               <o.icon className="h-3.5 w-3.5" />
-              {o.label}
             </button>
           ))}
         </div>
@@ -224,6 +214,17 @@ export default function Mantenimiento() {
           <span className={cn('h-1.5 w-1.5 rounded-full', soloUrgentes ? 'bg-white' : 'animate-dot-pulse bg-rose-500')} />
           {tr('mant.soloUrgentes')}
         </button>
+        {!data.isDemo && (
+          <button
+            type="button"
+            onClick={() => setNewOpen(true)}
+            className="ml-auto flex h-10 shrink-0 items-center gap-1.5 rounded-xl bg-rose-500 px-4 text-sm font-semibold text-white transition-all duration-150 hover:brightness-110 active:scale-[0.98]"
+          >
+            <Plus className="h-4 w-4" />
+            <span className="hidden sm:inline">{tr('mant.nuevaTarea')}</span>
+            <span className="sm:hidden">{tr('mant.nueva')}</span>
+          </button>
+        )}
       </div>
 
       {/* ============================== Banner por inmueble */}
