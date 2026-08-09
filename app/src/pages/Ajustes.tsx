@@ -1092,7 +1092,7 @@ export default function Ajustes() {
                         <Select value={c.icon} onValueChange={(v) => updateCat(c.key, { icon: v })}>
                           <SelectTrigger
                             aria-label={tr('aj.cambiarIcono')}
-                            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[var(--ro-chip-bg)] p-0 shadow-none [&>svg]:hidden"
+                            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[var(--ro-chip-bg)] p-0 shadow-none [&_svg:last-child]:hidden"
                           >
                             <Icon className="h-4 w-4 text-rose-500" />
                           </SelectTrigger>
