@@ -1118,8 +1118,9 @@ export default function Ajustes() {
                   {/* Dominio: Tedee | Import (Operativa subió al lado de Apariencia) */}
                   <div className="grid items-start gap-4 xl:grid-cols-2">
                   {/* Conexión Tedee: una fila compacta; cuando está configurada solo
-                      muestra el botón de editar (la tuerca) y una burbuja de estado */}
-                  <Card title={tr('aj.tedeeApi')}>
+                       muestra el botón de editar (la tuerca) y una burbuja de estado */}
+                  <div className="card p-4 md:p-6">
+                    <h2 className="font-display text-lg font-semibold tracking-[-0.01em]">{tr('aj.tedeeApi')}</h2>
                   <div className="flex items-center gap-2.5">
                     {tedeeState.state === 'checking' && (
                       <span className="inline-flex items-center gap-2 rounded-full border px-2.5 py-1 text-xs font-semibold" style={{ borderColor: 'var(--border)', color: 'var(--text-muted)' }}>
@@ -1192,7 +1193,7 @@ export default function Ajustes() {
                       </p>
                     </div>
                   )}
-                  </Card>
+                  </div>
 
                   {/* Actualizaciones + modo demo (ahora en la AdminBar) */}
 
