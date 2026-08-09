@@ -294,22 +294,10 @@ export default function CleaningCard({ cleaning: c, variants, highlight = false,
             </div>
           </div>
         </div>
-        <div className="flex shrink-0 flex-col items-end gap-1.5">
-          <StatusBadge label={t(STATUS_LABEL_KEY[c.status])} dot={c.status === 'en-curso'} pulse={c.status === 'en-curso'} />
-          <button
-            type="button"
-            onClick={() => setBodyOpen((o) => !o)}
-            aria-expanded={bodyOpen}
-            className="flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] font-semibold transition-colors lg:hidden"
-            style={{ borderColor: 'var(--border)', color: 'var(--text-muted)' }}
-          >
-            {bodyOpen ? t('tareas.ocultarDetalles') : t('tareas.verDetalles')}
-            <ChevronDown className={cn('h-3.5 w-3.5 transition-transform duration-200', bodyOpen && 'rotate-180')} />
-          </button>
-        </div>
+        <StatusBadge label={t(STATUS_LABEL_KEY[c.status])} dot={c.status === 'en-curso'} pulse={c.status === 'en-curso'} />
       </div>
 
-      {/* Meta: salida + reserva origen */}
+      {/* Meta: salida + reserva origen + trigger de expand (móvil, junto a la salida) */}
       <div className="mt-2.5 flex flex-wrap items-center gap-2">
         <span
           className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold"
@@ -325,6 +313,16 @@ export default function CleaningCard({ cleaning: c, variants, highlight = false,
             {t('tareas.reservaDe', { name: reservation.guest.name })}
           </Link>
         )}
+        <button
+          type="button"
+          onClick={() => setBodyOpen((o) => !o)}
+          aria-expanded={bodyOpen}
+          className="ml-auto flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] font-semibold transition-colors lg:hidden"
+          style={{ borderColor: 'var(--border)', color: 'var(--text-muted)' }}
+        >
+          {t('tareas.detalles')}
+          <ChevronDown className={cn('h-3.5 w-3.5 transition-transform duration-200', bodyOpen && 'rotate-180')} />
+        </button>
       </div>
 
       {/* Cuerpo: en móvil colapsable, en desktop siempre visible */}

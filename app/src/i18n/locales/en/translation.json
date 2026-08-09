@@ -505,8 +505,7 @@
     "eliminar": "Delete",
     "eliminarTitulo": "Delete cleaning",
     "eliminarDesc": "This cleaning will be permanently deleted. This cannot be undone.",
-    "verDetalles": "Show details",
-    "ocultarDetalles": "Hide"
+    "detalles": "Details"
   },
   "aj": {
     "inmuebles": "Properties",
