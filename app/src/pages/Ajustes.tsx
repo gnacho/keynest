@@ -1537,7 +1537,7 @@ export default function Ajustes() {
 
       {/* ============================== Dialog edición inmueble */}
       <Dialog open={!!editProp} onOpenChange={(o) => !o && setEditProp(null)}>
-        <DialogContent className="overflow-hidden rounded-2xl border-[var(--border)] bg-[var(--surface)] shadow-overlay sm:max-w-md">
+        <DialogContent className="overflow-hidden rounded-2xl border-[var(--border)] bg-[var(--surface)] shadow-overlay sm:max-w-2xl">
           <DialogHeader>
             <DialogTitle className="font-display text-lg font-semibold">
               {editProp === 'new' ? tr('aj.nuevoInmueble') : tr('aj.editarInmueble')}
@@ -1549,8 +1549,8 @@ export default function Ajustes() {
             </DialogDescription>
           </DialogHeader>
           {(editProperty || editProp === 'new') && (
-            <div className="flex flex-col gap-3">
-              <div className="relative h-28 overflow-hidden rounded-xl">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <div className="relative h-28 overflow-hidden rounded-xl sm:col-span-2">
                 <img src={editProperty?.photo ?? '/prop-carmen.svg'} alt={propForm.name} className="h-full w-full object-cover" />
                 <input
                   ref={photoInputRef}
@@ -1587,7 +1587,7 @@ export default function Ajustes() {
                 </span>
                 <input value={propForm.address} onChange={(e) => setPropForm((f) => ({ ...f, address: e.target.value }))} className={inputCls} style={inputStyle} />
               </label>
-              <div className="grid grid-cols-3 gap-3">
+              <div className="grid grid-cols-3 gap-3 sm:col-span-2">
                 <label className="flex flex-col gap-1.5">
                   <span className="text-xs font-semibold" style={{ color: 'var(--text-muted)' }}>
                     {tr('aj.dormitorios')}
@@ -1651,7 +1651,7 @@ export default function Ajustes() {
                   </Select>
                 </label>
               )}
-              <label className="flex flex-col gap-1.5">
+              <label className="flex flex-col gap-1.5 sm:col-span-2">
                 <span className="text-xs font-semibold" style={{ color: 'var(--text-muted)' }}>
                   {tr('aj.icalUrl')}
                 </span>
@@ -1725,7 +1725,7 @@ export default function Ajustes() {
                   </span>
                 )}
               </label>
-              <label className="flex flex-col gap-1.5">
+              <label className="flex flex-col gap-1.5 sm:col-span-2">
                 <span className="text-xs font-semibold" style={{ color: 'var(--text-muted)' }}>
                   {tr('aj.checklist')}
                 </span>
@@ -1741,7 +1741,7 @@ export default function Ajustes() {
                   {tr('aj.checklistNota')}
                 </span>
               </label>
-              <label className="flex flex-col gap-1.5">
+              <label className="flex flex-col gap-1.5 sm:col-span-2">
                 <span className="text-xs font-semibold" style={{ color: 'var(--text-muted)' }}>
                   {tr('aj.instrucciones')}
                 </span>
@@ -1760,7 +1760,7 @@ export default function Ajustes() {
               <button
                 type="button"
                 onClick={saveProp}
-                className="brand-gradient mt-1 flex h-11 items-center justify-center rounded-xl text-sm font-semibold text-white transition-all duration-150 hover:brightness-110 active:scale-[0.98]"
+                className="brand-gradient mt-1 flex h-11 items-center justify-center rounded-xl text-sm font-semibold text-white transition-all duration-150 hover:brightness-110 active:scale-[0.98] sm:col-span-2"
               >
                 {tr('aj.guardar')}
               </button>
