@@ -302,10 +302,6 @@ export default function Rentabilidad() {
   const prevRange = useMemo(() => prevRangeOf(range), [range]);
   const buckets = useMemo(() => bucketsFor(range), [range]);
   const label = rangeLabel(range, g);
-  const isEsteMes =
-    g === 'mes' &&
-    range.start.getMonth() === new Date().getMonth() &&
-    range.start.getFullYear() === new Date().getFullYear();
 
   const setParam = (key: string, value: string, isDefault: boolean) => {
     const next = new URLSearchParams(params);
@@ -328,14 +324,6 @@ export default function Rentabilidad() {
     // ymd LOCAL (no toISOString: la conversión a UTC desplaza el día)
     const ymd = `${next.getFullYear()}-${String(next.getMonth() + 1).padStart(2, '0')}-${String(next.getDate()).padStart(2, '0')}`;
     setParam('ancla', ymd, false);
-  };
-  const goEsteMes = () => {
-    const p = new URLSearchParams(params);
-    p.delete('g');
-    p.delete('ancla');
-    p.delete('desde');
-    p.delete('hasta');
-    setParams(p, { replace: true });
   };
   const setIntervalo = (key: 'desde' | 'hasta', value: string) => {
     const p = new URLSearchParams(params);
@@ -507,22 +495,6 @@ export default function Rentabilidad() {
 
   return (
     <div className="flex flex-col gap-5">
-
-      {/* ============================== Topbar */}
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <button
-          type="button"
-          onClick={goEsteMes}
-          disabled={isEsteMes}
-          className={cn(
-            'h-9 rounded-full border px-3.5 text-[13px] font-semibold transition-all',
-            isEsteMes ? 'cursor-not-allowed opacity-50' : 'hover:bg-[var(--surface-2)] active:scale-95',
-          )}
-          style={{ borderColor: 'var(--border)', color: '#6366F1' }}
-        >
-          {t('rent.esteMes')}
-        </button>
-      </div>
 
       {/* ============================== Filtros */}
       <div className="flex flex-wrap items-center gap-2">
