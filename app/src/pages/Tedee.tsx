@@ -384,7 +384,7 @@ export default function Tedee() {
 
       {/* ============================== Estado de cerraduras */}
       <motion.section variants={containerV} initial="hidden" animate="show" aria-label="Estado de cerraduras">
-        <div className="snap-carousel -mx-4 flex gap-3 px-4 lg:mx-0 lg:grid lg:grid-cols-3 lg:overflow-visible lg:px-0 xl:grid-cols-5">
+        <div className="snap-carousel -mx-4 flex gap-3 overflow-x-auto px-4 lg:mx-0 lg:grid lg:grid-cols-3 lg:overflow-visible lg:px-0 xl:grid-cols-5">
           {locks.map((lock, i) => (
             <div key={lock.id} className="w-[62%] shrink-0 sm:w-[46%] lg:w-auto">
               <LockCard
