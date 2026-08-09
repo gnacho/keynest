@@ -9,6 +9,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Euro,
+  Home,
   PieChart as PieChartIcon,
   Plus,
   TrendingDown,
@@ -62,6 +63,7 @@ import {
   startOfDay,
 } from '@/lib/format';
 import i18n, { intlLocale } from '@/i18n';
+import { cachedUser } from '@/lib/auth';
 import { cn } from '@/lib/utils';
 
 const EASE_OUT_QUART: [number, number, number, number] = [0.25, 1, 0.5, 1];
@@ -269,6 +271,7 @@ export default function Rentabilidad() {
 
   const inmueble = params.get('inmueble') ?? 'todos';
   const usuarioParam = params.get('usuario') ?? 'todos';
+  const me = cachedUser();
   const g = (params.get('g') as Granularity) || 'mes';
   const anclaParam = params.get('ancla');
   const anchor = anclaParam ? new Date(`${anclaParam}T12:00:00`) : new Date();
@@ -280,8 +283,17 @@ export default function Rentabilidad() {
   // Filtro de rentabilidad por usuario (dueño del inmueble); por defecto todos.
   const properties =
     usuarioParam === 'todos' ? allProperties : allProperties.filter((p) => p.ownerId === usuarioParam);
-  const reservations = data.getReservations();
-  const expenses = data.getExpenses();
+  const propertyIds = useMemo(() => new Set(properties.map((p) => p.id)), [properties]);
+  const allReservations = data.getReservations();
+  const allExpenses = data.getExpenses();
+  const reservations = useMemo(
+    () => allReservations.filter((r) => propertyIds.has(r.propertyId)),
+    [allReservations, propertyIds],
+  );
+  const expenses = useMemo(
+    () => allExpenses.filter((e) => propertyIds.has(e.propertyId)),
+    [allExpenses, propertyIds],
+  );
 
   const selectedProperty = inmueble === 'todos' ? null : data.getProperty(inmueble) ?? null;
   const propertyId = selectedProperty?.id ?? null;
@@ -450,7 +462,7 @@ export default function Rentabilidad() {
     }
     return out.sort((a, b) => b.date.getTime() - a.date.getTime()).slice(0, 10);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [data.version, propertyId, range]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [data.version, propertyId, range, properties]); // eslint-disable-line react-hooks/exhaustive-deps
 
   /* ---------------- Acciones ---------------- */
   const openDialog = () => {
@@ -511,6 +523,26 @@ export default function Rentabilidad() {
             ))}
           </SelectContent>
         </Select>
+
+        {me && (
+          <button
+            type="button"
+            aria-pressed={usuarioParam === me.id}
+            onClick={() => setParam('usuario', usuarioParam === me.id ? 'todos' : me.id, usuarioParam === me.id)}
+            className={cn(
+              'flex h-9 items-center gap-1.5 rounded-xl border px-3 text-[13px] font-semibold transition-colors',
+              usuarioParam === me.id ? 'text-white' : 'hover:bg-[var(--surface-2)]',
+            )}
+            style={
+              usuarioParam === me.id
+                ? { borderColor: '#6366F1', backgroundImage: 'linear-gradient(135deg,#6366F1,#8B5CF6)' }
+                : { borderColor: 'var(--border)', color: 'var(--text-muted)' }
+            }
+          >
+            <Home className="h-4 w-4" />
+            {t('rent.misInmuebles')}
+          </button>
+        )}
 
         {/* Filtro por usuario (dueño del inmueble) */}
         <Select value={usuarioParam} onValueChange={(v) => setParam('usuario', v, v === 'todos')}>
