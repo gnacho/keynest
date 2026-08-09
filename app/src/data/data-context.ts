@@ -34,6 +34,7 @@ export interface PropertyInput {
   icalUrl: string;
   checklist: string[];
   instructions: string;
+  ownerId?: string | null;
 }
 
 export interface AppSettings {
