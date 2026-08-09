@@ -1,8 +1,8 @@
 import { useMemo, useState } from 'react';
-import { useSearchParams } from 'react-router';
+import { useNavigate, useSearchParams } from 'react-router';
 import { motion, useReducedMotion } from 'framer-motion';
 import type { Variants } from 'framer-motion';
-import { Clock, Euro, Plus, Sparkles, UserRoundX } from 'lucide-react';
+import { Clock, Euro, Plus, Sparkles, TriangleAlert, UserRoundX } from 'lucide-react';
 import EmptyState from '@/components/EmptyState';
 import FilterBar from '@/components/FilterBar';
 import KpiCard from '@/components/KpiCard';
@@ -26,7 +26,7 @@ import {
 import { useTranslation } from 'react-i18next';
 import { useData } from '@/data/useData';
 import type { CleaningStatus } from '@/data/types';
-import { fmtMoney, isSameDay } from '@/lib/format';
+import { fmtDateShort, fmtMoney, isSameDay } from '@/lib/format';
 
 const EASE_OUT_QUART: [number, number, number, number] = [0.25, 1, 0.5, 1];
 
@@ -53,6 +53,7 @@ export default function Limpieza() {
   const { toasts, push } = useToasts();
   const [params] = useSearchParams();
   const [newOpen, setNewOpen] = useState(false);
+  const navigate = useNavigate();
 
   const inmueble = params.get('inmueble') ?? 'todos';
   const estado = params.get('estado') ?? 'todos';
@@ -64,6 +65,7 @@ export default function Limpieza() {
   /* ---- KPIs computados ---- */
   const pendientesHoy = all.filter((c) => isSameDay(c.date, now) && c.status !== 'archivada').length;
   const sinAsignar = all.filter((c) => c.status !== 'archivada' && c.assigneeIds.length === 0).length;
+  const alertas = all.filter((c) => c.status === 'pendiente' && c.assigneeIds.length === 0);
   const monthDone = all.filter(
     (c) =>
       c.status === 'archivada' &&
@@ -122,6 +124,38 @@ export default function Limpieza() {
 
       {/* ============================== FilterBar */}
       <FilterBar typeOptions={STATUS_OPTIONS.map((o) => ({ value: o.value, label: t(o.labelKey) }))} typeParam="estado" />
+
+      {/* ============================== Alertas: limpiezas creadas sin asignar */}
+      {alertas.length > 0 && (
+        <div
+          role="status"
+          className="flex flex-col gap-2 rounded-xl border px-3.5 py-3"
+          style={{ borderColor: 'rgb(244 63 94 / 0.35)', backgroundColor: 'rgb(244 63 94 / 0.08)' }}
+        >
+          <div className="flex items-center gap-2 text-[13px] font-semibold" style={{ color: '#E11D48' }}>
+            <TriangleAlert className="h-4 w-4 shrink-0" />
+            {t('limp.avisos', { count: alertas.length })}
+          </div>
+          <div className="flex flex-col gap-0.5">
+            {alertas.map((c) => {
+              const p = data.getProperty(c.propertyId);
+              return (
+                <button
+                  key={c.id}
+                  type="button"
+                  onClick={() => navigate(`/limpieza?tarea=${c.id}`)}
+                  className="flex items-center justify-between gap-2 rounded-lg px-2 py-1.5 text-left text-[13px] transition-colors hover:bg-[var(--surface-2)]"
+                >
+                  <span className="min-w-0 truncate font-medium">{p?.name ?? '—'}</span>
+                  <span className="shrink-0 text-xs" style={{ color: 'var(--text-muted)' }}>
+                    {fmtDateShort(c.date)}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       {/* ============================== KPIs */}
       <motion.section variants={containerV} initial="hidden" animate="show">

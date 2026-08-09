@@ -288,7 +288,9 @@
     "errorOcupada": "No se puede agendar: la fecha está ocupada",
     "avisoOcupada": "El inmueble está ocupado ese día. ¿Crear la limpieza igualmente?",
     "crearIgualmente": "Crear igualmente",
-    "errorCrear": "No se pudo crear la limpieza"
+    "errorCrear": "No se pudo crear la limpieza",
+    "avisos": "{{count}} limpieza sin asignar",
+    "avisos_other": "{{count}} limpiezas sin asignar"
   },
   "mant": {
     "titulo": "Mantenimiento",
