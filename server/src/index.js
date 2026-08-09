@@ -16,6 +16,7 @@ import { seedDemo } from './seed-demo.js'
 import { saveTedeeConfig, tedeeConfig, tedeeLocks } from './tedee.js'
 import { applyUpdate, currentId, updateStatus } from './update.js'
 import { importAirbnb, parseAirbnbCsv } from './import-airbnb.js'
+import { syncAirbnb, airbnbStatus } from './airbnb-sync.js'
 import { configurePush, flushNotificationQueue } from './push.js'
 import { registerPushRoutes } from './routes-push.js'
 import * as alerts from './alerts.js'
@@ -333,6 +334,9 @@ app.post('/api/import/airbnb', auth.requireAdmin(prodDb, demoDb), async (c) => {
   if (!parsed.data.dry) aud(c, 'import', 'reservation', '', `airbnb csv: ${result.updated} act, ${result.inserted} nuevas`)
   return c.json({ ...result, dupes, skipped, total: reservations.length, dry: parsed.data.dry })
 })
+
+/* Estado de la sesión del scraper Airbnb (ribbon UI) */
+app.get('/api/airbnb/status', auth.requireAuth(prodDb, demoDb), (c) => c.json(airbnbStatus(prodDb)))
 
 /* Config Tedee (solo admin): bridge local + token */
 app.get('/api/config/tedee', auth.requireAdmin(prodDb, demoDb), (c) => {
@@ -1261,6 +1265,11 @@ setInterval(() => {
 const tedeeChecker = alerts.createTedeeChecker({ db: prodDb })
 setTimeout(() => tedeeChecker.check().catch((e) => console.error('[keynest] tedee check error:', e.message)), 10000)
 setInterval(() => tedeeChecker.check().catch((e) => console.error('[keynest] tedee check error:', e.message)), 5 * 60 * 1000)
+
+/* Cruce Airbnb (guests+amount) + aviso de sesión muerta, cada hora */
+const runAirbnb = () => syncAirbnb(prodDb).catch((e) => console.error('[keynest] airbnb job error:', e.message))
+setTimeout(runAirbnb, 8000)
+setInterval(runAirbnb, 3600 * 1000)
 alerts.scheduleDaily(9, () => alerts.checkReservasHoy(prodDb), 'reservas-hoy')
 alerts.scheduleDaily(9, () => alerts.checkTransacciones(prodDb), 'transacciones')
 alerts.scheduleDaily(12, () => alerts.checkLimpiezas(prodDb), 'limpiezas-pendientes')

@@ -882,5 +882,9 @@
     "title": "Something went wrong",
     "desc": "The app hit an unexpected error. Reloading usually fixes it.",
     "reload": "Reload"
+  },
+  "airbnb": {
+    "sesionCaida": "The Airbnb session has expired; the scraper cannot update the data.",
+    "descartar": "Dismiss"
   }
 }

@@ -33,6 +33,7 @@ interface ApiReservation {
   id: string; property_id: string; uid: string; checkin: string; checkout: string;
   summary: string; confirmation_code: string; phone_last4: string;
   amount?: number; notes?: string; guest_name?: string; booked_date?: string;
+  guests?: number | null;
 }
 
 function mapProperty(row: ApiProperty): Property {
@@ -72,7 +73,7 @@ function mapReservation(row: ApiReservation): Reservation {
     },
     checkIn,
     checkOut,
-    guestsCount: 2,
+    guestsCount: row.guests ?? 2,
     guestAges: [],
     status: checkOut.getTime() < Date.now() ? 'completada' : checkIn.getTime() <= Date.now() ? 'activa' : 'confirmada',
     amount: row.amount ?? 0,

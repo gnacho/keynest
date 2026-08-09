@@ -66,6 +66,8 @@ const CATALOGO = {
     tedee_bateria: { titulo: 'Batería cerradura baja', cuerpo: (d) => `«${d.nombre}» al ${d.nivel}%` },
     limpieza_pendiente: { titulo: 'Limpieza pendiente', cuerpo: (d) => `${d.propiedad}: limpieza del ${d.fecha} sin completar` },
     transaccion: { titulo: 'Pago abonado', cuerpo: (d) => `${d.propiedad}: ${d.importe} €${d.huesped ? ` · ${d.huesped}` : ''}` },
+    airbnb_sesion_caida: { titulo: 'Sesión de Airbnb caída', cuerpo: (d) => `El scraper no puede acceder a Airbnb: ${d.detalle || 'sesión caducada'}` },
+    airbnb_sesion_ok: { titulo: 'Sesión de Airbnb recuperada', cuerpo: (d) => 'El scraper vuelve a acceder a Airbnb' },
     resumen: { titulo: 'Actividad en Keynest', cuerpo: (d) => `${d.total} avisos durante las horas de silencio` },
   },
   en: {
@@ -84,6 +86,8 @@ const CATALOGO = {
     tedee_bateria: { titulo: 'Low lock battery', cuerpo: (d) => `“${d.nombre}” at ${d.nivel}%` },
     limpieza_pendiente: { titulo: 'Cleaning pending', cuerpo: (d) => `${d.propiedad}: cleaning from ${d.fecha} not completed` },
     transaccion: { titulo: 'Payment received', cuerpo: (d) => `${d.propiedad}: ${d.importe} €${d.huesped ? ` · ${d.huesped}` : ''}` },
+    airbnb_sesion_caida: { titulo: 'Airbnb session down', cuerpo: (d) => `The scraper cannot reach Airbnb: ${d.detalle || 'session expired'}` },
+    airbnb_sesion_ok: { titulo: 'Airbnb session recovered', cuerpo: (d) => 'The scraper can reach Airbnb again' },
     resumen: { titulo: 'Keynest activity', cuerpo: (d) => `${d.total} alerts during your quiet hours` },
   },
 }
@@ -191,19 +195,19 @@ async function enviarAUna(db, sub, json, opciones) {
  * db = la BD objetivo (prod o demo). Devuelve contadores.
  */
 export async function notifyUsers(db, userIds, tipo, datos = {}, opciones = {}) {
-  const { demo = false, severity = 'normal', url = '/', ttl = severity === 'critical' ? 3600 : 21600 } = opciones
+  const { demo = false, severity = 'normal', url = '/', ttl = severity === 'critical' ? 3600 : 21600, forzar = false } = opciones
   const res = { enviados: 0, borrados: 0, fallidos: 0, pospuestos: 0, omitidos: 0 }
   const s = stmts(db)
 
   for (const userId of [...new Set(userIds)]) {
     const pref = s.pref.get(userId, tipo)
-    if (pref) {
+    if (!forzar && pref) {
       if (!pref.enabled || SEVERIDADES.indexOf(severity) < SEVERIDADES.indexOf(pref.min_severity)) {
         res.omitidos++
         continue
       }
     }
-    if (severity !== 'critical' && enQuietHours(db, userId)) {
+    if (!forzar && severity !== 'critical' && enQuietHours(db, userId)) {
       s.encolar.run(crypto.randomUUID(), userId, tipo, severity, JSON.stringify(datos), Date.now())
       res.pospuestos++
       continue

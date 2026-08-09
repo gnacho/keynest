@@ -882,5 +882,9 @@
     "title": "Algo no ha ido bien",
     "desc": "La aplicación ha encontrado un error inesperado. Recargar suele solucionarlo.",
     "reload": "Recargar"
+  },
+  "airbnb": {
+    "sesionCaida": "La sesión de Airbnb ha caducado; el scraper no puede actualizar los datos.",
+    "descartar": "Descartar"
   }
 }
