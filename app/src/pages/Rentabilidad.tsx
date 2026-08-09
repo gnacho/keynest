@@ -11,7 +11,6 @@ import {
   Euro,
   PieChart as PieChartIcon,
   Plus,
-  RefreshCw,
   TrendingDown,
   TrendingUp,
 } from 'lucide-react';
@@ -283,7 +282,6 @@ export default function Rentabilidad() {
   const selectedProperty = inmueble === 'todos' ? null : data.getProperty(inmueble) ?? null;
   const propertyId = selectedProperty?.id ?? null;
 
-  const [syncing, setSyncing] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [lastAddedId, setLastAddedId] = useState<string | null>(null);
   const [activePie, setActivePie] = useState<number>(-1);
@@ -463,16 +461,6 @@ export default function Rentabilidad() {
   }, [data.version, propertyId, range]); // eslint-disable-line react-hooks/exhaustive-deps
 
   /* ---------------- Acciones ---------------- */
-  const sync = () => {
-    if (syncing) return;
-    setSyncing(true);
-    data
-      .syncNow()
-      .then(() => toast.success(t('rent.syncOk')))
-      .catch(() => toast.error(t('rent.syncError')))
-      .finally(() => setSyncing(false));
-  };
-
   const openDialog = () => {
     setFProperty(propertyId ?? '');
     setFType('agua');
@@ -534,15 +522,6 @@ export default function Rentabilidad() {
         <div className="flex items-center gap-2">
           {!data.isDemo && (
             <>
-              <button
-                type="button"
-                onClick={sync}
-                className="hidden h-9 items-center gap-2 rounded-xl border px-3 text-sm font-semibold transition-colors duration-150 hover:bg-[var(--surface-2)] sm:flex"
-                style={{ borderColor: 'var(--border)' }}
-              >
-                <RefreshCw className={cn('h-4 w-4', syncing && 'animate-spin')} style={{ color: 'var(--text-muted)' }} />
-                <span>{t('rent.sincronizar')}</span>
-              </button>
               <button
                 type="button"
                 onClick={openDialog}

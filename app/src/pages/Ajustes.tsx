@@ -281,6 +281,17 @@ export default function Ajustes() {
   const [openPanel, setOpenPanel] = useState<'backup' | 'users' | 'audit' | null>(null);
   const isAdmin = cachedUser()?.role === 'admin';
   const isDemoUser = Boolean(cachedUser()?.is_demo);
+  const [syncingManual, setSyncingManual] = useState(false);
+
+  const doManualSync = () => {
+    if (syncingManual) return;
+    setSyncingManual(true);
+    data
+      .syncNow()
+      .then(() => toast.success(tr('aj.syncOk')))
+      .catch(() => toast.error(tr('aj.syncError')))
+      .finally(() => setSyncingManual(false));
+  };
 
   const checkUpdate = async () => {
     try {
@@ -1318,6 +1329,18 @@ export default function Ajustes() {
                         </span>
                       )}
                     </div>
+
+                    {/* 1b. Sincronizar datos (iCal) manualmente */}
+                    <button
+                      type="button"
+                      onClick={doManualSync}
+                      disabled={syncingManual}
+                      className="inline-flex h-9 shrink-0 items-center gap-1.5 rounded-xl border px-3 text-[13px] font-medium transition-colors disabled:opacity-50"
+                      style={{ borderColor: 'var(--border)', color: 'var(--text-muted)' }}
+                    >
+                      <RefreshCw className={cn('h-3.5 w-3.5', syncingManual && 'animate-spin')} />
+                      {syncingManual ? tr('aj.sincronizando') : tr('aj.sincronizar')}
+                    </button>
 
                     {/* 2. Respaldos (desplegable) */}
                     <button
