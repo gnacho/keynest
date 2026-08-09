@@ -673,7 +673,7 @@ export default function Rentabilidad() {
         variants={containerV}
         initial="hidden"
         animate="show"
-        className="snap-carousel -mx-4 flex gap-3 px-4 lg:mx-0 lg:grid lg:grid-cols-4 lg:overflow-visible lg:px-0"
+        className="snap-carousel -mx-4 flex gap-3 overflow-x-auto px-4 lg:mx-0 lg:grid lg:grid-cols-4 lg:overflow-visible lg:px-0"
       >
         <motion.div variants={itemV} className="w-[68%] shrink-0 sm:w-[46%] lg:w-auto">
           <FinKpiCard

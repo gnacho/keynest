@@ -201,6 +201,9 @@
     line-height: 1.45;
     -webkit-font-smoothing: antialiased;
     transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+    /* Recorta desbordamientos horizontales sin crear scroll container, para que
+       los menús fijos (bottom-nav) y sticky (topbars) no se pierdan por carruseles anchos. */
+    overflow-x: clip;
   }
 
   button,
