@@ -57,12 +57,14 @@ const NAV_ITEMS: NavItem[] = [
 const DESKTOP_NAV: NavItem[] = NAV_ITEMS;
 
 /* Móvil (bottom-nav): solo los esenciales + Ajustes */
-const HIDDEN_ROUTES = ['/calendario', '/reservas', '/mantenimiento'];
+const HIDDEN_ROUTES = ['/calendario', '/mantenimiento'];
 const VISIBLE_NAV: NavItem[] = NAV_ITEMS.filter((i) => !HIDDEN_ROUTES.includes(i.to));
 
 const SETTINGS_ITEM: NavItem = { to: '/ajustes', labelKey: 'ajustes', icon: Settings };
 
-const BOTTOM_ITEMS: NavItem[] = [...VISIBLE_NAV, SETTINGS_ITEM];
+/* Móvil (bottom-nav): esenciales (Resumen/Reservas/Limpieza/Rentabilidad) sin
+   Ajustes — Ajustes se accede desde el avatar de usuario del header. */
+const BOTTOM_ITEMS: NavItem[] = VISIBLE_NAV;
 
 const TITLE_KEYS: Record<string, string> = {
   '/': 'resumen',
@@ -345,7 +347,9 @@ export default function AppShell({ children }: { children: ReactNode }) {
           </h1>
           <div className="flex w-auto items-center gap-1.5">
             <ThemeToggle />
-            <PersonAvatar name={sessionName} initials={sessionInitials} size={32} />
+            <Link to={SETTINGS_ITEM.to} aria-label={t(`nav.${SETTINGS_ITEM.labelKey}`)}>
+              <PersonAvatar name={sessionName} initials={sessionInitials} size={32} />
+            </Link>
           </div>
         </header>
 
