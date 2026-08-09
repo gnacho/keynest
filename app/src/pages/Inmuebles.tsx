@@ -539,9 +539,25 @@ export default function Inmuebles() {
                 )}
               </label>
               <label className="flex flex-col gap-1.5 sm:col-span-2">
-                <span className="text-xs font-semibold" style={{ color: 'var(--text-muted)' }}>
-                  {tr('aj.checklist')}
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-xs font-semibold" style={{ color: 'var(--text-muted)' }}>
+                    {tr('aj.checklist')}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setFullEditor('checklist')}
+                    className="flex items-center gap-1 rounded-lg px-2 py-1 text-xs font-semibold transition-colors hover:bg-[var(--surface-2)]"
+                    style={{ color: 'var(--text-muted)' }}
+                  >
+                    <Pencil className="h-3 w-3" />
+                    {tr('aj.editar')}
+                  </button>
+                </div>
+                {/* Desktop: preview colapsado; click en Editar abre modal */}
+                <span className="hidden max-h-12 overflow-hidden text-[13px] lg:block" style={{ color: 'var(--text)' }}>
+                  {checklistText || <span style={{ color: 'var(--text-faint)' }}>{tr('aj.checklistPlaceholder')}</span>}
                 </span>
+                {/* Móvil: botón + editor full-screen */}
                 <button
                   type="button"
                   onClick={() => setFullEditor('checklist')}
@@ -551,22 +567,30 @@ export default function Inmuebles() {
                   <Pencil className="h-3.5 w-3.5" />
                   {tr('aj.editarCampo')}
                 </button>
-                <textarea
-                  value={checklistText}
-                  onChange={(e) => setChecklistText(e.target.value)}
-                  rows={6}
-                  placeholder={tr('aj.checklistPlaceholder')}
-                  className="hidden w-full resize-none rounded-xl border bg-[var(--surface)] px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-[#6366F1]/40 lg:block"
-                  style={inputStyle}
-                />
                 <span className="text-[11px]" style={{ color: 'var(--text-faint)' }}>
                   {tr('aj.checklistNota')}
                 </span>
               </label>
               <label className="flex flex-col gap-1.5 sm:col-span-2">
-                <span className="text-xs font-semibold" style={{ color: 'var(--text-muted)' }}>
-                  {tr('aj.instrucciones')}
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-xs font-semibold" style={{ color: 'var(--text-muted)' }}>
+                    {tr('aj.instrucciones')}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setFullEditor('instrucciones')}
+                    className="flex items-center gap-1 rounded-lg px-2 py-1 text-xs font-semibold transition-colors hover:bg-[var(--surface-2)]"
+                    style={{ color: 'var(--text-muted)' }}
+                  >
+                    <Pencil className="h-3 w-3" />
+                    {tr('aj.editar')}
+                  </button>
+                </div>
+                {/* Desktop: preview colapsado */}
+                <span className="hidden max-h-12 overflow-hidden text-[13px] lg:block" style={{ color: 'var(--text)' }}>
+                  {instructionsText || <span style={{ color: 'var(--text-faint)' }}>{tr('aj.instruccionesPlaceholder')}</span>}
                 </span>
+                {/* Móvil: botón + editor full-screen */}
                 <button
                   type="button"
                   onClick={() => setFullEditor('instrucciones')}
@@ -576,14 +600,6 @@ export default function Inmuebles() {
                   <Pencil className="h-3.5 w-3.5" />
                   {tr('aj.editarCampo')}
                 </button>
-                <textarea
-                  value={instructionsText}
-                  onChange={(e) => setInstructionsText(e.target.value)}
-                  rows={5}
-                  placeholder={tr('aj.instruccionesPlaceholder')}
-                  className="hidden w-full resize-none rounded-xl border bg-[var(--surface)] px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-[#6366F1]/40 lg:block"
-                  style={inputStyle}
-                />
                 <span className="text-[11px]" style={{ color: 'var(--text-faint)' }}>
                   {tr('aj.instruccionesNota')}
                 </span>
@@ -610,10 +626,10 @@ export default function Inmuebles() {
         />
       )}
 
-      {/* ============================== Editor a pantalla completa (móvil) */}
+      {/* ============================== Editor checklist/instrucciones (modal desktop, full-screen móvil) */}
       <Dialog open={fullEditor !== null} onOpenChange={(o) => !o && setFullEditor(null)}>
         <DialogContent
-          className="flex inset-0 top-0 left-0 h-[100dvh] max-h-none w-full max-w-none translate-x-0 translate-y-0 flex-col gap-3 rounded-none border-0 bg-[var(--surface)] p-4 sm:max-w-none sm:max-h-none"
+          className="flex flex-col gap-3 rounded-none border-0 bg-[var(--surface)] p-4 h-[100dvh] max-h-none w-full max-w-none translate-x-0 translate-y-0 sm:max-w-none sm:rounded-none lg:relative lg:inset-auto lg:h-auto lg:max-h-[80vh] lg:w-full lg:max-w-3xl lg:translate-x-0 lg:translate-y-0 lg:rounded-2xl lg:border lg:border-[var(--border)] lg:shadow-overlay"
           showCloseButton={false}
         >
           <DialogHeader>
@@ -628,7 +644,7 @@ export default function Inmuebles() {
               fullEditor === 'checklist' ? setChecklistText(e.target.value) : setInstructionsText(e.target.value)
             }
             placeholder={fullEditor === 'checklist' ? tr('aj.checklistPlaceholder') : tr('aj.instruccionesPlaceholder')}
-            className="min-h-0 flex-1 w-full resize-none rounded-xl border bg-[var(--surface)] px-3 py-2 text-[15px] outline-none focus:ring-2 focus:ring-[#6366F1]/40"
+            className="min-h-0 flex-1 w-full resize-none rounded-xl border bg-[var(--surface)] px-3 py-2 text-[15px] outline-none focus:ring-2 focus:ring-[#6366F1]/40 lg:min-h-[300px]"
             style={inputStyle}
           />
           <div className="flex gap-2">
