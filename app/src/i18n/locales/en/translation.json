@@ -442,7 +442,8 @@
     "hasta": "To",
     "periodAria": "Period granularity",
     "prevAria": "Previous period",
-    "nextAria": "Next period"
+    "nextAria": "Next period",
+    "todosUsuarios": "All users"
   },
   "gastoTipo": {
     "agua": "Water",
@@ -822,7 +823,9 @@
     "pushRequiereHttps": "Push notifications require HTTPS (or localhost). Over local IP access (http) they stay dormant and will activate by themselves once the app is served over HTTPS.",
     "guardando": "Saving…",
     "rolUsuario": "User",
-    "cambiarIcono": "Change icon"
+    "cambiarIcono": "Change icon",
+    "dueño": "Owner",
+    "sinDueño": "No owner"
   },
   "common2": {
     "confirmar": "Confirm",

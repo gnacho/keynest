@@ -426,7 +426,8 @@ guarded.get('/bootstrap', (c) => {
     // Días de aviso del panel: preferencia POR USUARIO (0 = defecto global)
     lookaheadDays: c.get('user').lookahead_days || Number(kvGet(db, 'set_lookahead') || 7),
   }
-  return c.json({ properties, reservations, cleanings, maintenance, people, categories: JSON.parse(categories), config: { ...settings }, sync: syncStatus(db), demo: c.get('user').is_demo, demoEnabled: auth.demoEnabled(prodDb) })
+  const users = db.prepare('SELECT id, username AS name, phone, role FROM users').all()
+  return c.json({ properties, reservations, cleanings, maintenance, people, categories: JSON.parse(categories), config: { ...settings }, sync: syncStatus(db), users, demo: c.get('user').is_demo, demoEnabled: auth.demoEnabled(prodDb) })
 })
 
 const propertySchema = z.object({
@@ -439,6 +440,7 @@ const propertySchema = z.object({
   icalUrl: z.string().default(''),
   checklist: z.array(z.string()).default([]),
   instructions: z.string().default(''),
+  owner_id: z.string().nullable().default(null),
 })
 
 function slugify(name) {
@@ -458,9 +460,9 @@ guarded.post('/properties', async (c) => {
   const db = c.get('db')
   while (db.prepare('SELECT id FROM properties WHERE slug = ?').get(slug)) slug = `${slugify(d.name)}-${n++}`
   const id = crypto.randomUUID()
-  c.get('db').prepare(`INSERT INTO properties (id, slug, name, address, bedrooms, bathrooms, area, photo, ical_url, checklist, instructions, created_at)
-              VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`)
-    .run(id, slug, d.name, d.address, d.bedrooms, d.bathrooms, d.area, d.photo, d.icalUrl, JSON.stringify(d.checklist), d.instructions, Date.now())
+  c.get('db').prepare(`INSERT INTO properties (id, slug, name, address, bedrooms, bathrooms, area, photo, ical_url, checklist, instructions, owner_id, created_at)
+              VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`)
+    .run(id, slug, d.name, d.address, d.bedrooms, d.bathrooms, d.area, d.photo, d.icalUrl, JSON.stringify(d.checklist), d.instructions, d.owner_id, Date.now())
   const property = db.prepare('SELECT * FROM properties WHERE id = ?').get(id)
   aud(c, 'create', 'property', id, d.name)
   return c.json({ ok: true, property: { ...property, checklist: JSON.parse(property.checklist) } }, 201)
@@ -474,8 +476,8 @@ guarded.put('/properties/:id', async (c) => {
   const parsed = propertySchema.safeParse(body)
   if (!parsed.success) return c.json({ error: 'formato inválido' }, 400)
   const d = parsed.data
-  db.prepare(`UPDATE properties SET name=?, address=?, bedrooms=?, bathrooms=?, area=?, photo=?, ical_url=?, checklist=?, instructions=? WHERE id=?`)
-    .run(d.name, d.address, d.bedrooms, d.bathrooms, d.area, d.photo, d.icalUrl, JSON.stringify(d.checklist), d.instructions, existing.id)
+  db.prepare(`UPDATE properties SET name=?, address=?, bedrooms=?, bathrooms=?, area=?, photo=?, ical_url=?, checklist=?, instructions=?, owner_id=? WHERE id=?`)
+    .run(d.name, d.address, d.bedrooms, d.bathrooms, d.area, d.photo, d.icalUrl, JSON.stringify(d.checklist), d.instructions, d.owner_id, existing.id)
   const property = db.prepare('SELECT * FROM properties WHERE id = ?').get(existing.id)
   aud(c, 'update', 'property', existing.id, d.name)
   return c.json({ ok: true, property: { ...property, checklist: JSON.parse(property.checklist) } })

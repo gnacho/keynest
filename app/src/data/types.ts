@@ -17,6 +17,8 @@ export interface Property {
   instructions: string;
   /** URL iCal de Airbnb para sincronizar reservas (vacío = sin sync). */
   icalUrl?: string;
+  /** Dueño del inmueble (id de usuario) para el filtro de rentabilidad. */
+  ownerId?: string | null;
 }
 
 export interface Guest {
