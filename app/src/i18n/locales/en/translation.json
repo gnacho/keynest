@@ -104,7 +104,8 @@
     "noches_other": "{{count}} nights",
     "reservasProximas": "Upcoming reservations",
     "reparacionesAbiertas": "Open repairs",
-    "sinAccesos": "No recorded accesses"
+    "sinAccesos": "No recorded accesses",
+    "rotacion": "Check-in and check-out on the same day"
   },
   "cal": {
     "titulo": "Calendar",

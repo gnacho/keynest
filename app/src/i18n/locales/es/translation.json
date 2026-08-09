@@ -104,7 +104,8 @@
     "noches_other": "{{count}} noches",
     "reservasProximas": "Reservas próximas",
     "reparacionesAbiertas": "Reparaciones abiertas",
-    "sinAccesos": "Sin accesos registrados"
+    "sinAccesos": "Sin accesos registrados",
+    "rotacion": "Entrada y salida el mismo día"
   },
   "cal": {
     "titulo": "Calendario",
