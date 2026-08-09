@@ -20,6 +20,7 @@ import {
   fmtDateShort,
   fmtDateLong,
   fmtMoney,
+  fmtMonth,
   fmtNumber,
   fmtTime,
   isSameDay,
@@ -294,7 +295,21 @@ export default function CleaningCard({ cleaning: c, variants, highlight = false,
             </div>
           </div>
         </div>
-        <StatusBadge label={t(STATUS_LABEL_KEY[c.status])} dot={c.status === 'en-curso'} pulse={c.status === 'en-curso'} />
+        <div className="flex shrink-0 flex-col items-end gap-1.5">
+          <StatusBadge label={t(STATUS_LABEL_KEY[c.status])} dot={c.status === 'en-curso'} pulse={c.status === 'en-curso'} />
+          {/* Fecha de la limpieza grande (chip calendario, estilo #24) */}
+          <span
+            className="flex flex-col items-center justify-center rounded-lg border leading-none"
+            style={{ minWidth: '44px', padding: '3px 6px', borderColor: 'rgb(139 92 246 / 0.25)', backgroundColor: 'rgb(139 92 246 / 0.08)' }}
+          >
+            <span className="text-xl font-bold" style={{ color: '#8B5CF6' }}>
+              {c.date.getDate()}
+            </span>
+            <span className="mt-0.5 text-[10px] font-semibold uppercase tracking-wide" style={{ color: '#8B5CF6' }}>
+              {fmtMonth(c.date, true)}
+            </span>
+          </span>
+        </div>
       </div>
 
       {/* Meta: salida + reserva origen + trigger de expand (móvil, junto a la salida) */}
