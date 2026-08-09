@@ -19,6 +19,7 @@ import {
 import type { LucideIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { Toaster } from '@/components/ui/sonner';
 import PersonAvatar from '@/components/PersonAvatar';
 import UpdateRibbon from '@/components/UpdateRibbon';
 import AirbnbSessionRibbon from '@/components/AirbnbSessionRibbon';
@@ -376,6 +377,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
           </header>
 
           <main className="mx-auto w-full max-w-[1440px] px-4 pb-24 pt-[72px] md:px-8 md:pb-10 md:pt-7">
+            <Toaster position="top-center" />
             <PullToRefresh>
             {updateAvailable && (
               <div

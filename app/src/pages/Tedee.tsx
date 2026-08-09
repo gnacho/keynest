@@ -21,7 +21,6 @@ import StatusBadge from '@/components/StatusBadge';
 import PersonAvatar from '@/components/PersonAvatar';
 import PropertyAvatar from '@/components/PropertyAvatar';
 import ConfirmDialog from '@/components/ConfirmDialog';
-import { Toaster } from '@/components/ui/sonner';
 import {
   Dialog,
   DialogContent,
@@ -319,7 +318,6 @@ export default function Tedee() {
 
   return (
     <div className="flex flex-col gap-6">
-      <Toaster position="top-center" />
 
       {/* ============================== Topbar */}
       <div className="flex items-start justify-between gap-3">

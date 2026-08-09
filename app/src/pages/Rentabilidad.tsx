@@ -34,7 +34,6 @@ import MoneyText from '@/components/MoneyText';
 import PropertyAvatar from '@/components/PropertyAvatar';
 import FinKpiCard from '@/components/fin/FinKpiCard';
 import { EXPENSE_META, EXPENSE_TYPES } from '@/components/fin/expenseMeta';
-import { Toaster } from '@/components/ui/sonner';
 import {
   Dialog,
   DialogContent,
@@ -508,7 +507,6 @@ export default function Rentabilidad() {
 
   return (
     <div className="flex flex-col gap-5">
-      <Toaster position="top-center" />
 
       {/* ============================== Topbar */}
       <div className="flex flex-wrap items-start justify-between gap-3">

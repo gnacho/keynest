@@ -32,7 +32,6 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { useTranslation } from 'react-i18next';
-import { Toaster } from '@/components/ui/sonner';
 import { useData } from '@/data/useData';
 import type { Reservation } from '@/data/types';
 import { addDays, fmtDateShort, fmtDateShortYear, isSameDay, startOfDay } from '@/lib/format';
@@ -319,7 +318,6 @@ export default function Reservas() {
 
   return (
     <div className="flex flex-col gap-5">
-      <Toaster position="top-center" />
       {/* Filtros + buscador + botón añadir (misma fila) */}
       <div className="flex flex-wrap items-center gap-2">
         <FilterBar hideAll className="mx-0 px-0" typeOptions={STATUS_OPTIONS.map((o) => ({ value: o.value, label: t(o.labelKey) }))} />
