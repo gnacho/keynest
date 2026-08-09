@@ -103,12 +103,7 @@ export default function Limpieza() {
   return (
     <div className="flex flex-col gap-5">
       {/* ============================== Topbar */}
-      <div className="flex items-start justify-between gap-3">
-        <div>
-          <p className="mt-0.5 text-[13px]" style={{ color: 'var(--text-muted)' }}>
-            {t('limp.tareas', { count: activas })} · {t('limp.pendientes', { count: pendientes })}
-          </p>
-        </div>
+      <div className="flex items-start justify-end gap-3">
         {!data.isDemo && (
           <button
             type="button"
@@ -243,6 +238,10 @@ export default function Limpieza() {
       />
 
       <ToastHost toasts={toasts} />
+
+      <p className="text-center text-[13px]" style={{ color: 'var(--text-muted)' }}>
+        {t('limp.tareas', { count: activas })} · {t('limp.pendientes', { count: pendientes })}
+      </p>
     </div>
   );
 }
