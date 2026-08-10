@@ -789,6 +789,11 @@ export default function DataProvider({ children }: { children: ReactNode }) {
       editMaintenance: async (id, patch) => {
         await putMaintenance(id, patch);
       },
+      deleteMaintenance: async (id) => {
+        await api(`/api/maintenance/${id}`, { method: 'DELETE' });
+        maintenance.current = maintenance.current.filter((t) => t.id !== id);
+        bump();
+      },
       addMaintenance: async (input) => {
         const res = await api<{ task: ApiMaintenance }>('/api/maintenance', {
           method: 'POST',

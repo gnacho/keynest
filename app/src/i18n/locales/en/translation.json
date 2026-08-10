@@ -369,7 +369,9 @@
     "guardar": "Save",
     "checksProgreso": "Checks ({{done}}/{{total}})",
     "mostrarAntiguas": "Show +{{dias}} days",
-    "ocultarAntiguas": "Hide old"
+    "ocultarAntiguas": "Hide old",
+    "eliminar": "Delete",
+    "seguro": "Sure?"
   },
   "cat": {
     "cerradura": "Lock/batteries",

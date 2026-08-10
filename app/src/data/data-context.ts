@@ -182,6 +182,7 @@ export interface DataApi {
   addMaintenance: (t: { propertyId: string; title: string; category: string; expenseTag: string; urgent: boolean; notes: string; checks?: CleaningCheck[] }) => Promise<MaintenanceTask | undefined>;
   /** Edita campos de una tarea existente (título, categoría, etiqueta, urgente, notas, fecha prevista). */
   editMaintenance: (id: string, patch: Partial<{ title: string; category: string; expenseTag: string; urgent: boolean; notes: string; scheduledDate: string | null; checks: CleaningCheck[] }>) => Promise<void>;
+  deleteMaintenance: (id: string) => Promise<void>;
   addExpense: (e: Omit<Expense, 'id'>) => void;
 }
 

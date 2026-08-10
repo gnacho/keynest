@@ -728,6 +728,17 @@ guarded.delete('/maintenance/:id/token', (c) => {
   return c.json({ ok: true })
 })
 
+/* Eliminar tarea de mantenimiento no finalizada */
+guarded.delete('/maintenance/:id', (c) => {
+  const db = c.get('db')
+  const existing = db.prepare('SELECT * FROM maintenance_tasks WHERE id = ?').get(c.req.param('id'))
+  if (!existing) return c.json({ error: 'no encontrada' }, 404)
+  if (existing.status === 'finalizada') return c.json({ error: 'no se puede eliminar una tarea finalizada', code: 'not-deletable' }, 409)
+  db.prepare('DELETE FROM maintenance_tasks WHERE id = ?').run(existing.id)
+  aud(c, 'delete', 'maintenance', existing.id, `${existing.property_id} ${existing.title}`)
+  return c.json({ ok: true })
+})
+
 /* ---------------------------------------------------------- Personas (staff) */
 const personSchema = z.object({
   name: z.string().min(1),
