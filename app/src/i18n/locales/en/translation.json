@@ -19,7 +19,8 @@
     "temaOscuro": "Switch to dark theme",
     "demoBadge": "DEMO",
     "demoBanner": "Demo mode — changes are not applied to the system",
-    "demoSalir": "Exit demo"
+    "demoSalir": "Exit demo",
+    "temaSistema": "Auto theme"
   },
   "login": {
     "bienvenido": "Welcome back",
