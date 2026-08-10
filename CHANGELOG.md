@@ -19,6 +19,14 @@ y este proyecto se adhiere a [Versionado Semántico](https://semver.org/lang/es/
 - **Sync iCal: un UID compartido entre dos inmuebles ya no migra la reserva**
   a la otra propiedad (el `ON CONFLICT(uid)` sobreescribía `property_id`).
 
+## [1.5.2] - 2026-08-10
+
+### Changed
+
+- Botón de tema movido del footer del sidebar a la topbar, con selector
+  segmentado de tres modos (Automático / Claro / Oscuro) como en Helios.
+  Los textos se ocultan en pantallas pequeñas.
+
 ## [1.5.0] - 2026-08-06
 
 ### Added
