@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { motion, useReducedMotion } from 'framer-motion';
-import { Phone, Plus, User } from 'lucide-react';
+import { Pencil, Phone, Plus, User } from 'lucide-react';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import MoneyText from '@/components/MoneyText';
 import PersonAvatar from '@/components/PersonAvatar';
@@ -17,8 +17,8 @@ interface AssignPopoverProps {
   tone: 'violet' | 'blue';
   onSelect: (personId: string) => void;
   onSelectUser?: (userId: string) => void;
-  /** 'dashed' = pill borde discontinuo "+ Asignar" · 'button' = botón secundario */
-  variant?: 'dashed' | 'button';
+  /** 'dashed' = pill borde discontinuo "+ Asignar" · 'button' = botón secundario · 'icon' = solo icono lápiz */
+  variant?: 'dashed' | 'button' | 'icon';
   label?: string;
   className?: string;
 }
@@ -59,6 +59,14 @@ export default function AssignPopover({
           >
             <Plus className="h-3.5 w-3.5" />
             {(label ?? tr('mant.asignar')).replace(/^\+ /, '')}
+          </button>
+        ) : variant === 'icon' ? (
+          <button
+            type="button"
+            className="flex h-6 w-6 items-center justify-center rounded-lg transition-colors hover:bg-[var(--surface-2)]"
+            style={{ color: 'var(--text-faint)' }}
+          >
+            <Pencil className="h-3 w-3" />
           </button>
         ) : (
           <button

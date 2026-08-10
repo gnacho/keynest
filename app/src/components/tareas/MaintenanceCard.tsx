@@ -304,6 +304,16 @@ export default function MaintenanceCard({ task: t, variants, animateEntry = true
             <span className="text-[11px]" style={{ color: 'var(--text-faint)' }}>
               {tr('aj.rol' + (assignedUser.role === 'admin' ? 'Admin' : 'User'))}
             </span>
+            {!data.isDemo && (
+              <AssignPopover
+                people={maintPeople}
+                users={maintUsers}
+                tone="blue"
+                variant="icon"
+                onSelect={(id) => data.assignMaintenance(t.id, id)}
+                onSelectUser={(id) => data.assignUserToMaintenance(t.id, id)}
+              />
+            )}
           </span>
         ) : assignee ? (
           <span className="flex items-center gap-2">
@@ -312,6 +322,16 @@ export default function MaintenanceCard({ task: t, variants, animateEntry = true
             <span className="text-[11px]" style={{ color: 'var(--text-faint)' }}>
               {assignee.hourlyRate} €/h
             </span>
+            {!data.isDemo && (
+              <AssignPopover
+                people={maintPeople}
+                users={maintUsers}
+                tone="blue"
+                variant="icon"
+                onSelect={(id) => data.assignMaintenance(t.id, id)}
+                onSelectUser={(id) => data.assignUserToMaintenance(t.id, id)}
+              />
+            )}
           </span>
         ) : (
           !data.isDemo && (
