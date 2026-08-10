@@ -109,7 +109,7 @@ function cleaningCost(c: Cleaning, people: Person[]): number {
 interface ApiMaintenance {
   id: string; property_id: string; title: string; category: string; expense_tag: string;
   urgent: number; notes: string; status: MaintenanceTask['status']; assignee_id: string | null;
-  scheduled_date: string | null; cost: number | null; created_at: number;
+  assigned_user_id: string | null; scheduled_date: string | null; cost: number | null; created_at: number;
   checks?: CleaningCheck[] | string; photos?: string[] | string; has_token?: boolean;
 }
 
@@ -126,6 +126,7 @@ function mapMaintenance(row: ApiMaintenance): MaintenanceTask {
     notes: row.notes,
     status: row.status,
     assigneeId: row.assignee_id ?? undefined,
+    assignedUserId: row.assigned_user_id ?? undefined,
     scheduledDate: row.scheduled_date ? new Date(`${row.scheduled_date}T12:00:00`) : undefined,
     cost: row.cost ?? undefined,
     checks: parseArr<CleaningCheck>(row.checks),
@@ -786,8 +787,17 @@ export default function DataProvider({ children }: { children: ReactNode }) {
         const t = maintenance.current.find((x) => x.id === taskId);
         void putMaintenance(taskId, { assigneeId: personId, status: t && t.status === 'nueva' ? 'asignada' : undefined });
       },
+      assignUserToMaintenance: (taskId, userId) => {
+        const t = maintenance.current.find((x) => x.id === taskId);
+        void putMaintenance(taskId, { assignedUserId: userId, status: t && t.status === 'nueva' ? 'asignada' : undefined });
+      },
       editMaintenance: async (id, patch) => {
         await putMaintenance(id, patch);
+      },
+      deleteMaintenance: async (id) => {
+        await api(`/api/maintenance/${id}`, { method: 'DELETE' });
+        maintenance.current = maintenance.current.filter((t) => t.id !== id);
+        bump();
       },
       addMaintenance: async (input) => {
         const res = await api<{ task: ApiMaintenance }>('/api/maintenance', {

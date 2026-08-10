@@ -345,6 +345,7 @@
     "dias_other": "{{count}} days",
     "mas": "more",
     "asignar": "Assign",
+    "asignarUsuario": "Users",
     "finalizar": "Complete",
     "cerrada": "Closed",
     "reabrir": "Reopen",
@@ -369,7 +370,9 @@
     "guardar": "Save",
     "checksProgreso": "Checks ({{done}}/{{total}})",
     "mostrarAntiguas": "Show +{{dias}} days",
-    "ocultarAntiguas": "Hide old"
+    "ocultarAntiguas": "Hide old",
+    "eliminar": "Delete",
+    "seguro": "Sure?"
   },
   "cat": {
     "cerradura": "Lock/batteries",
@@ -768,7 +771,8 @@
       "tedee_offline": "Lock offline",
       "tedee_ok": "Lock recovered",
       "tedee_bateria": "Low lock battery",
-      "limpieza_pendiente": "Cleaning pending"
+      "limpieza_pendiente": "Cleaning pending",
+      "mantenimiento_recordatorio": "Maintenance reminder"
     },
     "administracion": "Administration",
     "rolUser": "User",

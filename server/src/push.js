@@ -66,6 +66,7 @@ const CATALOGO = {
     tedee_bateria: { titulo: 'Batería cerradura baja', cuerpo: (d) => `«${d.nombre}» al ${d.nivel}%` },
     limpieza_pendiente: { titulo: 'Limpieza pendiente', cuerpo: (d) => `${d.propiedad}: limpieza del ${d.fecha} sin completar` },
     transaccion: { titulo: 'Pago abonado', cuerpo: (d) => `${d.propiedad}: ${d.importe} €${d.huesped ? ` · ${d.huesped}` : ''}` },
+    mantenimiento_recordatorio: { titulo: 'Tarea de mantenimiento', cuerpo: (d) => `${d.propiedad}: «${d.titulo}»${d.cuando === 'hoy' ? ' — hoy' : ' — mañana'}` },
     airbnb_sesion_caida: { titulo: 'Sesión de Airbnb caída', cuerpo: (d) => `El scraper no puede acceder a Airbnb: ${d.detalle || 'sesión caducada'}` },
     airbnb_sesion_ok: { titulo: 'Sesión de Airbnb recuperada', cuerpo: (d) => 'El scraper vuelve a acceder a Airbnb' },
     resumen: { titulo: 'Actividad en Keynest', cuerpo: (d) => `${d.total} avisos durante las horas de silencio` },
@@ -86,6 +87,7 @@ const CATALOGO = {
     tedee_bateria: { titulo: 'Low lock battery', cuerpo: (d) => `“${d.nombre}” at ${d.nivel}%` },
     limpieza_pendiente: { titulo: 'Cleaning pending', cuerpo: (d) => `${d.propiedad}: cleaning from ${d.fecha} not completed` },
     transaccion: { titulo: 'Payment received', cuerpo: (d) => `${d.propiedad}: ${d.importe} €${d.huesped ? ` · ${d.huesped}` : ''}` },
+    mantenimiento_recordatorio: { titulo: 'Maintenance task', cuerpo: (d) => `${d.propiedad}: “${d.titulo}”${d.cuando === 'hoy' ? ' — today' : ' — tomorrow'}` },
     airbnb_sesion_caida: { titulo: 'Airbnb session down', cuerpo: (d) => `The scraper cannot reach Airbnb: ${d.detalle || 'session expired'}` },
     airbnb_sesion_ok: { titulo: 'Airbnb session recovered', cuerpo: (d) => 'The scraper can reach Airbnb again' },
     resumen: { titulo: 'Keynest activity', cuerpo: (d) => `${d.total} alerts during your quiet hours` },
@@ -102,6 +104,7 @@ export const TIPOS_ALERTA = [
   'tedee_bateria',
   'limpieza_pendiente',
   'transaccion',
+  'mantenimiento_recordatorio',
 ]
 
 const SEVERIDADES = ['normal', 'high', 'critical']

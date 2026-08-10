@@ -161,7 +161,8 @@ export interface MaintenanceTask {
   status: MaintenanceStatus;
   urgent: boolean;
   scheduledDate?: Date; // fecha prevista (día desocupado)
-  assigneeId?: string;
+  assigneeId?: string;  // proveedor externo (people.id)
+  assignedUserId?: string; // usuario de la app (users.id)
   notes: string;
   cost?: number; // coste final si finalizada
   checks?: CleaningCheck[];

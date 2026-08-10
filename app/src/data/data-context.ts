@@ -178,10 +178,12 @@ export interface DataApi {
   regenerateUserToken: (userId: string) => string | undefined;
   setMaintenanceStatus: (taskId: string, status: MaintenanceTask['status']) => void;
   assignMaintenance: (taskId: string, personId: string) => void;
+  assignUserToMaintenance: (taskId: string, userId: string) => void;
   /** Crea una tarea de mantenimiento real (BD). */
   addMaintenance: (t: { propertyId: string; title: string; category: string; expenseTag: string; urgent: boolean; notes: string; checks?: CleaningCheck[] }) => Promise<MaintenanceTask | undefined>;
   /** Edita campos de una tarea existente (título, categoría, etiqueta, urgente, notas, fecha prevista). */
   editMaintenance: (id: string, patch: Partial<{ title: string; category: string; expenseTag: string; urgent: boolean; notes: string; scheduledDate: string | null; checks: CleaningCheck[] }>) => Promise<void>;
+  deleteMaintenance: (id: string) => Promise<void>;
   addExpense: (e: Omit<Expense, 'id'>) => void;
 }
 

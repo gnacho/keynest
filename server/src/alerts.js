@@ -233,6 +233,42 @@ export function checkLimpiezas(db, notifyFn = notifyAll) {
   return avisos
 }
 
+// ── Recordatorios de mantenimiento (asignados a usuarios) ─────────────────
+// Tareas con fecha prevista mañana u hoy, asignadas a un USUARIO de la app
+// (no proveedor externo). Un aviso el día antes y otro el mismo día como
+// recordatorio. Dedupe por kv por tarea+día.
+export function checkMantenimientoRecordatorios(db, notifyUsersFn) {
+  const hoy = hoyLocal()
+  const manana = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Europe/Madrid',
+    year: 'numeric', month: '2-digit', day: '2-digit',
+  }).format(Date.now() + 24 * 3600 * 1000)
+
+  const filas = db
+    .prepare(
+      `SELECT m.id, m.title, m.scheduled_date, m.assigned_user_id, p.name AS propiedad
+       FROM maintenance_tasks m
+       JOIN properties p ON p.id = m.property_id
+       WHERE m.status != 'finalizada'
+         AND m.assigned_user_id IS NOT NULL
+         AND (m.scheduled_date = ? OR m.scheduled_date = ?)`
+    )
+    .all(hoy, manana)
+  let avisos = 0
+  for (const f of filas) {
+    const cuando = f.scheduled_date === hoy ? 'hoy' : 'manana'
+    const key = `push_maint_rem_${f.id}_${f.scheduled_date}`
+    if (kvGet(db, key)) continue
+    notifyUsersFn(db, [f.assigned_user_id], 'mantenimiento_recordatorio',
+      { propiedad: f.propiedad, titulo: f.title, cuando },
+      { severity: 'normal', url: '/mantenimiento' }
+    )
+    kvSet(db, key, '1')
+    avisos++
+  }
+  return avisos
+}
+
 // ── Scheduler diario a hora fija local (patrón scheduleNightly de Helios) ────
 export function scheduleDaily(hora, fn, nombre) {
   const now = new Date()

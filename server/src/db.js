@@ -73,6 +73,10 @@ const MIGRATIONS = [
     notes TEXT
   );
   CREATE INDEX IF NOT EXISTS idx_update_hist_ts ON update_history(timestamp)`,
+  // 19: asignación de tareas de mantenimiento a USUARIOS de la app (no solo
+  //     proveedores externos). Para tareas simples (cambiar pilas, etc.) que
+  //     puede hacer el propio propietario. Mutuamente excluyente con assignee_id.
+  `ALTER TABLE maintenance_tasks ADD COLUMN assigned_user_id TEXT`,
 ]
 
 export function migrate(db) {
