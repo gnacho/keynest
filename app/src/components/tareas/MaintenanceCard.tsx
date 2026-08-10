@@ -351,7 +351,7 @@ export default function MaintenanceCard({ task: t, variants, animateEntry = true
           <button
             type="button"
             onClick={() => setConfirmOpen(true)}
-            className="flex h-8 items-center rounded-xl bg-emerald-500 px-3.5 text-xs font-semibold text-white transition-all duration-150 hover:brightness-110 active:scale-[0.98]"
+            className="brand-gradient flex h-8 items-center rounded-xl px-3.5 text-xs font-semibold text-white transition-all duration-150 hover:brightness-110 active:scale-[0.98]"
           >
             {tr('mant.finalizar')}
           </button>
