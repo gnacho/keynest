@@ -334,7 +334,7 @@ export default function Dashboard() {
               <KpiCard icon={Sparkles} tone="violet" label={t('dash.limpiezasPeriodo', { days: lookaheadDays })} value={pendingCleanings.length} sub={t('dash.sinAsignar', { count: unassigned.length })} to="/limpieza" className="h-full" />
             </motion.div>,
             <motion.div variants={itemV} key="k5" className="h-full">
-              <KpiCard icon={Euro} tone="emerald" label={t('dash.ingresosPrevistosMes')} value={expectedMonthIncome} unit="€" money sub={t('dash.reservasMes', { count: monthReservations })} to="/rentabilidad" className="h-full" />
+              <KpiCard icon={Euro} tone="emerald" label={t('dash.misInmueblesPrevistosMes')} value={expectedMonthIncome} unit="€" money sub={t('dash.reservasMes', { count: monthReservations })} to="/rentabilidad" className="h-full" />
             </motion.div>,
           ]}
         </Carousel>

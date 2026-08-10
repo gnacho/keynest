@@ -14,7 +14,7 @@ import { syncAll, syncStatus } from './sync.js'
 import { fetchIcs, icsToReservations, parseIcs } from './ical.js'
 import { seedDemo } from './seed-demo.js'
 import { saveTedeeConfig, tedeeConfig, tedeeLocks, tedeeAccesses } from './tedee.js'
-import { applyUpdate, currentId, updateStatus, getUpdateHistory } from './update.js'
+import { applyUpdate, currentId, updateStatus, getUpdateHistory, consumePendingUpdate } from './update.js'
 import { importAirbnb, parseAirbnbCsv } from './import-airbnb.js'
 import { syncAirbnb, airbnbStatus } from './airbnb-sync.js'
 import { configurePush, flushNotificationQueue } from './push.js'
@@ -1212,6 +1212,7 @@ app.get('/api/version', (c) =>
   c.json({
     version: pkgJson.version,
     build: currentId() || process.env.BUILD_SHA || pkgJson.version,
+    pendingUpdate: consumePendingUpdate(c.get('db')),
   }),
 )
 

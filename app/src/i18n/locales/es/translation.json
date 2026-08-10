@@ -102,6 +102,7 @@
     "salidasPeriodo": "Salidas · próximos {{days}} días",
     "limpiezasPeriodo": "Limpiezas · próximos {{days}} días",
     "ingresosPrevistosMes": "Ingresos previstos mes",
+    "misInmueblesPrevistosMes": "Mis inmuebles · Previsión mes",
     "reservasMes_one": "{{count}} reserva este mes",
     "reservasMes_other": "{{count}} reservas este mes",
     "ocupacionMes": "Ocupación mes",
@@ -895,7 +896,8 @@
   },
   "update": {
     "banner": "Se ha desplegado una versión nueva — recarga para verla",
-    "reload": "Recargar"
+    "reload": "Recargar",
+    "toastUpdated": "Keynest se ha actualizado a v{v}"
   },
   "errorBoundary": {
     "title": "Algo no ha ido bien",
