@@ -113,8 +113,8 @@ export function AppearanceCard() {
               onClick={() => setMode(opt.value)}
               className={cn('relative flex flex-col gap-2 rounded-xl border p-2 text-left transition-colors duration-150')}
               style={{
-                borderColor: mode === opt.value ? '#6366F1' : 'var(--border)',
-                backgroundColor: mode === opt.value ? 'rgb(99 102 241 / 0.08)' : 'transparent',
+                borderColor: mode === opt.value ? 'var(--brand-from)' : 'var(--border)',
+                backgroundColor: mode === opt.value ? 'rgb(var(--accent-rgb) / 0.08)' : 'transparent',
               }}
             >
               <ThemePreview variant={opt.value} />
@@ -128,7 +128,7 @@ export function AppearanceCard() {
                   animate={{ scale: 1 }}
                   transition={{ type: 'spring', stiffness: 500, damping: 25 }}
                   className="absolute right-2 top-2 flex h-4 w-4 items-center justify-center rounded-full text-white"
-                  style={{ backgroundColor: '#6366F1' }}
+                  style={{ backgroundColor: 'var(--brand-from)' }}
                 >
                   <Check className="h-3 w-3" strokeWidth={3} />
                 </motion.span>
@@ -170,7 +170,7 @@ export function AppearanceCard() {
                   'flex h-8 items-center rounded-lg px-3 text-xs font-semibold transition-colors duration-150',
                   active ? 'text-white' : 'text-[var(--text-muted)] hover:text-[var(--text)]',
                 )}
-                style={active ? { backgroundImage: 'linear-gradient(135deg,#6366F1,#8B5CF6)' } : undefined}
+                style={active ? { backgroundImage: 'linear-gradient(135deg, var(--brand-from), var(--brand-to))' } : undefined}
               >
                 {tr(d.labelKey)}
               </button>
