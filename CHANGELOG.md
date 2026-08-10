@@ -9,6 +9,17 @@ y este proyecto se adhiere a [Versionado Semántico](https://semver.org/lang/es/
 
 ### Todo
 
+## [1.5.5] - 2026-08-10
+
+### Added
+
+- Las tareas de mantenimiento pueden asignarse a usuarios de la app, no solo a
+  proveedores externos. La asignación es mutuamente excluyente: al asignar un
+  usuario se limpia el proveedor y viceversa. (#161)
+- Recordatorios push de mantenimiento: el día antes y el mismo día de la fecha
+  prevista, se envía una notificación al usuario asignado. Nuevo toggle en las
+  preferencias de notificación. (#161)
+
 - **Auditoría de seguridad y robustez** (release bug-hunting): revisar auth y
   sesiones, CSRF/Origin check, cabeceras de seguridad HTTP, path traversal,
   secretos cifrados (ENC_KEY/SESSION_SECRET), rate-limit y body caps, y bugs
