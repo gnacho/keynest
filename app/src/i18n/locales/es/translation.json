@@ -102,6 +102,7 @@
     "salidasPeriodo": "Salidas · próximos {{days}} días",
     "limpiezasPeriodo": "Limpiezas · próximos {{days}} días",
     "ingresosPrevistosMes": "Ingresos previstos mes",
+    "misInmueblesPrevistosMes": "Mis inmuebles · Previsión mes",
     "reservasMes_one": "{{count}} reserva este mes",
     "reservasMes_other": "{{count}} reservas este mes",
     "ocupacionMes": "Ocupación mes",

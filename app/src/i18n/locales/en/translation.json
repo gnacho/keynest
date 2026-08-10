@@ -102,6 +102,7 @@
     "salidasPeriodo": "Check-outs · next {{days}} days",
     "limpiezasPeriodo": "Cleanings · next {{days}} days",
     "ingresosPrevistosMes": "Expected income this month",
+    "misInmueblesPrevistosMes": "My properties · Month forecast",
     "reservasMes_one": "{{count}} reservation this month",
     "reservasMes_other": "{{count}} reservations this month",
     "ocupacionMes": "Occupancy this month",

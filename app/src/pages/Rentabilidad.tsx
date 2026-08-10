@@ -269,9 +269,9 @@ export default function Rentabilidad() {
   const reduce = useReducedMotion();
   const [params, setParams] = useSearchParams();
 
-  const inmueble = params.get('inmueble') ?? 'todos';
-  const usuarioParam = params.get('usuario') ?? 'todos';
   const me = cachedUser();
+  const inmueble = params.get('inmueble') ?? 'todos';
+  const usuarioParam = params.get('usuario') ?? (me?.id ?? 'todos');
   const g = (params.get('g') as Granularity) || 'mes';
   const anclaParam = params.get('ancla');
   const anchor = anclaParam ? new Date(`${anclaParam}T12:00:00`) : new Date();
