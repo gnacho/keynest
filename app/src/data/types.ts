@@ -135,7 +135,7 @@ export interface AppUser {
   id: string;
   name: string;
   phone?: string;
-  role: 'gestion' | 'limpieza';
+  role: 'admin' | 'gestion' | 'limpieza';
   /** Token de acceso directo (/t/<token>) — solo rol limpieza; undefined = revocado. */
   token?: string;
   /** Vínculo con la persona del maestro (Ajustes → Personas). */
