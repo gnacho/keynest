@@ -14,7 +14,7 @@ import { syncAll, syncStatus } from './sync.js'
 import { fetchIcs, icsToReservations, parseIcs } from './ical.js'
 import { seedDemo } from './seed-demo.js'
 import { saveTedeeConfig, tedeeConfig, tedeeLocks, tedeeAccesses } from './tedee.js'
-import { applyUpdate, currentId, updateStatus } from './update.js'
+import { applyUpdate, currentId, updateStatus, getUpdateHistory } from './update.js'
 import { importAirbnb, parseAirbnbCsv } from './import-airbnb.js'
 import { syncAirbnb, airbnbStatus } from './airbnb-sync.js'
 import { configurePush, flushNotificationQueue } from './push.js'
@@ -241,9 +241,13 @@ app.get('/api/update/status', auth.requireAdmin(prodDb, demoDb), async (c) => {
   return c.json(await updateStatus(prodDb))
 })
 
+app.get('/api/updates/history', auth.requireAdmin(prodDb, demoDb), (c) => {
+  return c.json({ entries: getUpdateHistory(c.get('db')) })
+})
+
 app.post('/api/update/apply', auth.requireAdmin(prodDb, demoDb), async (c) => {
   audit(c.get('db'), c.get('user').id, 'update.apply', 'system', 'server', '')
-  const ok = await applyUpdate()
+  const ok = await applyUpdate(c.get('db'), c.get('user').id)
   // systemd Restart=always levanta el servicio con el código nuevo tras salir
   setTimeout(() => process.exit(0), 1500)
   return c.json({ ok, restarting: ok })

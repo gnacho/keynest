@@ -58,6 +58,21 @@ const MIGRATIONS = [
   // 17: IDs de notificaciones de campana descartadas por usuario (persistencia
   //     multi-dispositivo, #140). JSON array de strings tipo ["not-out-uuid",...].
   `ALTER TABLE users ADD COLUMN dismissed_notifs TEXT DEFAULT '[]'`,
+  // 18: historial de actualizaciones (update_history, #153). Registra cada apply
+  //     exitoso con versión origen/destino, quién, duración y estado.
+  `CREATE TABLE IF NOT EXISTS update_history (
+    event_id TEXT PRIMARY KEY,
+    timestamp INTEGER NOT NULL,
+    action TEXT NOT NULL DEFAULT 'update',
+    channel TEXT NOT NULL DEFAULT 'stable',
+    version_from TEXT NOT NULL,
+    version_to TEXT NOT NULL,
+    initiated_by TEXT,
+    status TEXT NOT NULL DEFAULT 'applied',
+    duration_ms INTEGER,
+    notes TEXT
+  );
+  CREATE INDEX IF NOT EXISTS idx_update_hist_ts ON update_history(timestamp)`,
 ]
 
 export function migrate(db) {
