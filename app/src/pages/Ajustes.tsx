@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { useSearchParams } from 'react-router';
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 import type { Variants } from 'framer-motion';
 import {
@@ -123,7 +124,9 @@ export default function Ajustes() {
   const data = useData();
   const reduce = useReducedMotion();
 
-  const [tab, setTab] = useState<TabId>('personas');
+  const [searchParams] = useSearchParams();
+  const initialTab = (searchParams.get('tab') as TabId | null) ?? 'personas';
+  const [tab, setTab] = useState<TabId>(TABS.some(t => t.id === initialTab) ? initialTab : 'personas');
 
 
   /* ---- Personas: BD real vía provider ---- */

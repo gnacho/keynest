@@ -422,7 +422,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
             <NotificationsPopover />
             <ConnectionDot />
             <ThemeToggle />
-            <Link to={SETTINGS_ITEM.to} aria-label={t(`nav.${SETTINGS_ITEM.labelKey}`)}>
+            <Link to="/ajustes?tab=preferencias" aria-label={t(`nav.${SETTINGS_ITEM.labelKey}`)}>
               <PersonAvatar name={sessionName} initials={sessionInitials} size={32} />
             </Link>
           </div>
@@ -442,7 +442,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
               <NotificationsPopover />
               <ThemeToggle />
               <NavLink
-                to={SETTINGS_ITEM.to}
+                to="/ajustes?tab=preferencias"
                 className="flex items-center gap-2.5 rounded-xl p-1.5 transition-colors duration-150 hover:bg-[var(--surface-2)]"
               >
                 <PersonAvatar name={sessionName} initials={sessionInitials} size={30} />
