@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import { AnimatePresence, motion, useMotionValue, useReducedMotion, useTransform } from 'framer-motion';
 import type { Variants } from 'framer-motion';
-import { Ban, CalendarOff, Check, ChevronsRight, Link2, Settings2, Trash2, Undo2 } from 'lucide-react';
+import { Ban, CalendarOff, Check, ChevronsRight, Link2, Settings2, Undo2 } from 'lucide-react';
 import { toast } from 'sonner';
 import ConfirmDialog from '@/components/ConfirmDialog';
 import MoneyText from '@/components/MoneyText';
@@ -114,7 +114,6 @@ export default function MaintenanceCard({ task: t, variants, animateEntry = true
   const belowLg = useBelowLg();
   const [notesOpen, setNotesOpen] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
-  const [deleteConfirming, setDeleteConfirming] = useState(false);
 
   const property = data.getProperty(t.propertyId)!;
   const assignee = t.assigneeId ? data.getPerson(t.assigneeId) : undefined;
@@ -262,40 +261,6 @@ export default function MaintenanceCard({ task: t, variants, animateEntry = true
 
       {/* Asignación + acciones por estado */}
       <div className="mt-0.5 flex items-center justify-between gap-2">
-        {!data.isDemo && onEdit && t.status !== 'finalizada' && (
-          <div className="flex items-center gap-1.5">
-            <button
-              type="button"
-              onClick={onEdit}
-              className="brand-gradient flex h-8 items-center gap-1.5 rounded-xl px-3 text-xs font-semibold text-white transition-all duration-150 hover:brightness-110 active:scale-[0.98]"
-            >
-              <Settings2 className="h-3.5 w-3.5" />
-              {tr('mant.guardar')}
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                if (deleteConfirming) {
-                  void data.deleteMaintenance(t.id);
-                  setDeleteConfirming(false);
-                } else {
-                  setDeleteConfirming(true);
-                  setTimeout(() => setDeleteConfirming(false), 3000);
-                }
-              }}
-              className={cn(
-                'flex h-8 items-center gap-1.5 rounded-xl border px-3 text-xs font-semibold transition-all duration-150',
-                deleteConfirming
-                  ? 'border-rose-300 bg-rose-500 text-white dark:border-rose-500/60'
-                  : 'hover:bg-[var(--ro-chip-bg)]',
-              )}
-              style={deleteConfirming ? undefined : { borderColor: 'rgb(244 63 94 / 0.5)', color: '#F43F5E' }}
-            >
-              <Trash2 className="h-3.5 w-3.5" />
-              {deleteConfirming ? tr('mant.seguro') : tr('mant.eliminar')}
-            </button>
-          </div>
-        )}
         {!data.isDemo && (
           <button
             type="button"

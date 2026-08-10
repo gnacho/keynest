@@ -3,7 +3,7 @@ import type { DragEvent } from 'react';
 import { useSearchParams } from 'react-router';
 import { motion } from 'framer-motion';
 import type { Variants } from 'framer-motion';
-import { ChevronDown, Plus, Wrench } from 'lucide-react';
+import { ChevronDown, Plus, Trash2, Wrench } from 'lucide-react';
 import EmptyState from '@/components/EmptyState';
 import FilterBar from '@/components/FilterBar';
 import MaintenanceCard from '@/components/tareas/MaintenanceCard';
@@ -443,6 +443,7 @@ function NewTaskDialog({
 
   const valid = Boolean(slug && titulo.trim() && categoria);
   const [busy, setBusy] = useState(false);
+  const [deleteConfirming, setDeleteConfirming] = useState(false);
 
   const checksFromText = () =>
     checksText
@@ -598,14 +599,44 @@ function NewTaskDialog({
               {tr('mant.checksNota')}
             </span>
           </div>
-          <button
-            type="button"
-            disabled={!valid || busy}
-            onClick={() => void crear()}
-            className="flex h-11 w-full items-center justify-center rounded-xl bg-rose-500 text-sm font-semibold text-white transition-all duration-150 hover:brightness-110 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50 sm:col-span-2"
-          >
-            {busy ? tr('res.creando') : task ? tr('mant.guardar') : tr('mant.crearTarea')}
-          </button>
+          <div className={`flex gap-2 sm:col-span-2 ${task ? 'flex-row' : ''}`}>
+            {task && (
+              <button
+                type="button"
+                disabled={busy}
+                onClick={() => {
+                  if (deleteConfirming) {
+                    void data.deleteMaintenance(task.id);
+                    setDeleteConfirming(false);
+                    onCreated();
+                    onOpenChange(false);
+                    reset();
+                  } else {
+                    setDeleteConfirming(true);
+                    setTimeout(() => setDeleteConfirming(false), 3000);
+                  }
+                }}
+                className={cn(
+                  'flex h-11 items-center gap-1.5 rounded-xl border px-4 text-sm font-semibold transition-all duration-150 disabled:opacity-50',
+                  deleteConfirming
+                    ? 'border-rose-300 bg-rose-500 text-white'
+                    : 'hover:bg-[var(--ro-chip-bg)]',
+                )}
+                style={deleteConfirming ? undefined : { borderColor: 'rgb(244 63 94 / 0.5)', color: '#F43F5E' }}
+              >
+                <Trash2 className="h-4 w-4" />
+                {deleteConfirming ? tr('mant.seguro') : tr('mant.eliminar')}
+              </button>
+            )}
+            <button
+              type="button"
+              disabled={!valid || busy}
+              onClick={() => void crear()}
+              className="brand-gradient flex h-11 flex-1 items-center justify-center rounded-xl text-sm font-semibold text-white transition-all duration-150 hover:brightness-110 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {busy ? tr('res.creando') : task ? tr('mant.guardar') : tr('mant.crearTarea')}
+            </button>
+          </div>
         </div>
       </DialogContent>
     </Dialog>
