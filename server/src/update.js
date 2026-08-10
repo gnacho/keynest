@@ -1,5 +1,12 @@
+// update.js — estado y aplicación de actualizaciones. Detecta la última release
+// ESTABLE (releases/latest, tag v*) y, si hay versión nueva, la aplica ejecutando
+// keynest-update.sh (deploy/, versionado: releases + checksums + marker semver).
+// El server NO se auto-aplica en runtime: el script hace el deploy y, con
+// SKIP_RESTART=1, el server sale y systemd (Restart=always) relanza.
+// Incluye historial de actualizaciones (#153).
 import { execFile } from 'node:child_process'
 import { readFileSync } from 'node:fs'
+import { randomUUID } from 'node:crypto'
 import { kvGet, kvSet } from './db.js'
 
 const REPO = process.env.GITHUB_REPO || 'gnacho/keynest'
@@ -55,11 +62,45 @@ export async function updateStatus(prodDb) {
   return { current, latest, available }
 }
 
-export function applyUpdate() {
+// Registra una entrada en update_history antes de ejecutar el apply.
+// Se escribe ANTES de lanzar el script para que quede constancia aunque
+// el proceso muera durante el deploy.
+function recordUpdate(db, userId, fromVer, toVer, startTime) {
+  try {
+    db.prepare(`INSERT INTO update_history
+      (event_id, timestamp, action, channel, version_from, version_to, initiated_by, status, duration_ms)
+      VALUES (?, ?, 'update', 'stable', ?, ?, ?, 'started', 0)`)
+      .run(randomUUID(), Date.now(), fromVer, toVer, userId)
+  } catch { /* si la tabla no existe aún, no bloquear el apply */ }
+}
+
+// GET /api/updates/history — últimas 30 entradas.
+export function getUpdateHistory(db) {
+  try {
+    return db.prepare('SELECT * FROM update_history ORDER BY timestamp DESC LIMIT 30').all()
+  } catch { return [] }
+}
+
+export function applyUpdate(db, userId) {
+  const startTime = Date.now()
+  const fromVer = currentId()
+  const toVer = 'pending' // el script actualiza el marker; la versión real se verá tras el restart
+
+  recordUpdate(db, userId, fromVer, toVer, startTime)
+
   return new Promise((resolve) => {
     // El script del repo (deploy/keynest-update.sh) hace el deploy con checksums;
     // SKIP_RESTART=1: el server sale y systemd (Restart=always) relanza con lo nuevo.
     execFile(UPDATE_SCRIPT, { env: { ...process.env, SKIP_RESTART: '1' } }, (err) => {
+      // Actualizar la entrada con el resultado (mejor intento: el proceso va a
+      // salir ya, pero dejamos constancia del resultado del exec)
+      try {
+        const duration = Date.now() - startTime
+        db.prepare(`UPDATE update_history SET status = ?, duration_ms = ?
+          WHERE version_from = ? AND version_to = ? AND status = 'started'
+          ORDER BY timestamp DESC LIMIT 1`)
+          .run(err ? 'failed' : 'applied', duration, fromVer, toVer)
+      } catch { /* tabla sin crear o DB ya cerrada */ }
       resolve(!err)
     })
   })
