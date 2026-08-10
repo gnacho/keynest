@@ -1,19 +1,22 @@
 import { useState } from 'react';
 import { motion, useReducedMotion } from 'framer-motion';
-import { Phone, Plus } from 'lucide-react';
+import { Phone, Plus, User } from 'lucide-react';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import MoneyText from '@/components/MoneyText';
 import PersonAvatar from '@/components/PersonAvatar';
 import { useTranslation } from 'react-i18next';
-import type { Person } from '@/data/types';
+import type { Person, AppUser } from '@/data/types';
 import { cn } from '@/lib/utils';
 
 interface AssignPopoverProps {
   /** Personas candidatas (ya filtradas por rol y disponibilidad) */
   people: Person[];
+  /** Usuarios de la app candidatos a asignar */
+  users?: AppUser[];
   /** Color del módulo: violet (limpieza) / blue (mantenimiento) */
   tone: 'violet' | 'blue';
   onSelect: (personId: string) => void;
+  onSelectUser?: (userId: string) => void;
   /** 'dashed' = pill borde discontinuo "+ Asignar" · 'button' = botón secundario */
   variant?: 'dashed' | 'button';
   label?: string;
@@ -28,8 +31,10 @@ const TONE = {
 /** Popover de asignación de persona (design limpieza/mantenimiento: "+ Asignar"). */
 export default function AssignPopover({
   people,
+  users,
   tone,
   onSelect,
+  onSelectUser,
   variant = 'dashed',
   label,
   className,
@@ -115,6 +120,52 @@ export default function AssignPopover({
             </p>
           )}
         </div>
+        {users && users.length > 0 && (
+          <>
+            <div
+              className="mx-2 my-1 border-t"
+              style={{ borderColor: 'var(--border)' }}
+            />
+            <p
+              className="px-2 py-1.5 text-[11px] font-semibold uppercase tracking-[0.08em]"
+              style={{ color: 'var(--text-faint)' }}
+            >
+              {tr('mant.asignarUsuario')}
+            </p>
+            <div className="flex flex-col">
+              {users.map((u, i) => (
+                <motion.button
+                  key={u.id}
+                  type="button"
+                  initial={reduce ? { opacity: 0 } : { opacity: 0, scale: 0.8 }}
+                  animate={reduce ? { opacity: 1 } : { opacity: 1, scale: 1 }}
+                  transition={
+                    reduce ? { duration: 0.15 } : { type: 'spring', stiffness: 500, damping: 32, delay: i * 0.05 }
+                  }
+                  onClick={() => {
+                    onSelectUser?.(u.id);
+                    setOpen(false);
+                  }}
+                  className="flex items-center gap-3 rounded-xl px-2 py-2 text-left transition-colors duration-150 hover:bg-[var(--surface-2)]"
+                >
+                  <PersonAvatar name={u.name} initials={u.name.charAt(0).toUpperCase()} size={32} />
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate text-sm font-semibold">{u.name}</span>
+                    <span className="flex items-center gap-1 text-xs" style={{ color: 'var(--text-faint)' }}>
+                      <User className="h-3 w-3" />
+                      {tr('aj.rol' + (u.role === 'admin' ? 'Admin' : 'User'))}
+                    </span>
+                  </span>
+                </motion.button>
+              ))}
+            </div>
+          </>
+        )}
+        {(!users || users.length === 0) && people.length === 0 && (
+          <p className="px-2 py-3 text-xs" style={{ color: 'var(--text-muted)' }}>
+            {tr('tareas.sinPersonas')}
+          </p>
+        )}
       </PopoverContent>
     </Popover>
   );

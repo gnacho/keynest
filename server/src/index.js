@@ -17,7 +17,7 @@ import { saveTedeeConfig, tedeeConfig, tedeeLocks, tedeeAccesses } from './tedee
 import { applyUpdate, currentId, updateStatus, getUpdateHistory, consumePendingUpdate } from './update.js'
 import { importAirbnb, parseAirbnbCsv } from './import-airbnb.js'
 import { syncAirbnb, airbnbStatus } from './airbnb-sync.js'
-import { configurePush, flushNotificationQueue } from './push.js'
+import { configurePush, flushNotificationQueue, notifyUsers } from './push.js'
 import { registerPushRoutes } from './routes-push.js'
 import * as alerts from './alerts.js'
 import { getBackupConfig, setBackupConfig, runBackup, cleanOldBackups } from './backup.js'
@@ -647,6 +647,7 @@ guarded.post('/maintenance', async (c) => {
 const maintUpdateSchema = z.object({
   status: z.enum(['nueva', 'asignada', 'finalizada']).optional(),
   assigneeId: z.string().nullable().optional(),
+  assignedUserId: z.string().nullable().optional(),
   cost: z.number().nullable().optional(),
   title: z.string().min(1).optional(),
   category: z.string().optional(),
@@ -664,9 +665,29 @@ guarded.put('/maintenance/:id', async (c) => {
   const parsed = maintUpdateSchema.safeParse(body)
   if (!parsed.success) return c.json({ error: 'formato inválido' }, 400)
   const d = parsed.data
+  const hasAid = d.assigneeId !== undefined
+  const hasAuid = d.assignedUserId !== undefined
+
+  // Exclusión mutua: asignar uno limpia el otro.
+  let finalAid, finalAuid
+  let touchAid = hasAid, touchAuid = hasAuid
+  if (hasAuid) {
+    finalAuid = d.assignedUserId
+    finalAid = null // limpia proveedor
+    touchAid = true
+  } else if (hasAid) {
+    finalAid = d.assigneeId
+    finalAuid = null // limpia usuario
+    touchAuid = true
+  } else {
+    finalAid = null
+    finalAuid = null
+  }
+
   db.prepare(`UPDATE maintenance_tasks SET
     status = COALESCE(?, status),
     assignee_id = CASE WHEN ? THEN ? ELSE assignee_id END,
+    assigned_user_id = CASE WHEN ? THEN ? ELSE assigned_user_id END,
     cost = COALESCE(?, cost),
     title = COALESCE(?, title),
     category = COALESCE(?, category),
@@ -678,16 +699,15 @@ guarded.put('/maintenance/:id', async (c) => {
     WHERE id = ?`)
     .run(
       d.status ?? null,
-      d.assigneeId !== undefined ? 1 : 0,
-      d.assigneeId ?? null,
+      touchAid ? 1 : 0, finalAid,
+      touchAuid ? 1 : 0, finalAuid,
       d.cost ?? null,
       d.title ?? null,
       d.category ?? null,
       d.expenseTag ?? null,
       d.urgent !== undefined ? (d.urgent ? 1 : 0) : null,
       d.notes ?? null,
-      d.scheduledDate !== undefined ? 1 : 0,
-      d.scheduledDate ?? null,
+      d.scheduledDate !== undefined ? 1 : 0, d.scheduledDate ?? null,
       d.checks !== undefined ? JSON.stringify(d.checks) : null,
       existing.id,
     )
@@ -725,6 +745,17 @@ guarded.delete('/maintenance/:id/token', (c) => {
   const db = c.get('db')
   db.prepare('UPDATE maintenance_tasks SET token_hash = NULL, token_cipher = NULL WHERE id = ?').run(c.req.param('id'))
   aud(c, 'update', 'maintenance', c.req.param('id'), 'token revocado')
+  return c.json({ ok: true })
+})
+
+/* Eliminar tarea de mantenimiento no finalizada */
+guarded.delete('/maintenance/:id', (c) => {
+  const db = c.get('db')
+  const existing = db.prepare('SELECT * FROM maintenance_tasks WHERE id = ?').get(c.req.param('id'))
+  if (!existing) return c.json({ error: 'no encontrada' }, 404)
+  if (existing.status === 'finalizada') return c.json({ error: 'no se puede eliminar una tarea finalizada', code: 'not-deletable' }, 409)
+  db.prepare('DELETE FROM maintenance_tasks WHERE id = ?').run(existing.id)
+  aud(c, 'delete', 'maintenance', existing.id, `${existing.property_id} ${existing.title}`)
   return c.json({ ok: true })
 })
 
@@ -1345,6 +1376,7 @@ setTimeout(runAirbnb, 8000)
 setInterval(runAirbnb, 3600 * 1000)
 alerts.scheduleDaily(9, () => alerts.checkReservasHoy(prodDb), 'reservas-hoy')
 alerts.scheduleDaily(9, () => alerts.checkTransacciones(prodDb), 'transacciones')
+alerts.scheduleDaily(9, () => alerts.checkMantenimientoRecordatorios(prodDb, notifyUsers), 'mantenimiento-recordatorio')
 alerts.scheduleDaily(12, () => alerts.checkLimpiezas(prodDb), 'limpiezas-pendientes')
 
 /* Backup diario a las 03:00 si está habilitado */

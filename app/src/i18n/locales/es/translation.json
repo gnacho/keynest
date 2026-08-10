@@ -345,6 +345,7 @@
     "dias_other": "{{count}} días",
     "mas": "más",
     "asignar": "Asignar",
+    "asignarUsuario": "Usuarios",
     "finalizar": "Finalizar",
     "cerrada": "Cerrada",
     "reabrir": "Reabrir",
@@ -369,7 +370,9 @@
     "guardar": "Guardar",
     "checksProgreso": "Checks ({{done}}/{{total}})",
     "mostrarAntiguas": "Mostrar +{{dias}} días",
-    "ocultarAntiguas": "Ocultar antiguas"
+    "ocultarAntiguas": "Ocultar antiguas",
+    "eliminar": "Eliminar",
+    "seguro": "¿Seguro?"
   },
   "cat": {
     "cerradura": "Cerradura/pilas",
@@ -768,7 +771,8 @@
       "tedee_offline": "Cerradura offline",
       "tedee_ok": "Cerradura recuperada",
       "tedee_bateria": "Batería de cerradura baja",
-      "limpieza_pendiente": "Limpieza pendiente"
+      "limpieza_pendiente": "Limpieza pendiente",
+      "mantenimiento_recordatorio": "Recordatorio de mantenimiento"
     },
     "administracion": "Administración",
     "rolUser": "Usuario",

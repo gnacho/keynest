@@ -276,6 +276,7 @@ const TIPOS_NOTIF = [
   'tedee_ok',
   'tedee_bateria',
   'limpieza_pendiente',
+  'mantenimiento_recordatorio',
 ] as const;
 
 /* ---------- Tarjeta Mi perfil (canónica webapp-shell): avatar + nombre + email + idioma + notifs + contraseña + logout ----------
