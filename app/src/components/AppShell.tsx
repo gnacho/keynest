@@ -15,6 +15,7 @@ import {
   Settings,
   Sparkles,
   Sun,
+  Sunrise,
   TrendingUp,
   Wrench,
 } from 'lucide-react';
@@ -42,7 +43,8 @@ interface NavItem {
 }
 
 /* Items de dominio; Ajustes NO va en el nav principal del sidebar: va abajo,
-   junto al ThemeToggle (webapp-shell). En móvil entra en la bottom-nav directa. */
+   en el pie del sidebar. El ThemeToggle vive en la topbar (issue #151).
+   En móvil entra en la bottom-nav directa. */
 /* NAV_ITEMS es la fuente única (webapp-shell). En DESKTOP (sidebar + raíl) se
    muestran TODOS los de dominio; en MÓVIL la bottom-nav muestra solo los 4
    esenciales (Resumen/Limpieza/Rentabilidad/Ajustes) — Calendario/Reservas/
@@ -86,22 +88,65 @@ const TITLE_KEYS: Record<string, string> = {
 
 const COLLAPSE_KEY = 'keynest-sidebar-collapsed';
 
-function ThemeToggle({ className }: { className?: string }) {
-  const { resolved, toggle } = useTheme();
+function ThemeToggle() {
+  const { mode, setMode, resolved } = useTheme();
   const { t } = useTranslation();
+  const reduce = useReducedMotion();
+
+  const OPTIONS: { value: 'system' | 'light' | 'dark'; key: string; icon: typeof Sun }[] = [
+    { value: 'system', key: 'aj.sistema', icon: Sunrise },
+    { value: 'light', key: 'aj.claro', icon: Sun },
+    { value: 'dark', key: 'aj.oscuro', icon: Moon },
+  ];
+
   return (
-    <button
-      type="button"
-      onClick={toggle}
-      aria-label={resolved === 'dark' ? t('nav.temaClaro') : t('nav.temaOscuro')}
-      className={cn(
-        'flex h-9 w-9 items-center justify-center rounded-xl border transition-colors duration-150 hover:bg-[var(--surface-2)]',
-        className,
-      )}
-      style={{ borderColor: 'var(--border)', color: 'var(--text-muted)' }}
+    <div
+      role="radiogroup"
+      aria-label={t('aj.tema')}
+      className="flex h-8 items-center rounded-full border p-0.5"
+      style={{ borderColor: 'var(--border)', backgroundColor: 'var(--surface)' }}
     >
-      {resolved === 'dark' ? <Sun className="h-[18px] w-[18px]" /> : <Moon className="h-[18px] w-[18px]" />}
-    </button>
+      {OPTIONS.map(({ value, key, icon: Icon }) => {
+        const active = mode === value;
+        const label = t(key);
+        return (
+          <button
+            key={value}
+            role="radio"
+            aria-checked={active}
+            aria-label={label}
+            title={label}
+            onClick={() => setMode(value)}
+            className="relative flex h-7 items-center gap-1 rounded-full px-2.5 text-xs font-medium transition-colors"
+            style={{
+              backgroundColor: active ? 'var(--surface-2)' : 'transparent',
+              color: active ? 'var(--text)' : 'var(--text-muted)',
+            }}
+          >
+            <AnimatePresence mode="wait" initial={false}>
+              <motion.span
+                key={active ? `${value}-on` : `${value}-off`}
+                initial={reduce ? false : { rotate: -90, opacity: 0 }}
+                animate={{ rotate: 0, opacity: 1 }}
+                exit={reduce ? {} : { rotate: 90, opacity: 0 }}
+                transition={{ duration: 0.3 }}
+                className="flex"
+              >
+                <Icon size={15} strokeWidth={2.2} />
+              </motion.span>
+            </AnimatePresence>
+            <span className="hidden sm:inline">{label}</span>
+            {value === 'system' && active && (
+              <span
+                className="ml-0.5 inline-block h-1.5 w-1.5 rounded-full"
+                style={{ backgroundColor: resolved === 'dark' ? 'rgb(165 180 252)' : 'rgb(245 158 11)' }}
+                aria-label={resolved === 'dark' ? t('aj.oscuro') : t('aj.claro')}
+              />
+            )}
+          </button>
+        );
+      })}
+    </div>
   );
 }
 
@@ -264,25 +309,21 @@ export default function AppShell({ children }: { children: ReactNode }) {
             </nav>
           )}
 
-          {/* Pie canon webapp-shell: [tema | ajustes | colapsar] en una fila.
-              El usuario (avatar+nombre) vive en la topbar, no aquí (5-Ago-2026). */}
+          {/* Pie canon webapp-shell: [ajustes | colapsar]. El tema vive en la topbar
+              (issue #151). El usuario (avatar+nombre) también en la topbar. */}
           <div className={cn('flex flex-col gap-2 border-t p-3', collapsed && 'items-center')} style={{ borderColor: 'var(--border)' }}>
             {collapsed ? (
-              <>
-                <ThemeToggle />
-                <button
-                  type="button"
-                  onClick={() => setCollapsed((c) => !c)}
-                  aria-label={t('nav.expandirMenu')}
-                  className="flex h-9 w-9 items-center justify-center rounded-xl border transition-colors duration-150 hover:bg-[var(--surface-2)]"
-                  style={{ borderColor: 'var(--border)', color: 'var(--text-faint)' }}
-                >
-                  <ChevronsRight className="h-4 w-4" />
-                </button>
-              </>
+              <button
+                type="button"
+                onClick={() => setCollapsed((c) => !c)}
+                aria-label={t('nav.expandirMenu')}
+                className="flex h-9 w-9 items-center justify-center rounded-xl border transition-colors duration-150 hover:bg-[var(--surface-2)]"
+                style={{ borderColor: 'var(--border)', color: 'var(--text-faint)' }}
+              >
+                <ChevronsRight className="h-4 w-4" />
+              </button>
             ) : (
               <div className="flex items-center gap-2">
-                <ThemeToggle />
                 <NavLink
                   to={SETTINGS_ITEM.to}
                   className={cn(
@@ -319,7 +360,6 @@ export default function AppShell({ children }: { children: ReactNode }) {
           <nav className="mt-3 flex flex-1 flex-col items-center gap-1 overflow-y-auto">
             {[...DESKTOP_NAV, SETTINGS_ITEM].map(renderIconItem)}
           </nav>
-          <ThemeToggle />
         </aside>
 
         {/* ============================== Header móvil (< md) */}
@@ -371,6 +411,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
             <h1 className="font-display text-xl font-semibold tracking-[-0.01em]">{title}</h1>
             <div className="flex items-center gap-2">
               <NotificationsPopover />
+              <ThemeToggle />
               <NavLink
                 to={SETTINGS_ITEM.to}
                 className="flex items-center gap-2.5 rounded-xl p-1.5 transition-colors duration-150 hover:bg-[var(--surface-2)]"
