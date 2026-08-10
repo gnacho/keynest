@@ -150,6 +150,30 @@ function ThemeToggle() {
   );
 }
 
+function ConnectionDot({ withLabel = false }: { withLabel?: boolean }) {
+  const { connectionStatus } = useData();
+  const { t } = useTranslation();
+  const live = connectionStatus === 'connected';
+  return (
+    <span
+      className="inline-flex items-center gap-1.5 rounded-full text-[11px] font-medium"
+      style={{ color: 'var(--text-faint)' }}
+      role="status"
+      aria-label={live ? t('nav.conectado') : t('nav.reconectando')}
+    >
+      <span className="relative flex h-2 w-2">
+        {!live && (
+          <span className="absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75 animate-ping" />
+        )}
+        <span
+          className={`relative inline-flex h-2 w-2 rounded-full ${live ? 'bg-emerald-500' : 'bg-amber-400'}`}
+        />
+      </span>
+      {withLabel && (live ? t('nav.conectado') : t('nav.reconectando'))}
+    </span>
+  );
+}
+
 function LogoMark({ size = 28 }: { size?: number }) {
   return <img src="/logo.svg" alt="Keynest" width={size} height={size} style={{ width: size, height: size }} />;
 }
@@ -309,25 +333,28 @@ export default function AppShell({ children }: { children: ReactNode }) {
             </nav>
           )}
 
-          {/* Pie canon webapp-shell: [ajustes | colapsar]. El tema vive en la topbar
-              (issue #151). El usuario (avatar+nombre) también en la topbar. */}
+          {/* Pie: [conexión | ajustes | colapsar]. El tema vive en la topbar (issue #151). */}
           <div className={cn('flex flex-col gap-2 border-t p-3', collapsed && 'items-center')} style={{ borderColor: 'var(--border)' }}>
             {collapsed ? (
-              <button
-                type="button"
-                onClick={() => setCollapsed((c) => !c)}
-                aria-label={t('nav.expandirMenu')}
-                className="flex h-9 w-9 items-center justify-center rounded-xl border transition-colors duration-150 hover:bg-[var(--surface-2)]"
-                style={{ borderColor: 'var(--border)', color: 'var(--text-faint)' }}
-              >
-                <ChevronsRight className="h-4 w-4" />
-              </button>
+              <>
+                <ConnectionDot />
+                <button
+                  type="button"
+                  onClick={() => setCollapsed((c) => !c)}
+                  aria-label={t('nav.expandirMenu')}
+                  className="flex h-9 w-9 items-center justify-center rounded-xl border transition-colors duration-150 hover:bg-[var(--surface-2)]"
+                  style={{ borderColor: 'var(--border)', color: 'var(--text-faint)' }}
+                >
+                  <ChevronsRight className="h-4 w-4" />
+                </button>
+              </>
             ) : (
               <div className="flex items-center gap-2">
+                <ConnectionDot withLabel />
                 <NavLink
                   to={SETTINGS_ITEM.to}
                   className={cn(
-                    'relative flex h-9 flex-1 items-center gap-2.5 rounded-xl px-3 text-sm font-medium transition-colors duration-150',
+                    'relative flex h-9 flex-1 items-center justify-center gap-2.5 rounded-xl px-3 text-sm font-medium transition-colors duration-150',
                     isActive(SETTINGS_ITEM.to) ? 'text-[var(--text)]' : 'text-[var(--text-muted)] hover:text-[var(--text)]',
                   )}
                   style={isActive(SETTINGS_ITEM.to) ? { backgroundColor: 'var(--surface-2)' } : undefined}
@@ -360,6 +387,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
           <nav className="mt-3 flex flex-1 flex-col items-center gap-1 overflow-y-auto">
             {[...DESKTOP_NAV, SETTINGS_ITEM].map(renderIconItem)}
           </nav>
+          <ConnectionDot />
         </aside>
 
         {/* ============================== Header móvil (< md) */}
@@ -392,6 +420,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
           </h1>
           <div className="flex w-auto items-center gap-1.5">
             <NotificationsPopover />
+            <ConnectionDot />
             <ThemeToggle />
             <Link to={SETTINGS_ITEM.to} aria-label={t(`nav.${SETTINGS_ITEM.labelKey}`)}>
               <PersonAvatar name={sessionName} initials={sessionInitials} size={32} />

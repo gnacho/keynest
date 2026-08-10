@@ -248,6 +248,7 @@ export default function DataProvider({ children }: { children: ReactNode }) {
   const [version, setVersion] = useState(0);
   const [loading, setLoading] = useState(() => isAuthed());
   const [isDemo, setIsDemo] = useState(false);
+  const [connectionStatus, setConnectionStatus] = useState<'connected' | 'reconnecting'>('connected');
   const bump = () => setVersion((v) => v + 1);
 
   const properties = useRef<Property[]>([]);
@@ -333,6 +334,8 @@ export default function DataProvider({ children }: { children: ReactNode }) {
     };
 
     es = new EventSource('/api/events');
+    es.addEventListener('open', () => setConnectionStatus('connected'));
+    es.addEventListener('error', () => setConnectionStatus('reconnecting'));
     es.addEventListener('property.changed', scheduleRefresh);
     es.addEventListener('reservation.changed', scheduleRefresh);
     es.addEventListener('cleaning.changed', scheduleRefresh);
@@ -425,6 +428,7 @@ export default function DataProvider({ children }: { children: ReactNode }) {
       version,
       bump,
       loading,
+      connectionStatus,
       isDemo,
       refresh,
       addProperty: async (input) => {
@@ -800,7 +804,7 @@ export default function DataProvider({ children }: { children: ReactNode }) {
         bump();
       },
     };
-  }, [version, loading, refresh, saveProperty, isDemo]);
+  }, [version, loading, connectionStatus, refresh, saveProperty, isDemo]);
 
   return (
     <DataContext.Provider value={api2}>

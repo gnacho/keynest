@@ -20,7 +20,9 @@
     "demoBadge": "DEMO",
     "demoBanner": "Demo mode — changes are not applied to the system",
     "demoSalir": "Exit demo",
-    "temaSistema": "Auto theme"
+    "temaSistema": "Auto theme",
+    "conectado": "Live",
+    "reconectando": "Reconnecting"
   },
   "login": {
     "bienvenido": "Welcome back",

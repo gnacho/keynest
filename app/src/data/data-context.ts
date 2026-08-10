@@ -69,6 +69,8 @@ export interface DataApi {
   bump: () => void;
   /** true mientras carga el bootstrap inicial del backend. */
   loading: boolean;
+  /** Estado de la conexión SSE al backend. */
+  connectionStatus: 'connected' | 'reconnecting';
   /** Sesión demo: la UI oculta toda acción de escritura (server rechaza mutaciones). */
   isDemo: boolean;
   /** Recarga inmuebles+reservas del backend. */
