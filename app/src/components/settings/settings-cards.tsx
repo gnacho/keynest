@@ -14,6 +14,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Switch } from '@/components/ui/switch';
 import { useTheme } from '@/theme/ThemeProvider';
 import type { ThemeMode } from '@/theme/ThemeProvider';
+import { ACCENTS } from '@/theme/accents';
 import { api } from '@/lib/api';
 import { cachedUser, logout } from '@/lib/auth';
 import { applyLanguage, cachedLanguagePref } from '@/i18n';
@@ -93,7 +94,7 @@ const THEME_OPTIONS: { value: ThemeMode; labelKey: string; icon: typeof Moon }[]
 /* ---------- Tarjeta Apariencia ---------- */
 export function AppearanceCard() {
   const { t: tr } = useTranslation();
-  const { mode, setMode, density, setDensity } = useTheme();
+  const { mode, setMode, density, setDensity, accent, setAccent } = useTheme();
 
   return (
     <Card title={tr('aj.apariencia')} desc={tr('aj.aparienciaDesc')}>
@@ -172,6 +173,46 @@ export function AppearanceCard() {
                 style={active ? { backgroundImage: 'linear-gradient(135deg,#6366F1,#8B5CF6)' } : undefined}
               >
                 {tr(d.labelKey)}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Acento */}
+      <div>
+        <span className="text-xs font-semibold" style={{ color: 'var(--text-muted)' }}>
+          {tr('aj.acento')}
+        </span>
+        <div role="radiogroup" aria-label={tr('aj.acento')} className="mt-1.5 flex flex-wrap gap-2">
+          {ACCENTS.map((a) => {
+            const active = accent === a.id;
+            return (
+              <button
+                key={a.id}
+                type="button"
+                role="radio"
+                aria-checked={active}
+                title={a.label}
+                onClick={() => setAccent(a.id)}
+                className={cn(
+                  'relative flex h-9 w-9 items-center justify-center rounded-xl border transition-all duration-200 hover:scale-110 hover:shadow-lg',
+                  active ? 'border-[var(--brand-from)] shadow-md' : 'border-transparent hover:shadow-[var(--brand-from)]/30',
+                )}
+                style={{
+                  backgroundImage: `linear-gradient(135deg, ${a.from}, ${a.to})`,
+                  boxShadow: active ? `0 0 0 2px var(--bg), 0 0 0 3.5px ${a.from}` : undefined,
+                }}
+              >
+                {active && (
+                  <motion.span
+                    initial={{ scale: 0 }}
+                    animate={{ scale: 1 }}
+                    transition={{ type: 'spring', stiffness: 500, damping: 25 }}
+                  >
+                    <Check className="h-4 w-4 text-white" strokeWidth={3} />
+                  </motion.span>
+                )}
               </button>
             );
           })}

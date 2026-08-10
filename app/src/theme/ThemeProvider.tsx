@@ -1,5 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import type { ReactNode } from 'react';
+import { applyAccent, getStoredAccent, storeAccent } from './accents';
 
 export type ThemeMode = 'dark' | 'light' | 'system';
 export type EffectiveTheme = 'light' | 'dark';
@@ -45,9 +46,11 @@ function applyDensity(density: Density) {
 export function applyBootPreferences() {
   try {
     const mode = initialMode();
-    applyTheme(mode === 'system' ? resolveSystem() : mode);
+    const effective = mode === 'system' ? resolveSystem() : mode;
+    applyTheme(effective);
     const density = localStorage.getItem(DENSITY_KEY);
     if (density === 'compact' || density === 'comfortable') applyDensity(density);
+    applyAccent(getStoredAccent(), effective === 'dark');
   } catch {
     /* sin localStorage */
   }
@@ -61,6 +64,8 @@ interface ThemeContextValue {
   toggle: () => void;
   density: Density;
   setDensity: (d: Density) => void;
+  accent: string;
+  setAccent: (id: string) => void;
 }
 
 const ThemeContext = createContext<ThemeContextValue | null>(null);
@@ -75,6 +80,7 @@ export default function ThemeProvider({ children }: { children: ReactNode }) {
       return 'comfortable';
     }
   });
+  const [accent, setAccentState] = useState<string>(getStoredAccent);
 
   const resolved: EffectiveTheme = mode === 'system' ? systemTheme : mode;
 
@@ -95,6 +101,10 @@ export default function ThemeProvider({ children }: { children: ReactNode }) {
     applyDensity(density);
   }, [density]);
 
+  useEffect(() => {
+    applyAccent(accent, resolved === 'dark');
+  }, [accent, resolved]);
+
   const setMode = useCallback((next: ThemeMode) => {
     setModeState(next);
     try {
@@ -114,6 +124,11 @@ export default function ThemeProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
+  const setAccent = useCallback((id: string) => {
+    setAccentState(id);
+    storeAccent(id);
+  }, []);
+
   const toggle = useCallback(() => setMode(resolved === 'dark' ? 'light' : 'dark'), [resolved, setMode]);
 
   const value = useMemo<ThemeContextValue>(
@@ -125,8 +140,10 @@ export default function ThemeProvider({ children }: { children: ReactNode }) {
       toggle,
       density,
       setDensity,
+      accent,
+      setAccent,
     }),
-    [mode, setMode, resolved, toggle, density, setDensity],
+    [mode, setMode, resolved, toggle, density, setDensity, accent, setAccent],
   );
 
   return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>;
