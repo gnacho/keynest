@@ -23,6 +23,7 @@ import type { LucideIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Toaster } from '@/components/ui/sonner';
+import { toast } from 'sonner';
 import PersonAvatar from '@/components/PersonAvatar';
 import UpdateRibbon from '@/components/UpdateRibbon';
 import AirbnbSessionRibbon from '@/components/AirbnbSessionRibbon';
@@ -209,6 +210,24 @@ export default function AppShell({ children }: { children: ReactNode }) {
   // Aviso proactivo de versión nueva del propio servidor (anti pantalla-negra):
   // poll 10 min + visibilitychange; desactivado en demo.
   const updateAvailable = useUpdateAvailable(!sessionUser?.is_demo);
+
+  // Toast de confirmación post-update: si /api/version trae pendingUpdate
+  // (el servidor se reinició tras un apply), muestra un aviso.
+  useEffect(() => {
+    if (sessionUser?.is_demo) return;
+    const check = async () => {
+      try {
+        const res = await fetch('/api/version', { credentials: 'same-origin' });
+        if (!res.ok) return;
+        const data = await res.json();
+        if (data.pendingUpdate?.to) {
+          toast.success(t('update.toastUpdated', { v: data.pendingUpdate.to }));
+        }
+      } catch { /* noop */ }
+    };
+    void check();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sessionUser]);
 
   const isActive = (to: string) =>
     to === '/' ? location.pathname === '/' : location.pathname.startsWith(to);

@@ -896,7 +896,8 @@
   },
   "update": {
     "banner": "A new version has been deployed — reload to see it",
-    "reload": "Reload"
+    "reload": "Reload",
+    "toastUpdated": "Keynest has been updated to v{v}"
   },
   "errorBoundary": {
     "title": "Something went wrong",

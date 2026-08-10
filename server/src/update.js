@@ -81,6 +81,27 @@ export function getUpdateHistory(db) {
   } catch { return [] }
 }
 
+// consumePendingUpdate — si hay un apply pendiente (status='started') y la
+// versión actual ya cambió, lo marca como 'applied' y devuelve los datos
+// para mostrar un toast de confirmación. Si la versión NO cambió (falló),
+// actualiza a 'failed' y devuelve null.
+export function consumePendingUpdate(db) {
+  try {
+    const pending = db.prepare(
+      "SELECT * FROM update_history WHERE status = 'started' AND action = 'update' ORDER BY timestamp DESC LIMIT 1"
+    ).get()
+    if (!pending) return null
+    const cur = currentId()
+    if (cur && cur !== pending.version_from) {
+      db.prepare("UPDATE update_history SET status = 'applied' WHERE event_id = ?").run(pending.event_id)
+      return { from: pending.version_from, to: cur }
+    }
+    // No cambió: marcar como failed
+    db.prepare("UPDATE update_history SET status = 'failed' WHERE event_id = ?").run(pending.event_id)
+    return null
+  } catch { return null }
+}
+
 export function applyUpdate(db, userId) {
   const startTime = Date.now()
   const fromVer = currentId()
