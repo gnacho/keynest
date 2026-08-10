@@ -180,10 +180,10 @@ export default function MaintenanceCard({ task: t, variants, animateEntry = true
               type="button"
               onClick={onEdit}
               aria-label={tr('mant.editarTarea')}
-              className="flex h-7 w-7 items-center justify-center rounded-lg transition-colors hover:bg-[var(--surface-2)]"
+              className="group flex h-7 w-7 items-center justify-center rounded-lg transition-colors hover:bg-[var(--surface-2)]"
               style={{ color: 'var(--text-faint)' }}
             >
-              <Settings2 className="h-4 w-4" />
+              <Settings2 className="h-4 w-4 transition-transform duration-300 group-hover:rotate-90" />
             </button>
           )}
         </div>
