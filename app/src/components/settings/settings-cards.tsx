@@ -671,9 +671,9 @@ export function AboutCard() {
   const runtimeLine = `React v${React.version}`;
   const tiles = [
     { key: 'code', icon: Github, label: tr('aj.aboutCode'), href: REPO_URL },
-    { key: 'changelog', icon: FileText, label: tr('aj.aboutCambios'), href: `${REPO_URL}/commits/main` },
-    { key: 'kofi', icon: Heart, label: tr('aj.aboutKofi') },
-    { key: 'privacy', icon: ShieldCheck, label: tr('aj.aboutPrivacidad') },
+    { key: 'changelog', icon: FileText, label: tr('aj.aboutCambios'), href: 'https://keynest.cloudless.club' },
+    { key: 'kofi', icon: Heart, label: tr('aj.aboutKofi'), href: 'https://ko-fi.com/gnacho' },
+    { key: 'privacy', icon: ShieldCheck, label: tr('aj.aboutPrivacidad'), href: 'https://cloudless.club' },
   ];
   const linkCls = 'flex items-center gap-2 rounded-lg border border-[var(--border)] px-2.5 py-1 text-xs font-medium transition-colors duration-150 hover:border-[#6366F1]/50 hover:text-[#6366F1]';
   const plainCls = 'flex items-center gap-2 rounded-lg border border-[var(--border)] px-2.5 py-1 text-xs font-medium';
