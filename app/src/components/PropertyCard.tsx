@@ -1,7 +1,7 @@
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router';
 import { motion, useReducedMotion } from 'framer-motion';
-import { BedDouble, BookOpen, CalendarDays, Pencil, Ruler, Sparkles, TrendingUp } from 'lucide-react';
+import { BedDouble, BookOpen, CalendarDays, Settings2, Ruler, Sparkles, TrendingUp } from 'lucide-react';
 import type { Property } from '@/data/types';
 import { useData } from '@/data/useData';
 import { fmtDateShort } from '@/lib/format';
@@ -64,6 +64,13 @@ export default function PropertyCard({ property, className }: PropertyCardProps)
               ? t('common2.libreDesde', { date: fmtDateShort(occ.freeSince) })
               : t('common2.libre')}
         </span>
+        <Link
+          to="/inmuebles"
+          className="group/edit absolute right-2 top-2 flex h-7 w-7 items-center justify-center rounded-lg bg-black/25 transition-colors hover:bg-black/45"
+          style={{ color: '#fff' }}
+        >
+          <Settings2 className="h-4 w-4 transition-transform duration-300 group-hover/edit:rotate-90" />
+        </Link>
         <div className="absolute bottom-3 left-3 right-3">
           <p className="font-display text-[17px] font-semibold leading-5 text-white">{property.name}</p>
           <p className="text-xs text-white/80">{property.address}</p>
@@ -87,13 +94,6 @@ export default function PropertyCard({ property, className }: PropertyCardProps)
           <span className="font-display tnum text-xs">{property.area}</span>
           <span className="text-[10px] font-medium">m²</span>
         </span>
-        <Link
-          to={`/inmuebles`}
-          className="ml-auto flex h-6 w-6 items-center justify-center rounded-lg opacity-0 transition-all duration-150 group-hover:opacity-100 hover:bg-[var(--surface-2)]"
-          style={{ color: 'var(--text-faint)' }}
-        >
-          <Pencil className="h-3 w-3" />
-        </Link>
       </div>
 
       <div className="grid grid-cols-4 gap-0.5 px-2 pb-2 pt-1.5">
