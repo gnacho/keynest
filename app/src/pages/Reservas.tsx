@@ -373,7 +373,7 @@ export default function Reservas() {
       </div>
 
       {/* KPIs de vista */}
-      <div className="snap-carousel -mx-4 flex gap-3 overflow-x-auto px-4 lg:mx-0 lg:grid lg:grid-cols-2 lg:overflow-visible lg:px-0">
+      <div className="grid grid-cols-2 gap-3">
         {(
           [
             <KpiCard key="i" icon={Euro} tone="emerald" label={t('res.ingresos30', { days: lookaheadDays })} value={kpis.incomeNext} unit="€" money />,
@@ -385,7 +385,7 @@ export default function Reservas() {
             initial={painted || reduce ? false : { opacity: 0, y: 24 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: i * 0.07, ease: EASE_OUT_QUART }}
-            className="w-[46%] min-w-[170px] shrink-0 lg:w-auto lg:min-w-0"
+            className="min-w-0"
           >
             {card}
           </motion.div>
