@@ -66,9 +66,9 @@ export default function MonthOverviewCard({ occupancyPct, spark, income, reserva
   ];
 
   return (
-    <div className={`card flex h-full flex-col gap-1.5 p-2 ${className ?? ''}`}>
+    <div className={`card flex h-full flex-col gap-1.5 p-1.5 ${className ?? ''}`}>
       <p
-        className="text-[10px] font-semibold uppercase leading-4 tracking-[0.08em]"
+        className="text-[9px] font-semibold uppercase leading-3 tracking-[0.08em]"
         style={{ color: 'var(--text-faint)' }}
       >
         {t('dash.tusInmueblesEsteMes')}
@@ -76,21 +76,21 @@ export default function MonthOverviewCard({ occupancyPct, spark, income, reserva
       <div className="flex flex-col">
         <Link
           to="/calendario"
-          className="flex items-center gap-2.5 rounded-lg px-1 py-[3px] transition-colors duration-150 hover:bg-[var(--surface-2)]"
+          className="flex items-center gap-2 rounded-lg px-1 py-1 transition-colors duration-150 hover:bg-[var(--surface-2)]"
         >
-          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg" style={{ backgroundColor: 'var(--bl-chip-bg)' }}>
-            <BedDouble className="h-4 w-4" style={{ color: '#3B82F6' }} strokeWidth={2} />
+          <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg" style={{ backgroundColor: 'var(--bl-chip-bg)' }}>
+            <BedDouble className="h-3.5 w-3.5" style={{ color: '#3B82F6' }} strokeWidth={2} />
           </span>
           <span className="min-w-0 flex-1">
-            <span className="block text-xs font-medium" style={{ color: 'var(--text-muted)' }}>
+            <span className="block text-[11px] font-medium" style={{ color: 'var(--text-muted)' }}>
               {t('dash.ocupacionActual')}
             </span>
-            <span className="font-display tnum text-[19px] font-semibold leading-6" style={{ color: 'var(--text)' }}>
+            <span className="font-display tnum text-[17px] font-semibold leading-5" style={{ color: 'var(--text)' }}>
               {fmtPct(display)}
             </span>
           </span>
           {spark.length > 1 && (
-            <span className="h-7 w-14 shrink-0">
+            <span className="h-6 w-12 shrink-0">
               <Sparkline data={spark} color="#3B82F6" />
             </span>
           )}
@@ -100,17 +100,17 @@ export default function MonthOverviewCard({ occupancyPct, spark, income, reserva
           <Link
             key={to + label}
             to={to}
-            className="flex items-center gap-2.5 rounded-lg px-1 py-[3px] transition-colors duration-150 hover:bg-[var(--surface-2)]"
+            className="flex items-center gap-2 rounded-lg px-1 py-1 transition-colors duration-150 hover:bg-[var(--surface-2)]"
           >
-            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg" style={{ backgroundColor: bg }}>
-              <Icon className="h-4 w-4" style={{ color }} strokeWidth={2} />
+            <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg" style={{ backgroundColor: bg }}>
+              <Icon className="h-3.5 w-3.5" style={{ color }} strokeWidth={2} />
             </span>
-            <span className="min-w-0 flex-1 truncate text-xs font-medium" style={{ color: 'var(--text-muted)' }}>
+            <span className="min-w-0 flex-1 truncate text-[11px] font-medium" style={{ color: 'var(--text-muted)' }}>
               {label}
             </span>
             <span
               className="shrink-0 font-display tnum font-semibold"
-              style={{ color: 'var(--text)', fontSize: big ? '22px' : '19px', lineHeight: '1.5' }}
+              style={{ color: 'var(--text)', fontSize: big ? '20px' : '17px', lineHeight: '1.4' }}
             >
               {value}
             </span>
