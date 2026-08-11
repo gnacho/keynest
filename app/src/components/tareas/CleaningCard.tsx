@@ -13,7 +13,7 @@ import ConfirmDialog from '@/components/ConfirmDialog';
 import AssignPopover from '@/components/tareas/AssignPopover';
 import ConfirmCleaningDialog from '@/components/tareas/ConfirmCleaningDialog';
 import HoursStepper from '@/components/tareas/HoursStepper';
-import { Sheet, SheetContent } from '@/components/ui/sheet';
+import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { useTranslation } from 'react-i18next';
 import { useData } from '@/data/useData';
 import type { Cleaning, CleaningStatus, SemColor } from '@/data/types';
@@ -321,7 +321,7 @@ export default function CleaningCard({ cleaning: c, variants, highlight = false,
         )}
         <button
           type="button"
-          onClick={() => setEditOpen(true)}
+          onClick={() => setSheetOpen(true)}
           className="group ml-auto flex h-7 w-7 items-center justify-center rounded-lg transition-colors hover:bg-[var(--surface-2)]"
           style={{ color: 'var(--text-faint)' }}
         >
@@ -335,6 +335,12 @@ export default function CleaningCard({ cleaning: c, variants, highlight = false,
           side="right"
           className="flex flex-col gap-3 overflow-y-auto border-[var(--border)] bg-[var(--surface)] w-full sm:max-w-[420px]"
         >
+        <SheetHeader className="px-1 pt-1 text-left">
+          <SheetTitle className="font-display text-lg font-semibold">{property.name}</SheetTitle>
+          <SheetDescription style={{ color: 'var(--text-muted)' }}>
+            {fmtDateShort(c.date)} · {fmtTime(c.date)}
+          </SheetDescription>
+        </SheetHeader>
         {/* 1) CHECKLIST DEL INMUEBLE — lo primero que mira la persona de limpieza */}
         <div className="rounded-2xl border p-3" style={{ borderColor: 'var(--border)', backgroundColor: 'var(--surface-2)' }}>
           <p
