@@ -10,7 +10,6 @@ import {
   Euro,
   LogIn,
   LogOut,
-  Settings2,
   Sparkles,
   Users,
 } from 'lucide-react';
@@ -389,9 +388,6 @@ export default function Dashboard() {
       >
         <div className="flex items-center justify-between">
           <h2 className="font-display text-[17px] font-semibold">{t('dash.tusInmuebles')}</h2>
-          <Link to="/inmuebles" className="group flex h-7 w-7 items-center justify-center rounded-lg transition-colors hover:bg-[var(--surface-2)]" style={{ color: 'var(--text-faint)' }}>
-            <Settings2 className="h-4 w-4 transition-transform duration-300 group-hover:rotate-90" />
-          </Link>
         </div>
         <div className="grid gap-4 lg:grid-cols-2 xl:grid-cols-3">
           {properties.map((p) => (
