@@ -113,7 +113,9 @@
     "sinAccesos": "Sin accesos registrados",
     "rotacion": "Entrada y salida el mismo día",
     "limpiarAlertas": "Limpiar alertas",
-    "sinAlertas": "Sin alertas"
+    "sinAlertas": "Sin alertas",
+    "limpiezasSinAsignar_one": "{{count}} limpieza sin asignar",
+    "limpiezasSinAsignar_other": "{{count}} limpiezas sin asignar"
   },
   "cal": {
     "titulo": "Calendario",

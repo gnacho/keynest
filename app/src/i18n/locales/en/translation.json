@@ -113,7 +113,9 @@
     "sinAccesos": "No recorded accesses",
     "rotacion": "Check-in and check-out on the same day",
     "limpiarAlertas": "Clear alerts",
-    "sinAlertas": "No alerts"
+    "sinAlertas": "No alerts",
+    "limpiezasSinAsignar_one": "{{count}} unassigned cleaning",
+    "limpiezasSinAsignar_other": "{{count}} unassigned cleanings"
   },
   "cal": {
     "titulo": "Calendar",

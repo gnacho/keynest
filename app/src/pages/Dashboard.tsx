@@ -8,12 +8,10 @@ import {
   CalendarCheck2,
   CircleAlert,
   Euro,
-  LogIn,
-  LogOut,
-  Sparkles,
   Users,
 } from 'lucide-react';
 import KpiCard from '@/components/KpiCard';
+import MovementsCard from '@/components/MovementsCard';
 import PropertyCard from '@/components/PropertyCard';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import PropertyAvatar from '@/components/PropertyAvatar';
@@ -179,8 +177,6 @@ export default function Dashboard() {
   const checkOutsNext = reservations
     .filter((r) => r.status !== 'completada' && inWindow(r.checkOut))
     .sort((a, b) => a.checkOut.getTime() - b.checkOut.getTime());
-  const checkInsToday = checkInsNext.filter((r) => isSameDay(r.checkIn, today));
-  const cleaningsNext = cleanings.filter((c) => c.status !== 'archivada' && inWindow(c.date));
   const pendingCleanings = data.getPendingCleanings().filter((c) => inWindow(c.date));
   const unassigned = pendingCleanings.filter((c) => c.assigneeIds.length === 0);
 
@@ -192,9 +188,6 @@ export default function Dashboard() {
       || (r.checkOut.getMonth() === monthNow && r.checkOut.getFullYear() === yearNow),
   ).length;
 
-  const nextCheckInTime = checkInsToday
-    .map((r) => r.checkIn)
-    .sort((a, b) => a.getTime() - b.getTime())[0];
 
   const cleaningForReservation = (r: Reservation) =>
     cleanings.find((c) => c.reservationId === r.id);
@@ -324,18 +317,18 @@ export default function Dashboard() {
         <Carousel itemClassName="w-[42vw] min-w-[160px]">
           {[
             <motion.div variants={itemV} key="k1" className="h-full">
-              <KpiCard icon={BedDouble} tone="blue" label={t('dash.ocupacionActual')} value={occupancyPct} unit="%" spark={spark14} sparkColor="#3B82F6" to="/calendario" className="h-full" />
+              <MovementsCard
+                checkIns={checkInsNext.length}
+                checkOuts={checkOutsNext.length}
+                cleanings={pendingCleanings.length}
+                unassigned={unassigned.length}
+                className="h-full"
+              />
             </motion.div>,
             <motion.div variants={itemV} key="k2" className="h-full">
-              <KpiCard icon={LogIn} tone="emerald" label={t('dash.entradasPeriodo', { days: lookaheadDays })} value={checkInsNext.length} sub={nextCheckInTime ? t('dash.proximaLas', { time: fmtTime(nextCheckInTime) }) : t('dash.sinEntradas')} to="/reservas" className="h-full" />
+              <KpiCard icon={BedDouble} tone="blue" label={t('dash.ocupacionActual')} value={occupancyPct} unit="%" spark={spark14} sparkColor="#3B82F6" to="/calendario" className="h-full" />
             </motion.div>,
             <motion.div variants={itemV} key="k3" className="h-full">
-              <KpiCard icon={LogOut} tone="orange" label={t('dash.salidasPeriodo', { days: lookaheadDays })} value={checkOutsNext.length} sub={t('dash.limpiezasGeneradas', { count: cleaningsNext.length })} to="/limpieza" className="h-full" />
-            </motion.div>,
-            <motion.div variants={itemV} key="k4" className="h-full">
-              <KpiCard icon={Sparkles} tone="violet" label={t('dash.limpiezasPeriodo', { days: lookaheadDays })} value={pendingCleanings.length} sub={t('dash.sinAsignar', { count: unassigned.length })} to="/limpieza" className="h-full" />
-            </motion.div>,
-            <motion.div variants={itemV} key="k5" className="h-full">
               <KpiCard icon={Euro} tone="emerald" label={t('dash.misInmueblesPrevistosMes')} value={expectedMonthIncome} unit="€" money sub={t('dash.reservasMes', { count: monthReservations })} to="/rentabilidad" className="h-full" />
             </motion.div>,
           ]}

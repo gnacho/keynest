@@ -528,7 +528,7 @@ export default function Rentabilidad() {
           <button
             type="button"
             aria-pressed={usuarioParam === me.id}
-            onClick={() => setParam('usuario', usuarioParam === me.id ? 'todos' : me.id, usuarioParam === me.id)}
+            onClick={() => setParam('usuario', usuarioParam === me.id ? 'todos' : me.id, false)}
             className={cn(
               'flex h-9 items-center gap-1.5 rounded-xl border px-3 text-[13px] font-semibold transition-colors',
               usuarioParam === me.id ? 'text-white' : 'hover:bg-[var(--surface-2)]',
