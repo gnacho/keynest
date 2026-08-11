@@ -1,7 +1,7 @@
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router';
 import { motion, useReducedMotion } from 'framer-motion';
-import { BedDouble, BookOpen, CalendarDays, Ruler, Sparkles, TrendingUp } from 'lucide-react';
+import { BedDouble, BookOpen, CalendarDays, Pencil, Ruler, Sparkles, TrendingUp } from 'lucide-react';
 import type { Property } from '@/data/types';
 import { useData } from '@/data/useData';
 import { fmtDateShort } from '@/lib/format';
@@ -31,7 +31,8 @@ export default function PropertyCard({ property, className }: PropertyCardProps)
 
   return (
     <motion.article
-      className={cn('card group overflow-hidden', className)}
+      className={cn('card group overflow-hidden transition-shadow duration-200 hover:shadow-lg hover:shadow-[var(--brand-from)]/10', className)}
+      style={{ borderColor: 'var(--border)' }}
       whileHover={reduce ? undefined : { y: -2 }}
       whileTap={reduce ? undefined : { scale: 0.99 }}
       transition={{ duration: 0.18 }}
@@ -69,24 +70,33 @@ export default function PropertyCard({ property, className }: PropertyCardProps)
         </div>
       </div>
 
-      <div className="flex items-center gap-2 px-3 pt-3">
+      <div className="flex items-center gap-2 px-3 pt-2">
         <span
-          className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-semibold"
+          className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold"
           style={{ backgroundColor: 'var(--surface-2)', color: 'var(--text-muted)' }}
         >
           <BedDouble className="h-3.5 w-3.5" />
-          {property.bedrooms} dorm
+          <span className="font-display tnum text-xs">{property.bedrooms}</span>
+          <span className="text-[10px] font-medium">dorm</span>
         </span>
         <span
-          className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-semibold"
+          className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold"
           style={{ backgroundColor: 'var(--surface-2)', color: 'var(--text-muted)' }}
         >
           <Ruler className="h-3.5 w-3.5" />
-          {property.area} m²
+          <span className="font-display tnum text-xs">{property.area}</span>
+          <span className="text-[10px] font-medium">m²</span>
         </span>
+        <Link
+          to={`/inmuebles`}
+          className="ml-auto flex h-6 w-6 items-center justify-center rounded-lg opacity-0 transition-all duration-150 group-hover:opacity-100 hover:bg-[var(--surface-2)]"
+          style={{ color: 'var(--text-faint)' }}
+        >
+          <Pencil className="h-3 w-3" />
+        </Link>
       </div>
 
-      <div className="grid grid-cols-4 gap-1 p-3">
+      <div className="grid grid-cols-4 gap-0.5 px-2 pb-2 pt-1.5">
         {ACTIONS.map(({ to, label, icon: Icon, color }) => (
           <motion.div key={to} whileTap={reduce ? undefined : { scale: 0.94 }}>
             <Link

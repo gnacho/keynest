@@ -24,7 +24,6 @@ import { useTranslation } from 'react-i18next';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Toaster } from '@/components/ui/sonner';
 import { toast } from 'sonner';
-import PersonAvatar from '@/components/PersonAvatar';
 import UpdateRibbon from '@/components/UpdateRibbon';
 import AirbnbSessionRibbon from '@/components/AirbnbSessionRibbon';
 import PullToRefresh from '@/components/PullToRefresh';
@@ -33,6 +32,7 @@ import { useUpdateAvailable } from '@/hooks/useUpdateAvailable';
 import { useTheme } from '@/theme/ThemeProvider';
 import { useData } from '@/data/useData';
 import { cachedUser, logout } from '@/lib/auth';
+import { APP_VERSION } from '@/components/settings/settings-cards';
 import { cn } from '@/lib/utils';
 
 const EASE_OUT_QUART: [number, number, number, number] = [0.25, 1, 0.5, 1];
@@ -204,8 +204,6 @@ export default function AppShell({ children }: { children: ReactNode }) {
   const urgentMaintenance = getUrgentMaintenance().length;
 
   const sessionUser = cachedUser();
-  const sessionName = sessionUser?.username ?? 'Usuario';
-  const sessionInitials = sessionName.slice(0, 2).toUpperCase();
 
   // Aviso proactivo de versión nueva del propio servidor (anti pantalla-negra):
   // poll 10 min + visibilitychange; desactivado en demo.
@@ -437,14 +435,11 @@ export default function AppShell({ children }: { children: ReactNode }) {
           <h1 className="flex-1 text-center font-display text-[17px] font-semibold tracking-[-0.01em]">
             {title}
           </h1>
-          <div className="flex w-auto items-center gap-1.5">
-            <NotificationsPopover />
-            <ConnectionDot />
-            <ThemeToggle />
-            <Link to="/ajustes?tab=preferencias" aria-label={t(`nav.${SETTINGS_ITEM.labelKey}`)}>
-              <PersonAvatar name={sessionName} initials={sessionInitials} size={32} />
-            </Link>
-          </div>
+           <div className="flex w-auto items-center gap-1.5">
+             <NotificationsPopover />
+             <ConnectionDot />
+             <ThemeToggle />
+           </div>
         </header>
 
         {/* ============================== Contenido */}
@@ -460,13 +455,6 @@ export default function AppShell({ children }: { children: ReactNode }) {
             <div className="flex items-center gap-2">
               <NotificationsPopover />
               <ThemeToggle />
-              <NavLink
-                to="/ajustes?tab=preferencias"
-                className="flex items-center gap-2.5 rounded-xl p-1.5 transition-colors duration-150 hover:bg-[var(--surface-2)]"
-              >
-                <PersonAvatar name={sessionName} initials={sessionInitials} size={30} />
-                <span className="hidden text-[13px] font-semibold lg:inline">{sessionName}</span>
-              </NavLink>
             </div>
           </header>
 
@@ -563,14 +551,14 @@ export default function AppShell({ children }: { children: ReactNode }) {
                       layoutId="bottomnav-pill"
                       transition={reduce ? { duration: 0.15 } : { type: 'spring', stiffness: 500, damping: 40 }}
                       className="absolute top-1.5 h-8 w-14 rounded-xl"
-                      style={{ backgroundColor: 'rgb(99 102 241 / 0.12)' }}
+                      style={{ backgroundColor: 'rgb(var(--accent-rgb) / 0.12)' }}
                     />
                   )}
                   <span className="relative">
                     <item.icon
                       className="h-5 w-5"
                       strokeWidth={active ? 2.2 : 1.8}
-                      style={{ color: active ? '#6366F1' : 'var(--text-faint)' }}
+                      style={{ color: active ? 'var(--brand-from)' : 'var(--text-faint)' }}
                     />
                     {badge > 0 && (
                       <span className="absolute -right-2 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-rose-500 px-1 text-[10px] font-semibold text-white">
@@ -588,6 +576,9 @@ export default function AppShell({ children }: { children: ReactNode }) {
               );
             })}
           </div>
+          <p className="pb-2 pt-1 text-center text-[9px] font-medium" style={{ color: 'var(--text-faint)' }}>
+            v{APP_VERSION}
+          </p>
         </nav>
       </div>
     </TooltipProvider>
