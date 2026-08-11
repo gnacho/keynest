@@ -31,6 +31,7 @@ import {
 import { toast } from 'sonner';
 import ChartCard from '@/components/ChartCard';
 import EmptyState from '@/components/EmptyState';
+import Fab from '@/components/Fab';
 import MoneyText from '@/components/MoneyText';
 import PropertyAvatar from '@/components/PropertyAvatar';
 import FinKpiCard from '@/components/fin/FinKpiCard';
@@ -635,7 +636,7 @@ export default function Rentabilidad() {
           <button
             type="button"
             onClick={openDialog}
-            className="ml-auto brand-gradient flex h-9 items-center gap-2 rounded-xl px-3.5 text-sm font-semibold text-white transition-all duration-150 hover:brightness-110 active:scale-[0.98]"
+            className="ml-auto brand-gradient hidden h-9 items-center gap-2 rounded-xl px-3.5 text-sm font-semibold text-white transition-all duration-150 hover:brightness-110 active:scale-[0.98] lg:flex"
           >
             <Plus className="h-4 w-4" />
             {t('rent.anadirGasto')}
@@ -1192,6 +1193,8 @@ export default function Rentabilidad() {
           </div>
         </DialogContent>
       </Dialog>
+
+      {!data.isDemo && <Fab onClick={openDialog} aria-label={t('rent.anadirGasto')} />}
     </div>
   );
 }

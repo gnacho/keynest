@@ -4,6 +4,7 @@ import { motion, useReducedMotion } from 'framer-motion';
 import type { Variants } from 'framer-motion';
 import { Clock, Euro, Plus, Sparkles, TriangleAlert, UserRoundX } from 'lucide-react';
 import EmptyState from '@/components/EmptyState';
+import Fab from '@/components/Fab';
 import FilterBar from '@/components/FilterBar';
 import KpiCard from '@/components/KpiCard';
 import CleaningCard from '@/components/tareas/CleaningCard';
@@ -109,11 +110,10 @@ export default function Limpieza() {
           <button
             type="button"
             onClick={() => setNewOpen(true)}
-            className="ml-auto brand-gradient flex h-9 shrink-0 items-center gap-1.5 rounded-xl px-4 text-sm font-semibold text-white transition-all duration-150 hover:brightness-110 active:scale-[0.98]"
+            className="ml-auto brand-gradient hidden h-9 shrink-0 items-center gap-1.5 rounded-xl px-4 text-sm font-semibold text-white transition-all duration-150 hover:brightness-110 active:scale-[0.98] lg:flex"
           >
             <Plus className="h-4 w-4" />
-            <span className="hidden sm:inline">{t('limp.nuevaLimpieza')}</span>
-            <span className="sm:hidden">{t('limp.nueva')}</span>
+            <span>{t('limp.nuevaLimpieza')}</span>
           </button>
         )}
       </div>
@@ -240,6 +240,8 @@ export default function Limpieza() {
       <p className="text-center text-[13px]" style={{ color: 'var(--text-muted)' }}>
         {t('limp.tareas', { count: activas })} · {t('limp.pendientes', { count: pendientes })}
       </p>
+
+      {!data.isDemo && <Fab onClick={() => setNewOpen(true)} aria-label={t('limp.nuevaLimpieza')} />}
     </div>
   );
 }

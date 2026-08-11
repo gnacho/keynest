@@ -16,6 +16,7 @@ import {
   Users,
 } from 'lucide-react';
 import FilterBar from '@/components/FilterBar';
+import Fab from '@/components/Fab';
 import KpiCard from '@/components/KpiCard';
 import MoneyText from '@/components/MoneyText';
 import PersonAvatar from '@/components/PersonAvatar';
@@ -385,7 +386,7 @@ export default function Reservas() {
           <button
             type="button"
             onClick={() => setDialogOpen(true)}
-            className="ml-auto brand-gradient flex h-9 items-center gap-1.5 rounded-xl px-3.5 text-sm font-semibold text-white"
+            className="ml-auto brand-gradient hidden h-9 items-center gap-1.5 rounded-xl px-3.5 text-sm font-semibold text-white lg:flex"
           >
             <Plus className="h-4 w-4" />
             {t('res.nuevaReserva')}
@@ -784,6 +785,8 @@ export default function Reservas() {
           </motion.div>
         )}
       </AnimatePresence>
+
+      {!data.isDemo && <Fab onClick={() => setDialogOpen(true)} aria-label={t('res.nuevaReserva')} />}
     </div>
   );
 }
