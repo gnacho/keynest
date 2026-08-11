@@ -278,7 +278,7 @@ export default function Dashboard() {
       </div>
 
       {/* ============================== Sección 1 — KPIs */}
-      <motion.section className="grid gap-5 lg:grid-cols-2" variants={containerV} initial="hidden" animate="show">
+      <motion.section className="grid gap-5 md:grid-cols-2" variants={containerV} initial="hidden" animate="show">
         <motion.div variants={itemV} className="h-full">
           <MovementsCard
             checkIns={checkInsNext.length}
