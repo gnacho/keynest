@@ -4,6 +4,7 @@ import { motion, useReducedMotion } from 'framer-motion';
 import { BedDouble, BookOpen, CalendarDays, Settings2, Ruler, Sparkles, TrendingUp } from 'lucide-react';
 import type { Property } from '@/data/types';
 import { useData } from '@/data/useData';
+import PropertyAvatar from '@/components/PropertyAvatar';
 import { fmtDateShort } from '@/lib/format';
 import { cn } from '@/lib/utils';
 
@@ -19,10 +20,7 @@ interface PropertyCardProps {
   className?: string;
 }
 
-/**
- * Patrón clave (design.md §7.3): foto 16:9 + pill de ocupación + nombre/dirección
- * + chips dorm/m² + fila de 4 botones que navegan a la vista filtrada ?inmueble=<slug>.
- */
+/** Tarjeta compacta de inmueble: sin foto, fila con avatar + nombre + números + acciones. */
 export default function PropertyCard({ property, className }: PropertyCardProps) {
   const { t } = useTranslation();
   const { getOccupancy } = useData();
@@ -31,74 +29,55 @@ export default function PropertyCard({ property, className }: PropertyCardProps)
 
   return (
     <motion.article
-      className={cn('card group overflow-hidden transition-shadow duration-200 hover:shadow-lg hover:shadow-[var(--brand-from)]/10', className)}
+      className={cn('card group flex flex-col gap-2 p-3 transition-shadow duration-200 hover:shadow-lg hover:shadow-[var(--brand-from)]/10', className)}
       style={{ borderColor: 'var(--border)' }}
-      whileHover={reduce ? undefined : { y: -2 }}
+      whileHover={reduce ? undefined : { y: -1 }}
       whileTap={reduce ? undefined : { scale: 0.99 }}
       transition={{ duration: 0.18 }}
     >
-      <div className="relative aspect-video overflow-hidden">
-        <img
-          src={property.photo}
-          alt={property.name}
-          loading="lazy"
-          className="h-full w-full object-cover transition-transform duration-500 ease-out-quart group-hover:scale-[1.04]"
-        />
-        <div
-          className="absolute inset-0"
-          style={{ background: 'linear-gradient(180deg, transparent 40%, rgb(0 0 0 / 0.45) 100%)' }}
-        />
-        {/* Pill de estado de ocupación */}
-        <span
-          className="absolute left-3 top-3 inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-semibold backdrop-blur-md"
-          style={
-            occ.occupied
-              ? { backgroundColor: 'rgb(59 130 246 / 0.9)', color: '#fff' }
-              : { backgroundColor: 'rgb(15 23 42 / 0.55)', color: '#E2E8F0' }
-          }
-        >
-          <span className={cn('h-1.5 w-1.5 rounded-full', occ.occupied ? 'bg-white' : 'bg-slate-300')} />
-          {occ.occupied
-            ? t('common2.ocupado')
-            : occ.freeSince
-              ? t('common2.libreDesde', { date: fmtDateShort(occ.freeSince) })
-              : t('common2.libre')}
-        </span>
+      {/* Fila superior: avatar + nombre/dirección + estado + editar */}
+      <div className="flex items-start gap-2.5">
+        <PropertyAvatar property={property} size={40} />
+        <div className="min-w-0 flex-1">
+          <p className="truncate text-[15px] font-semibold leading-tight">{property.name}</p>
+          <p className="truncate text-xs" style={{ color: 'var(--text-muted)' }}>
+            {occ.occupied
+              ? t('common2.ocupado')
+              : occ.freeSince
+                ? t('common2.libreDesde', { date: fmtDateShort(occ.freeSince) })
+                : t('common2.libre')}
+          </p>
+        </div>
         <Link
           to={`/inmuebles?editar=${property.id}`}
-          className="group/edit absolute right-2 top-2 flex h-7 w-7 items-center justify-center rounded-lg bg-black/25 transition-colors hover:bg-black/45"
-          style={{ color: '#fff' }}
+          className="group/edit flex h-7 w-7 shrink-0 items-center justify-center rounded-lg transition-colors hover:bg-[var(--surface-2)]"
+          style={{ color: 'var(--text-faint)' }}
         >
           <Settings2 className="h-4 w-4 transition-transform duration-300 group-hover/edit:rotate-90" />
         </Link>
-        <div className="absolute bottom-3 left-3 right-3">
-          <p className="font-display text-[17px] font-semibold leading-5 text-white">{property.name}</p>
-          <p className="text-xs text-white/80">{property.address}</p>
-        </div>
       </div>
 
-      <div className="flex items-center gap-3 px-3 pt-1.5 pb-2">
-        <span className="inline-flex items-center gap-1 text-[13px] font-semibold" style={{ color: 'var(--text-muted)' }}>
-          <BedDouble className="h-4 w-4" />
+      {/* Fila números: icono + número en la misma horizontal */}
+      <div className="flex items-center gap-4">
+        <span className="inline-flex items-center gap-1.5 text-sm font-semibold" style={{ color: 'var(--text-muted)' }}>
+          <BedDouble className="h-4 w-4" style={{ color: '#8B5CF6' }} />
           <span className="font-display tnum">{property.bedrooms}</span>
         </span>
-        <span className="inline-flex items-center gap-1 text-[13px] font-semibold" style={{ color: 'var(--text-muted)' }}>
-          <Ruler className="h-4 w-4" />
+        <span className="inline-flex items-center gap-1.5 text-sm font-semibold" style={{ color: 'var(--text-muted)' }}>
+          <Ruler className="h-4 w-4" style={{ color: '#3B82F6' }} />
           <span className="font-display tnum">{property.area}</span>
         </span>
       </div>
 
-      <div className="grid grid-cols-4 gap-0.5 px-2 pb-2 pt-1.5">
-        {ACTIONS.map(({ to, label, icon: Icon, color }) => (
-          <motion.div key={to} whileTap={reduce ? undefined : { scale: 0.94 }}>
+      {/* Fila de acciones: solo iconos */}
+      <div className="flex items-center gap-1 border-t pt-2" style={{ borderColor: 'var(--border)' }}>
+        {ACTIONS.map(({ to, icon: Icon, color }) => (
+          <motion.div key={to} whileTap={reduce ? undefined : { scale: 0.94 }} className="flex-1">
             <Link
               to={`${to}?inmueble=${property.slug}`}
-              className="flex flex-col items-center gap-1 rounded-xl py-2 transition-colors duration-150 hover:bg-[var(--surface-2)]"
+              className="flex items-center justify-center rounded-lg py-1.5 transition-colors duration-150 hover:bg-[var(--surface-2)]"
             >
               <Icon className="h-[18px] w-[18px]" style={{ color }} strokeWidth={2} />
-              <span className="text-[11px] font-semibold" style={{ color: 'var(--text-muted)' }}>
-                {label}
-              </span>
             </Link>
           </motion.div>
         ))}
