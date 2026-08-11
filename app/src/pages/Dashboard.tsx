@@ -9,6 +9,7 @@ import {
   CalendarRange,
   CircleAlert,
   Euro,
+  Lock,
   Sparkles,
   Users,
   Wrench,
@@ -386,6 +387,7 @@ export default function Dashboard() {
               { to: `/limpieza${q}`, label: t('limpieza'), icon: Sparkles },
               { to: `/mantenimiento${q}`, label: t('mantenimiento'), icon: Wrench },
               { to: `/rentabilidad${q}`, label: t('rentabilidad'), icon: Euro },
+              { to: `/tedee${q}`, label: t('tedee'), icon: Lock },
             ];
             const rows = [
               { label: t('dash.ingresosPrevistosMes'), value: `${fmtNumber(income)} €`, color: '#10B981', icon: Euro },
@@ -395,8 +397,8 @@ export default function Dashboard() {
               { label: t('dash.reparacionesAbiertas'), value: String(openMaint), color: '#F97316', icon: Wrench },
             ];
             return (
-              <div className="flex flex-col gap-5">
-                <SheetHeader className="pb-0 text-left">
+              <div className="flex flex-col gap-5 px-5 pb-5">
+                <SheetHeader className="px-0 pb-0 pt-1 text-left">
                   <div className="flex items-center gap-3">
                     <PropertyAvatar property={statsProp} size={44} />
                     <div className="min-w-0">
@@ -443,7 +445,7 @@ export default function Dashboard() {
                   )}
                 </div>
 
-                <div className="flex flex-wrap gap-2">
+                <div className="flex flex-wrap justify-center gap-2">
                   {links.map(({ icon: LinkIcon, to, label }) => (
                     <Link
                       key={to}
