@@ -23,7 +23,7 @@ interface MovementsCardProps {
   className?: string;
 }
 
-/** Tarjeta unificada de movimientos (entradas · salidas · limpiezas): número y etiqueta al mismo tamaño, con leyenda del plazo. */
+/** Tarjeta unificada de movimientos (entradas · salidas · limpiezas): número y etiqueta en mayúsculas, compacta, con leyenda del plazo. */
 export default function MovementsCard({ checkIns, checkOuts, cleanings, unassigned, lookaheadDays, className }: MovementsCardProps) {
   const { t } = useTranslation();
   const reduce = useReducedMotion();
@@ -59,7 +59,7 @@ export default function MovementsCard({ checkIns, checkOuts, cleanings, unassign
   ];
 
   return (
-    <div className={`card flex h-full flex-col justify-between gap-3 p-3 ${className ?? ''}`}>
+    <div className={`card flex h-full flex-col justify-between gap-1 p-2 ${className ?? ''}`}>
       <p
         className="text-[10px] font-semibold uppercase leading-4 tracking-[0.08em]"
         style={{ color: 'var(--text-faint)' }}
@@ -72,16 +72,16 @@ export default function MovementsCard({ checkIns, checkOuts, cleanings, unassign
             key={to + label}
             to={to}
             aria-label={ariaLabel}
-            className="flex items-center gap-3 rounded-xl px-1 py-1.5 transition-colors duration-150 hover:bg-[var(--surface-2)]"
+            className="flex items-center gap-2.5 rounded-lg px-1 py-[3px] transition-colors duration-150 hover:bg-[var(--surface-2)]"
           >
-            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl" style={{ backgroundColor: bg }}>
-              <Icon className="h-[18px] w-[18px]" style={{ color }} strokeWidth={2} />
+            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg" style={{ backgroundColor: bg }}>
+              <Icon className="h-4 w-4" style={{ color }} strokeWidth={2} />
             </span>
-            <span className="flex items-baseline gap-2">
-              <span className="font-display tnum text-[22px] font-semibold leading-7" style={{ color: 'var(--text)' }}>
+            <span className="flex items-baseline gap-1.5">
+              <span className="font-display tnum text-[19px] font-semibold leading-6" style={{ color: 'var(--text)' }}>
                 {value}
               </span>
-              <span className="font-display text-[17px] font-semibold" style={{ color: 'var(--text-muted)' }}>
+              <span className="font-display text-[16px] font-semibold uppercase tracking-wide" style={{ color: 'var(--text-muted)' }}>
                 {label}
               </span>
             </span>

@@ -66,26 +66,26 @@ export default function MonthOverviewCard({ occupancyPct, spark, income, reserva
   ];
 
   return (
-    <div className={`card flex h-full flex-col gap-3 p-3 ${className ?? ''}`}>
+    <div className={`card flex h-full flex-col gap-1.5 p-2 ${className ?? ''}`}>
       <p
         className="text-[10px] font-semibold uppercase leading-4 tracking-[0.08em]"
         style={{ color: 'var(--text-faint)' }}
       >
         {t('dash.tusInmueblesEsteMes')}
       </p>
-      <div className="flex flex-col gap-1">
+      <div className="flex flex-col">
         <Link
           to="/calendario"
-          className="flex items-center gap-3 rounded-xl px-1 py-1 transition-colors duration-150 hover:bg-[var(--surface-2)]"
+          className="flex items-center gap-2.5 rounded-lg px-1 py-[3px] transition-colors duration-150 hover:bg-[var(--surface-2)]"
         >
-          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl" style={{ backgroundColor: 'var(--bl-chip-bg)' }}>
-            <BedDouble className="h-[18px] w-[18px]" style={{ color: '#3B82F6' }} strokeWidth={2} />
+          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg" style={{ backgroundColor: 'var(--bl-chip-bg)' }}>
+            <BedDouble className="h-4 w-4" style={{ color: '#3B82F6' }} strokeWidth={2} />
           </span>
           <span className="min-w-0 flex-1">
             <span className="block text-xs font-medium" style={{ color: 'var(--text-muted)' }}>
               {t('dash.ocupacionActual')}
             </span>
-            <span className="font-display tnum text-[20px] font-semibold leading-7" style={{ color: 'var(--text)' }}>
+            <span className="font-display tnum text-[19px] font-semibold leading-6" style={{ color: 'var(--text)' }}>
               {fmtPct(display)}
             </span>
           </span>
@@ -100,17 +100,17 @@ export default function MonthOverviewCard({ occupancyPct, spark, income, reserva
           <Link
             key={to + label}
             to={to}
-            className="flex items-center gap-3 rounded-xl px-1 py-1 transition-colors duration-150 hover:bg-[var(--surface-2)]"
+            className="flex items-center gap-2.5 rounded-lg px-1 py-[3px] transition-colors duration-150 hover:bg-[var(--surface-2)]"
           >
-            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl" style={{ backgroundColor: bg }}>
-              <Icon className="h-[18px] w-[18px]" style={{ color }} strokeWidth={2} />
+            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg" style={{ backgroundColor: bg }}>
+              <Icon className="h-4 w-4" style={{ color }} strokeWidth={2} />
             </span>
             <span className="min-w-0 flex-1 truncate text-xs font-medium" style={{ color: 'var(--text-muted)' }}>
               {label}
             </span>
             <span
               className="shrink-0 font-display tnum font-semibold"
-              style={{ color: 'var(--text)', fontSize: big ? '24px' : '20px', lineHeight: '1.5' }}
+              style={{ color: 'var(--text)', fontSize: big ? '22px' : '19px', lineHeight: '1.5' }}
             >
               {value}
             </span>
