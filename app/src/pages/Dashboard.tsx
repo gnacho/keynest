@@ -3,9 +3,15 @@ import { Link, useNavigate } from 'react-router';
 import { motion } from 'framer-motion';
 import type { Variants } from 'framer-motion';
 import {
+  BedDouble,
+  Calendar,
   CalendarCheck2,
+  CalendarRange,
   CircleAlert,
+  Euro,
+  Sparkles,
   Users,
+  Wrench,
 } from 'lucide-react';
 import MovementsCard from '@/components/MovementsCard';
 import MonthOverviewCard from '@/components/MonthOverviewCard';
@@ -362,7 +368,7 @@ export default function Dashboard() {
       <Sheet open={statsProp !== null} onOpenChange={(o) => !o && setStatsProp(null)}>
         <SheetContent
           side="bottom"
-          className="max-h-[85dvh] overflow-y-auto rounded-t-3xl border-[var(--border)] bg-[var(--surface)] pb-[calc(24px+env(safe-area-inset-bottom))] lg:inset-x-auto lg:inset-y-auto lg:top-1/2 lg:left-1/2 lg:h-auto lg:max-h-[82vh] lg:w-[560px] lg:max-w-[calc(100vw-32px)] lg:-translate-x-1/2 lg:-translate-y-1/2 lg:rounded-2xl lg:border lg:shadow-overlay"
+          className="max-h-[85dvh] overflow-y-auto rounded-t-3xl border-[var(--border)] bg-[var(--surface)] pb-[calc(24px+env(safe-area-inset-bottom))] lg:inset-x-auto lg:inset-y-auto lg:top-1/2 lg:left-1/2 lg:h-auto lg:max-h-[85vh] lg:w-[720px] lg:max-w-[calc(100vw-32px)] lg:-translate-x-1/2 lg:-translate-y-1/2 lg:rounded-2xl lg:border lg:shadow-overlay"
         >
           {statsProp && (() => {
             const income = proratedIncome(reservations, statsProp.id, monthNow, yearNow);
@@ -375,18 +381,18 @@ export default function Dashboard() {
             const accs = tedeeAccess.filter((a) => a.propertyId === statsProp.id).slice(0, 5);
             const q = `?inmueble=${statsProp.slug}`;
             const links = [
-              { to: `/calendario${q}`, label: t('calendario') },
-              { to: `/reservas${q}`, label: t('reservas') },
-              { to: `/limpieza${q}`, label: t('limpieza') },
-              { to: `/mantenimiento${q}`, label: t('mantenimiento') },
-              { to: `/rentabilidad${q}`, label: t('rentabilidad') },
+              { to: `/calendario${q}`, label: t('calendario'), icon: Calendar },
+              { to: `/reservas${q}`, label: t('reservas'), icon: CalendarRange },
+              { to: `/limpieza${q}`, label: t('limpieza'), icon: Sparkles },
+              { to: `/mantenimiento${q}`, label: t('mantenimiento'), icon: Wrench },
+              { to: `/rentabilidad${q}`, label: t('rentabilidad'), icon: Euro },
             ];
             const rows = [
-              { label: t('dash.ingresosPrevistosMes'), value: `${fmtNumber(income)} €`, color: '#10B981' },
-              { label: t('dash.ocupacionMes'), value: `${fmtPct(occPct)}`, sub: t('dash.noches', { count: nights }), color: '#3B82F6' },
-              { label: t('dash.reservasProximas'), value: String(upcoming), color: '#6366F1' },
-              { label: t('dash.limpiezasPendientes'), value: String(pendClean), color: '#8B5CF6' },
-              { label: t('dash.reparacionesAbiertas'), value: String(openMaint), color: '#F97316' },
+              { label: t('dash.ingresosPrevistosMes'), value: `${fmtNumber(income)} €`, color: '#10B981', icon: Euro },
+              { label: t('dash.ocupacionMes'), value: `${fmtPct(occPct)}`, sub: t('dash.noches', { count: nights }), color: '#3B82F6', icon: BedDouble },
+              { label: t('dash.reservasProximas'), value: String(upcoming), color: '#6366F1', icon: CalendarCheck2 },
+              { label: t('dash.limpiezasPendientes'), value: String(pendClean), color: '#8B5CF6', icon: Sparkles },
+              { label: t('dash.reparacionesAbiertas'), value: String(openMaint), color: '#F97316', icon: Wrench },
             ];
             return (
               <div className="flex flex-col gap-5">
@@ -403,15 +409,17 @@ export default function Dashboard() {
                 </SheetHeader>
 
                 <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-                  {rows.map((r) => (
-                    <div key={r.label} className="card flex items-center justify-between gap-2 px-3 py-2.5">
+                  {rows.map(({ icon: RowIcon, label, value, sub, color }) => (
+                    <div key={label} className="card flex items-center justify-between gap-2 px-3 py-2.5">
                       <span className="flex min-w-0 items-center gap-2 text-sm" style={{ color: 'var(--text-muted)' }}>
-                        <span className="h-2 w-2 shrink-0 rounded-full" style={{ backgroundColor: r.color }} />
-                        <span className="truncate">{r.label}</span>
+                        <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg" style={{ backgroundColor: `${color}1A` }}>
+                          <RowIcon className="h-4 w-4" style={{ color }} strokeWidth={2} />
+                        </span>
+                        <span className="truncate">{label}</span>
                       </span>
                       <span className="shrink-0 tnum text-sm font-semibold">
-                        {r.value}
-                        {r.sub && <span className="ml-1 text-xs font-medium" style={{ color: 'var(--text-faint)' }}>{r.sub}</span>}
+                        {value}
+                        {sub && <span className="ml-1 text-xs font-medium" style={{ color: 'var(--text-faint)' }}>{sub}</span>}
                       </span>
                     </div>
                   ))}
@@ -436,15 +444,16 @@ export default function Dashboard() {
                 </div>
 
                 <div className="flex flex-wrap gap-2">
-                  {links.map((l) => (
+                  {links.map(({ icon: LinkIcon, to, label }) => (
                     <Link
-                      key={l.to}
-                      to={l.to}
+                      key={to}
+                      to={to}
                       onClick={() => setStatsProp(null)}
-                      className="rounded-full border px-3 py-1.5 text-xs font-semibold transition-colors hover:bg-[var(--surface-2)]"
+                      className="flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-semibold transition-colors hover:bg-[var(--surface-2)]"
                       style={{ borderColor: 'var(--border)', color: 'var(--text-muted)' }}
                     >
-                      {l.label}
+                      <LinkIcon className="h-3.5 w-3.5" strokeWidth={2} />
+                      {label}
                     </Link>
                   ))}
                 </div>
