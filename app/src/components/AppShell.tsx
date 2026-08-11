@@ -30,6 +30,7 @@ import PullToRefresh from '@/components/PullToRefresh';
 import NotificationsPopover from '@/components/NotificationsPopover';
 import { useUpdateAvailable } from '@/hooks/useUpdateAvailable';
 import { useTheme } from '@/theme/ThemeProvider';
+import type { ThemeMode } from '@/theme/ThemeProvider';
 import { useData } from '@/data/useData';
 import { cachedUser, logout } from '@/lib/auth';
 import { APP_VERSION } from '@/components/settings/settings-cards';
@@ -148,6 +149,39 @@ function ThemeToggle() {
         );
       })}
     </div>
+  );
+}
+
+/** Botón único de tema para móvil: cicla system → light → dark, icono rota al cambiar. */
+function ThemeCycleButton() {
+  const { mode, setMode, resolved } = useTheme();
+  const { t } = useTranslation();
+  const reduce = useReducedMotion();
+  const CYCLE: ThemeMode[] = ['system', 'light', 'dark'];
+  const Icon =
+    mode === 'dark' ? Moon : mode === 'light' ? Sun : resolved === 'dark' ? Moon : Sunrise;
+  const next = () => setMode(CYCLE[(CYCLE.indexOf(mode) + 1) % CYCLE.length]);
+  return (
+    <button
+      type="button"
+      onClick={next}
+      aria-label={t('aj.tema')}
+      className="flex h-9 w-9 items-center justify-center rounded-xl border transition-colors duration-150 hover:bg-[var(--surface-2)]"
+      style={{ borderColor: 'var(--border)', color: 'var(--text-muted)' }}
+    >
+      <AnimatePresence mode="wait" initial={false}>
+        <motion.span
+          key={mode}
+          initial={reduce ? false : { rotate: -90, opacity: 0 }}
+          animate={{ rotate: 0, opacity: 1 }}
+          exit={reduce ? {} : { rotate: 90, opacity: 0 }}
+          transition={{ duration: 0.3 }}
+          className="flex"
+        >
+          <Icon size={17} strokeWidth={2.2} />
+        </motion.span>
+      </AnimatePresence>
+    </button>
   );
 }
 
@@ -434,7 +468,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
            <div className="flex w-auto items-center gap-1.5">
              <NotificationsPopover />
              <ConnectionDot />
-             <ThemeToggle />
+             <ThemeCycleButton />
            </div>
         </header>
 
