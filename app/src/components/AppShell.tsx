@@ -250,17 +250,15 @@ export default function AppShell({ children }: { children: ReactNode }) {
             to={item.to}
             aria-label={t(`nav.${item.labelKey}`)}
             className={cn(
-              'relative flex h-10 w-10 items-center justify-center rounded-xl transition-colors duration-150',
+              'relative flex h-10 w-10 items-center justify-center rounded-xl transition-colors duration-150 hover:bg-[var(--surface-2)]',
               active ? 'text-[var(--text)]' : 'text-[var(--text-muted)] hover:text-[var(--text)]',
             )}
             style={active ? { backgroundColor: 'var(--surface-2)' } : undefined}
           >
             {active && (
               <motion.span
-                key={`dot-${location.pathname}`}
-                initial={reduce ? false : { scale: 0 }}
-                animate={{ scale: 1 }}
-                transition={{ duration: 0.2, ease: EASE_OUT_QUART }}
+                layoutId="nav-dot"
+                transition={reduce ? { duration: 0.15 } : { type: 'spring', stiffness: 500, damping: 40 }}
                 className="brand-gradient absolute -left-[13px] top-1/2 h-2 w-2 -translate-y-1/2 rounded-full"
               />
             )}
@@ -288,17 +286,15 @@ export default function AppShell({ children }: { children: ReactNode }) {
         key={item.to}
         to={item.to}
         className={cn(
-          'relative flex h-10 items-center gap-3 rounded-xl px-3 text-sm font-medium transition-colors duration-150',
+          'relative flex h-10 items-center gap-3 rounded-xl px-3 text-sm font-medium transition-colors duration-150 hover:bg-[var(--surface-2)]',
           active ? 'text-[var(--text)]' : 'text-[var(--text-muted)] hover:text-[var(--text)]',
         )}
         style={active ? { backgroundColor: 'var(--surface-2)' } : undefined}
       >
         {active && (
           <motion.span
-            key={`bar-${location.pathname}`}
-            initial={reduce ? false : { scaleY: 0 }}
-            animate={{ scaleY: 1 }}
-            transition={{ duration: 0.2, ease: EASE_OUT_QUART }}
+            layoutId="nav-bar"
+            transition={reduce ? { duration: 0.15 } : { type: 'spring', stiffness: 500, damping: 40 }}
             className="brand-gradient absolute left-0 top-1/2 h-5 w-[3px] -translate-y-1/2 rounded-full"
             style={{ originY: 0.5 }}
           />
