@@ -58,7 +58,7 @@ export default function Limpieza() {
   const navigate = useNavigate();
 
   const inmueble = params.get('inmueble') ?? 'todos';
-  const estado = params.get('estado') ?? 'todos';
+  const estado = params.get('estado') ?? 'pendiente';
   const tareaParam = params.get('tarea');
 
   const all = data.getCleanings();
@@ -109,7 +109,7 @@ export default function Limpieza() {
     <div className="flex flex-col gap-5">
       {/* ============================== Filtros + botón añadir (misma fila) */}
       <div className="flex flex-wrap items-center gap-2">
-        <FilterBar className="mx-0 px-0" typeOptions={STATUS_OPTIONS.map((o) => ({ value: o.value, label: t(o.labelKey) }))} typeParam="estado" />
+        <FilterBar hideAll className="mx-0 px-0" typeOptions={STATUS_OPTIONS.map((o) => ({ value: o.value, label: t(o.labelKey) }))} typeParam="estado" />
         {!data.isDemo && (
           <button
             type="button"
