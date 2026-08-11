@@ -4,12 +4,13 @@ import type { LucideIcon } from 'lucide-react';
 import { LogIn, LogOut, Sparkles } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
-interface Item {
+interface Row {
   to: string;
   icon: LucideIcon;
   color: string;
   bg: string;
   value: number;
+  label: string;
   ariaLabel: string;
 }
 
@@ -18,35 +19,63 @@ interface MovementsCardProps {
   checkOuts: number;
   cleanings: number;
   unassigned: number;
+  lookaheadDays: number;
   className?: string;
 }
 
-/** Tarjeta unificada de movimientos (entradas · salidas · limpiezas) con 3 iconos+números. */
-export default function MovementsCard({ checkIns, checkOuts, cleanings, unassigned, className }: MovementsCardProps) {
+/** Tarjeta unificada de movimientos (entradas · salidas · limpiezas) con número + etiqueta por fila. */
+export default function MovementsCard({ checkIns, checkOuts, cleanings, unassigned, lookaheadDays, className }: MovementsCardProps) {
   const { t } = useTranslation();
   const reduce = useReducedMotion();
 
-  const items: Item[] = [
-    { to: '/reservas', icon: LogIn, color: '#10B981', bg: 'var(--em-chip-bg)', value: checkIns, ariaLabel: t('dash.entradas') },
-    { to: '/reservas', icon: LogOut, color: '#F97316', bg: 'var(--or-chip-bg)', value: checkOuts, ariaLabel: t('dash.salidas') },
-    { to: '/limpieza', icon: Sparkles, color: '#8B5CF6', bg: 'var(--vi-chip-bg)', value: cleanings, ariaLabel: t('dash.limpiezas') },
+  const rows: Row[] = [
+    {
+      to: '/reservas',
+      icon: LogIn,
+      color: '#10B981',
+      bg: 'var(--em-chip-bg)',
+      value: checkIns,
+      label: t('dash.entradasPeriodo', { days: lookaheadDays }),
+      ariaLabel: t('dash.entradas'),
+    },
+    {
+      to: '/reservas',
+      icon: LogOut,
+      color: '#F97316',
+      bg: 'var(--or-chip-bg)',
+      value: checkOuts,
+      label: t('dash.salidasPeriodo', { days: lookaheadDays }),
+      ariaLabel: t('dash.salidas'),
+    },
+    {
+      to: '/limpieza',
+      icon: Sparkles,
+      color: '#8B5CF6',
+      bg: 'var(--vi-chip-bg)',
+      value: cleanings,
+      label: t('dash.limpiezasPeriodo', { days: lookaheadDays }),
+      ariaLabel: t('dash.limpiezas'),
+    },
   ];
 
   return (
     <div className={`card flex h-full flex-col justify-between gap-3 p-3 ${className ?? ''}`}>
-      <div className="flex items-center justify-around gap-1">
-        {items.map(({ to, icon: Icon, color, bg, value, ariaLabel }) => (
+      <div className="flex flex-col">
+        {rows.map(({ to, icon: Icon, color, bg, value, label, ariaLabel }) => (
           <Link
-            key={to + ariaLabel}
+            key={to + label}
             to={to}
             aria-label={ariaLabel}
-            className="flex flex-1 flex-col items-center gap-1 rounded-xl py-1.5 transition-colors duration-150 hover:bg-[var(--surface-2)]"
+            className="flex items-center gap-3 rounded-xl px-1 py-1.5 transition-colors duration-150 hover:bg-[var(--surface-2)]"
           >
-            <span className="flex h-9 w-9 items-center justify-center rounded-xl" style={{ backgroundColor: bg }}>
+            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl" style={{ backgroundColor: bg }}>
               <Icon className="h-[18px] w-[18px]" style={{ color }} strokeWidth={2} />
             </span>
-            <span className="font-display tnum text-[20px] font-semibold leading-6" style={{ color: 'var(--text)' }}>
+            <span className="min-w-0 flex-1 font-display tnum text-[20px] font-semibold leading-6" style={{ color: 'var(--text)' }}>
               {value}
+            </span>
+            <span className="truncate text-xs font-medium" style={{ color: 'var(--text-muted)' }}>
+              {label}
             </span>
           </Link>
         ))}

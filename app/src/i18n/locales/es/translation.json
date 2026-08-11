@@ -105,6 +105,7 @@
     "misInmueblesPrevistosMes": "Mis inmuebles · Previsión mes",
     "reservasMes_one": "{{count}} reserva este mes",
     "reservasMes_other": "{{count}} reservas este mes",
+    "reservasMesLabel": "Reservas este mes",
     "ocupacionMes": "Ocupación mes",
     "noches_one": "{{count}} noche",
     "noches_other": "{{count}} noches",

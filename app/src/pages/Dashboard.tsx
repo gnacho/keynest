@@ -1,17 +1,14 @@
-import { useMemo, useRef, useState } from 'react';
-import type { ReactNode } from 'react';
+import { useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router';
 import { motion } from 'framer-motion';
 import type { Variants } from 'framer-motion';
 import {
-  BedDouble,
   CalendarCheck2,
   CircleAlert,
-  Euro,
   Users,
 } from 'lucide-react';
-import KpiCard from '@/components/KpiCard';
 import MovementsCard from '@/components/MovementsCard';
+import MonthOverviewCard from '@/components/MonthOverviewCard';
 import PropertyCard from '@/components/PropertyCard';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import PropertyAvatar from '@/components/PropertyAvatar';
@@ -32,7 +29,6 @@ import {
   fmtTime,
   isSameDay,
 } from '@/lib/format';
-import { cn } from '@/lib/utils';
 
 const EASE_OUT_QUART: [number, number, number, number] = [0.25, 1, 0.5, 1];
 
@@ -78,51 +74,6 @@ function occupiedNightsMonth(reservations: Reservation[], propertyId: string, mo
     }
   }
   return total;
-}
-
-/* -------------------------------------- Carrusel scroll-snap con indicadores */
-function Carousel({ children, itemClassName }: { children: ReactNode[]; itemClassName: string }) {
-  const ref = useRef<HTMLDivElement>(null);
-  const [active, setActive] = useState(0);
-
-  const onScroll = () => {
-    const el = ref.current;
-    if (!el || el.children.length === 0) return;
-    const first = el.children[0] as HTMLElement;
-    const step = first.offsetWidth + 12;
-    setActive(Math.min(children.length - 1, Math.round(el.scrollLeft / step)));
-  };
-
-  return (
-    <div>
-      <div
-        ref={ref}
-        onScroll={onScroll}
-        className="snap-carousel -mx-4 flex gap-3 overflow-x-auto px-4 lg:mx-0 lg:grid lg:overflow-visible lg:px-0"
-        style={{ gridTemplateColumns: `repeat(${children.length}, minmax(0,1fr))`, gap: undefined }}
-      >
-        {children.map((child, i) => (
-          <div key={i} className={cn('shrink-0 lg:w-auto', itemClassName)}>
-            {child}
-          </div>
-        ))}
-      </div>
-      {children.length > 1 && (
-        <div className="mt-3 flex justify-center gap-1.5 lg:hidden">
-          {children.map((_, i) => (
-            <span
-              key={i}
-              className={cn(
-                'h-1.5 rounded-full transition-all duration-200',
-                i === active ? 'brand-gradient w-[18px]' : 'w-1.5',
-              )}
-              style={i === active ? undefined : { backgroundColor: 'var(--border)' }}
-            />
-          ))}
-        </div>
-      )}
-    </div>
-  );
 }
 
 /* ------------------------------------------------------------------ Página */
@@ -313,26 +264,26 @@ export default function Dashboard() {
       </div>
 
       {/* ============================== Sección 1 — KPIs */}
-      <motion.section variants={containerV} initial="hidden" animate="show">
-        <Carousel itemClassName="w-[42vw] min-w-[160px]">
-          {[
-            <motion.div variants={itemV} key="k1" className="h-full">
-              <MovementsCard
-                checkIns={checkInsNext.length}
-                checkOuts={checkOutsNext.length}
-                cleanings={pendingCleanings.length}
-                unassigned={unassigned.length}
-                className="h-full"
-              />
-            </motion.div>,
-            <motion.div variants={itemV} key="k2" className="h-full">
-              <KpiCard icon={BedDouble} tone="blue" label={t('dash.ocupacionActual')} value={occupancyPct} unit="%" spark={spark14} sparkColor="#3B82F6" to="/calendario" className="h-full" />
-            </motion.div>,
-            <motion.div variants={itemV} key="k3" className="h-full">
-              <KpiCard icon={Euro} tone="emerald" label={t('dash.misInmueblesPrevistosMes')} value={expectedMonthIncome} unit="€" money sub={t('dash.reservasMes', { count: monthReservations })} to="/rentabilidad" className="h-full" />
-            </motion.div>,
-          ]}
-        </Carousel>
+      <motion.section className="grid gap-5 lg:grid-cols-2" variants={containerV} initial="hidden" animate="show">
+        <motion.div variants={itemV} className="h-full">
+          <MovementsCard
+            checkIns={checkInsNext.length}
+            checkOuts={checkOutsNext.length}
+            cleanings={pendingCleanings.length}
+            unassigned={unassigned.length}
+            lookaheadDays={lookaheadDays}
+            className="h-full"
+          />
+        </motion.div>
+        <motion.div variants={itemV} className="h-full">
+          <MonthOverviewCard
+            occupancyPct={occupancyPct}
+            spark={spark14}
+            income={expectedMonthIncome}
+            reservationsCount={monthReservations}
+            className="h-full"
+          />
+        </motion.div>
       </motion.section>
 
       {/* ============================== Sección 2 — Hoy: entradas y salidas */}
