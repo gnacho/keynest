@@ -13,7 +13,7 @@ import ConfirmDialog from '@/components/ConfirmDialog';
 import AssignPopover from '@/components/tareas/AssignPopover';
 import ConfirmCleaningDialog from '@/components/tareas/ConfirmCleaningDialog';
 import HoursStepper from '@/components/tareas/HoursStepper';
-import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { useTranslation } from 'react-i18next';
 import { useData } from '@/data/useData';
 import type { Cleaning, CleaningStatus, SemColor } from '@/data/types';
@@ -329,18 +329,17 @@ export default function CleaningCard({ cleaning: c, variants, highlight = false,
         </button>
       </div>
 
-      {/* Sheet de edición con el cuerpo completo */}
-      <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
-        <SheetContent
-          side="right"
-          className="flex flex-col gap-3 overflow-y-auto border-[var(--border)] bg-[var(--surface)] w-full sm:max-w-[420px]"
+      {/* Dialog de edición con el cuerpo completo */}
+      <Dialog open={sheetOpen} onOpenChange={setSheetOpen}>
+        <DialogContent className="flex max-h-[85dvh] flex-col gap-3 overflow-y-auto rounded-2xl border-[var(--border)] bg-[var(--surface)] shadow-overlay sm:max-w-2xl"
+          style={{ maxWidth: 'min(672px, 94vw)' }}
         >
-        <SheetHeader className="px-1 pt-1 text-left">
-          <SheetTitle className="font-display text-lg font-semibold">{property.name}</SheetTitle>
-          <SheetDescription style={{ color: 'var(--text-muted)' }}>
+        <DialogHeader className="px-1 pt-1 text-left">
+          <DialogTitle className="font-display text-lg font-semibold">{property.name}</DialogTitle>
+          <DialogDescription style={{ color: 'var(--text-muted)' }}>
             {fmtDateShort(c.date)} · {fmtTime(c.date)}
-          </SheetDescription>
-        </SheetHeader>
+          </DialogDescription>
+        </DialogHeader>
         {/* 1) CHECKLIST DEL INMUEBLE — lo primero que mira la persona de limpieza */}
         <div className="rounded-2xl border p-3" style={{ borderColor: 'var(--border)', backgroundColor: 'var(--surface-2)' }}>
           <p
@@ -583,8 +582,8 @@ export default function CleaningCard({ cleaning: c, variants, highlight = false,
             </button>
           )}
         </div>
-        </SheetContent>
-      </Sheet>
+        </DialogContent>
+      </Dialog>
 
       <ConfirmDialog
         open={deleteOpen}
