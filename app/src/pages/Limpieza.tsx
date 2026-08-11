@@ -214,7 +214,7 @@ export default function Limpieza() {
           variants={containerV}
           initial="hidden"
           animate="show"
-          className="grid gap-4 lg:grid-cols-2 lg:items-start"
+          className="grid gap-3 lg:grid-cols-4 lg:items-start"
         >
           {filtered.map((c) => (
             <CleaningCard

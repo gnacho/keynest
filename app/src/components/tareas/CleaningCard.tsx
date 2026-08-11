@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router';
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 import type { Variants } from 'framer-motion';
-import { Check, ChevronDown, ClipboardList, Phone, Pencil, Plus, Sparkles, Trash2, X } from 'lucide-react';
+import { Check, ChevronDown, ClipboardList, Phone, Pencil, Plus, Settings2, Sparkles, Trash2, X } from 'lucide-react';
 import CleaningPhotos from '@/components/tareas/CleaningPhotos';
 import PhotoLightbox from '@/components/tareas/PhotoLightbox';
 import PersonAvatar from '@/components/PersonAvatar';
@@ -13,6 +13,7 @@ import ConfirmDialog from '@/components/ConfirmDialog';
 import AssignPopover from '@/components/tareas/AssignPopover';
 import ConfirmCleaningDialog from '@/components/tareas/ConfirmCleaningDialog';
 import HoursStepper from '@/components/tareas/HoursStepper';
+import { Sheet, SheetContent } from '@/components/ui/sheet';
 import { useTranslation } from 'react-i18next';
 import { useData } from '@/data/useData';
 import type { Cleaning, CleaningStatus, SemColor } from '@/data/types';
@@ -77,9 +78,7 @@ export default function CleaningCard({ cleaning: c, variants, highlight = false,
   const [instrEditing, setInstrEditing] = useState(false);
   const [instrDraft, setInstrDraft] = useState(c.instructions);
   const [deleteOpen, setDeleteOpen] = useState(false);
-  // En móvil el cuerpo (checklist, instrucciones, asignación, fotos) se pliega;
-  // en desktop siempre visible.
-  const [bodyOpen, setBodyOpen] = useState(false);
+  const [sheetOpen, setSheetOpen] = useState(false);
 
   const done = c.checks.filter((k) => k.done).length;
   const total = c.checks.length;
@@ -139,7 +138,7 @@ export default function CleaningCard({ cleaning: c, variants, highlight = false,
           <div className="mt-2 flex justify-end gap-2">
             <button
               type="button"
-              onClick={() => setEditOpen(true)}
+          onClick={() => setSheetOpen(true)}
               className="flex h-8 items-center rounded-xl border px-3 text-xs font-semibold transition-colors hover:bg-[var(--surface-2)]"
               style={{ borderColor: 'var(--border)', color: 'var(--text-muted)' }}
             >
@@ -273,23 +272,22 @@ export default function CleaningCard({ cleaning: c, variants, highlight = false,
           : undefined
       }
       transition={highlight && !reduce ? { duration: 1.2, ease: 'easeOut' } : { duration: 0.3 }}
-      className="card min-w-0 overflow-hidden border-l-[3px] p-4"
+      className="card min-w-0 overflow-hidden border-l-[3px] p-3"
       style={{
         borderLeftColor: STATUS_BORDER[c.status],
       }}
     >
-      {/* Cabecera: información esencial + progreso + trigger de expand (móvil) */}
-      <div className="flex items-start justify-between gap-3">
-        <div className="flex min-w-0 items-center gap-3">
-          <PropertyAvatar property={property} size={40} />
+      {/* Cabecera compacta */}
+      <div className="flex items-start justify-between gap-2">
+        <div className="flex min-w-0 items-center gap-2.5">
+          <PropertyAvatar property={property} size={32} />
           <div className="min-w-0 flex-1">
-            <p className="truncate text-[15px] font-semibold">{property.name}</p>
-            <p className="truncate text-xs" style={{ color: 'var(--text-muted)' }}>
-              {property.address}
+            <p className="truncate text-[13px] font-semibold leading-tight">{property.name}</p>
+            <p className="truncate text-[11px]" style={{ color: 'var(--text-muted)' }}>
+              {fmtDateShort(c.date)} · {fmtTime(c.date)}
             </p>
-            {/* Progreso del checklist: siempre visible */}
-            <div className="mt-1.5 flex items-center gap-2">
-              <div className="h-1.5 min-w-0 flex-1 overflow-hidden rounded-full" style={{ backgroundColor: 'var(--border)' }}>
+            <div className="mt-1 flex items-center gap-1.5">
+              <div className="h-1 min-w-0 flex-1 overflow-hidden rounded-full" style={{ backgroundColor: 'var(--border)' }}>
                 <motion.div
                   className="h-full rounded-full bg-violet-500"
                   initial={false}
@@ -297,52 +295,46 @@ export default function CleaningCard({ cleaning: c, variants, highlight = false,
                   transition={{ duration: 0.3 }}
                 />
               </div>
-              <span className="tnum shrink-0 text-xs font-semibold text-violet-500">{done}/{total}</span>
+              <span className="tnum shrink-0 text-[10px] font-semibold text-violet-500">{done}/{total}</span>
             </div>
           </div>
         </div>
-        {/* Fecha de la limpieza grande (chip calendario, estilo #24) + hora */}
-          <span
-            className="flex flex-col items-center justify-center rounded-lg border leading-none"
-            style={{ minWidth: '44px', padding: '3px 6px', borderColor: 'rgb(139 92 246 / 0.25)', backgroundColor: 'rgb(139 92 246 / 0.08)' }}
-          >
-            <span className="text-xl font-bold" style={{ color: '#8B5CF6' }}>
-              {c.date.getDate()}
-            </span>
-            <span className="mt-0.5 text-[10px] font-semibold uppercase tracking-wide" style={{ color: '#8B5CF6' }}>
-              {fmtMonth(c.date, true)}
-            </span>
-            <span className="mt-0.5 text-[9px] font-medium tnum" style={{ color: '#8B5CF6' }}>
-              {fmtTime(c.date)}
-            </span>
-          </span>
+        <span
+          className="flex shrink-0 flex-col items-center rounded-lg border px-1.5 py-0.5 leading-none"
+          style={{ borderColor: 'rgb(139 92 246 / 0.25)', backgroundColor: 'rgb(139 92 246 / 0.08)' }}
+        >
+          <span className="text-lg font-bold" style={{ color: '#8B5CF6' }}>{c.date.getDate()}</span>
+          <span className="text-[9px] font-semibold uppercase" style={{ color: '#8B5CF6' }}>{fmtMonth(c.date, true)}</span>
+        </span>
       </div>
 
-      {/* Meta: estado + reserva origen + trigger de expand (móvil) */}
-      <div className="mt-2.5 flex flex-wrap items-center gap-2">
+      {/* Meta row: status + reservation + edit button */}
+      <div className="mt-2 flex flex-wrap items-center gap-1.5">
         <StatusBadge label={t(STATUS_LABEL_KEY[c.status])} tone={STATUS_TONE[c.status]} dot={c.status === 'en-curso'} pulse={c.status === 'en-curso'} />
         {reservation && (
           <Link
             to={`/reservas?inmueble=${property.slug}&reserva=${reservation.id}`}
-            className="text-xs font-medium text-violet-500 hover:underline"
+            className="text-[11px] font-medium text-violet-500 hover:underline"
           >
             {t('tareas.reservaDe', { name: reservation.guest.name })}
           </Link>
         )}
         <button
           type="button"
-          onClick={() => setBodyOpen((o) => !o)}
-          aria-expanded={bodyOpen}
-          className="ml-auto flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] font-semibold transition-colors"
-          style={{ borderColor: 'var(--border)', color: 'var(--text-muted)' }}
+          onClick={() => setEditOpen(true)}
+          className="group ml-auto flex h-7 w-7 items-center justify-center rounded-lg transition-colors hover:bg-[var(--surface-2)]"
+          style={{ color: 'var(--text-faint)' }}
         >
-          {t('tareas.detalles')}
-          <ChevronDown className={cn('h-3.5 w-3.5 transition-transform duration-200', bodyOpen && 'rotate-180')} />
+          <Settings2 className="h-4 w-4 transition-transform duration-300 group-hover:rotate-90" />
         </button>
       </div>
 
-      {/* Cuerpo: en móvil colapsable, en desktop siempre visible */}
-      <div className={cn('mt-3 flex flex-col gap-3', !bodyOpen && 'hidden')}>
+      {/* Sheet de edición con el cuerpo completo */}
+      <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
+        <SheetContent
+          side="bottom"
+          className="rounded-t-3xl border-[var(--border)] bg-[var(--surface)] pb-[calc(24px+env(safe-area-inset-bottom))] lg:inset-y-0 lg:right-0 lg:left-auto lg:h-full lg:w-[420px] lg:rounded-none lg:border-l"
+        >
         {/* 1) CHECKLIST DEL INMUEBLE — lo primero que mira la persona de limpieza */}
         <div className="rounded-2xl border p-3" style={{ borderColor: 'var(--border)', backgroundColor: 'var(--surface-2)' }}>
           <p
@@ -585,7 +577,8 @@ export default function CleaningCard({ cleaning: c, variants, highlight = false,
             </button>
           )}
         </div>
-      </div>
+        </SheetContent>
+      </Sheet>
 
       <ConfirmDialog
         open={deleteOpen}
