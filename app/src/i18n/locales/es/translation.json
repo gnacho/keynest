@@ -73,6 +73,8 @@
     "sinAsignar_other": "{{count}} sin asignar",
     "porAsignar_one": "{{count}} por asignar",
     "porAsignar_other": "{{count}} por asignar",
+    "mismoDia_one": "{{count}} mismo día",
+    "mismoDia_other": "{{count}} mismo día",
     "vsMesAnterior": "vs mes anterior",
     "entradas": "Entradas",
     "salidas": "Salidas",

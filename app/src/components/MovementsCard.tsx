@@ -11,6 +11,7 @@ interface Row {
   value: number;
   label: string;
   ariaLabel: string;
+  kind: 'in' | 'out' | 'cleaning';
 }
 
 interface MovementsCardProps {
@@ -18,12 +19,14 @@ interface MovementsCardProps {
   checkOuts: number;
   cleanings: number;
   unassigned: number;
+  /** Entradas que coinciden con una salida el mismo día (rotación). */
+  sameDayCheckIns: number;
   lookaheadDays: number;
   className?: string;
 }
 
 /** Tarjeta unificada de movimientos (entradas · salidas · limpiezas): número y etiqueta en mayúsculas, compacta, con leyenda del plazo. */
-export default function MovementsCard({ checkIns, checkOuts, cleanings, unassigned, lookaheadDays, className }: MovementsCardProps) {
+export default function MovementsCard({ checkIns, checkOuts, cleanings, unassigned, sameDayCheckIns, lookaheadDays, className }: MovementsCardProps) {
   const { t } = useTranslation();
 
   const rows: Row[] = [
@@ -35,6 +38,7 @@ export default function MovementsCard({ checkIns, checkOuts, cleanings, unassign
       value: checkIns,
       label: t('dash.entradas'),
       ariaLabel: t('dash.entradas'),
+      kind: 'in',
     },
     {
       to: '/reservas',
@@ -44,6 +48,7 @@ export default function MovementsCard({ checkIns, checkOuts, cleanings, unassign
       value: checkOuts,
       label: t('dash.salidas'),
       ariaLabel: t('dash.salidas'),
+      kind: 'out',
     },
     {
       to: '/limpieza',
@@ -53,6 +58,7 @@ export default function MovementsCard({ checkIns, checkOuts, cleanings, unassign
       value: cleanings,
       label: t('dash.limpiezas'),
       ariaLabel: t('dash.limpiezas'),
+      kind: 'cleaning',
     },
   ];
 
@@ -65,7 +71,7 @@ export default function MovementsCard({ checkIns, checkOuts, cleanings, unassign
         {t('dash.proximosDias', { days: lookaheadDays })}
       </p>
       <div className="flex flex-col">
-        {rows.map(({ to, icon: Icon, color, bg, value, label, ariaLabel }) => (
+        {rows.map(({ to, icon: Icon, color, bg, value, label, ariaLabel, kind }) => (
           <Link
             key={to + label}
             to={to}
@@ -83,7 +89,7 @@ export default function MovementsCard({ checkIns, checkOuts, cleanings, unassign
                 {label}
               </span>
             </span>
-            {to === '/limpieza' && unassigned > 0 && (
+            {kind === 'cleaning' && unassigned > 0 && (
               <span
                 className="shrink-0 rounded-full px-2 py-0.5 text-[11px] font-semibold whitespace-nowrap"
                 style={{ backgroundColor: 'var(--ro-chip-bg)', color: '#F43F5E' }}
@@ -91,12 +97,20 @@ export default function MovementsCard({ checkIns, checkOuts, cleanings, unassign
                 {t('dash.porAsignar', { count: unassigned })}
               </span>
             )}
-            {to === '/limpieza' && unassigned === 0 && (
+            {kind === 'cleaning' && unassigned === 0 && (
               <span
                 className="shrink-0 rounded-full px-2 py-0.5 text-[11px] font-semibold whitespace-nowrap"
                 style={{ backgroundColor: 'var(--em-chip-bg)', color: '#10B981' }}
               >
                 {t('dash.sinAsignar', { count: 0 })}
+              </span>
+            )}
+            {kind === 'in' && sameDayCheckIns > 0 && (
+              <span
+                className="shrink-0 rounded-full px-2 py-0.5 text-[11px] font-semibold whitespace-nowrap"
+                style={{ backgroundColor: 'var(--or-chip-bg)', color: '#F97316' }}
+              >
+                {t('dash.mismoDia', { count: sameDayCheckIns })}
               </span>
             )}
           </Link>

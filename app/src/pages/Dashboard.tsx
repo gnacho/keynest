@@ -128,6 +128,16 @@ export default function Dashboard() {
   const pendingCleanings = data.getPendingCleanings().filter((c) => inWindow(c.date));
   const unassigned = pendingCleanings.filter((c) => c.assigneeIds.length === 0);
 
+  // Entradas que coinciden con una salida el mismo día en el mismo inmueble (rotación).
+  const sameDayCheckIns = checkInsNext.filter((r) =>
+    reservations.some(
+      (x) =>
+        x.propertyId === r.propertyId
+        && x.id !== r.id
+        && isSameDay(x.checkOut, r.checkIn),
+    ),
+  ).length;
+
   const monthNow = today.getMonth();
   const yearNow = today.getFullYear();
   const expectedMonthIncome = proratedIncome(reservations, null, monthNow, yearNow);
@@ -268,6 +278,7 @@ export default function Dashboard() {
             checkOuts={checkOutsNext.length}
             cleanings={pendingCleanings.length}
             unassigned={unassigned.length}
+            sameDayCheckIns={sameDayCheckIns}
             lookaheadDays={lookaheadDays}
             className="h-full"
           />

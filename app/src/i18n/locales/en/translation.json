@@ -73,6 +73,8 @@
     "sinAsignar_other": "{{count}} unassigned",
     "porAsignar_one": "{{count}} to assign",
     "porAsignar_other": "{{count}} to assign",
+    "mismoDia_one": "{{count}} same day",
+    "mismoDia_other": "{{count}} same day",
     "vsMesAnterior": "vs previous month",
     "entradas": "Check-ins",
     "salidas": "Check-outs",
