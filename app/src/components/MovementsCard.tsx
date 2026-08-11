@@ -1,5 +1,4 @@
 import { Link } from 'react-router';
-import { motion, useReducedMotion } from 'framer-motion';
 import type { LucideIcon } from 'lucide-react';
 import { LogIn, LogOut, Sparkles } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
@@ -26,7 +25,6 @@ interface MovementsCardProps {
 /** Tarjeta unificada de movimientos (entradas · salidas · limpiezas): número y etiqueta en mayúsculas, compacta, con leyenda del plazo. */
 export default function MovementsCard({ checkIns, checkOuts, cleanings, unassigned, lookaheadDays, className }: MovementsCardProps) {
   const { t } = useTranslation();
-  const reduce = useReducedMotion();
 
   const rows: Row[] = [
     {
@@ -77,7 +75,7 @@ export default function MovementsCard({ checkIns, checkOuts, cleanings, unassign
             <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg" style={{ backgroundColor: bg }}>
               <Icon className="h-4 w-4" style={{ color }} strokeWidth={2} />
             </span>
-            <span className="flex items-baseline gap-1.5">
+            <span className="flex min-w-0 flex-1 items-baseline gap-1.5">
               <span className="font-display tnum text-[19px] font-semibold leading-6" style={{ color: 'var(--text)' }}>
                 {value}
               </span>
@@ -85,19 +83,24 @@ export default function MovementsCard({ checkIns, checkOuts, cleanings, unassign
                 {label}
               </span>
             </span>
+            {to === '/limpieza' && unassigned > 0 && (
+              <span
+                className="shrink-0 rounded-full px-2 py-0.5 text-[11px] font-semibold whitespace-nowrap"
+                style={{ backgroundColor: 'var(--ro-chip-bg)', color: '#F43F5E' }}
+              >
+                {t('dash.porAsignar', { count: unassigned })}
+              </span>
+            )}
+            {to === '/limpieza' && unassigned === 0 && (
+              <span
+                className="shrink-0 rounded-full px-2 py-0.5 text-[11px] font-semibold whitespace-nowrap"
+                style={{ backgroundColor: 'var(--em-chip-bg)', color: '#10B981' }}
+              >
+                {t('dash.sinAsignar', { count: 0 })}
+              </span>
+            )}
           </Link>
         ))}
-      </div>
-      <div className="flex items-center justify-center gap-1.5">
-        <motion.span
-          initial={reduce ? false : { opacity: 0, y: 4 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.2, duration: 0.4 }}
-          className="text-xs font-medium"
-          style={{ color: unassigned > 0 ? '#F43F5E' : 'var(--text-muted)' }}
-        >
-          {t('dash.limpiezasSinAsignar', { count: unassigned })}
-        </motion.span>
       </div>
     </div>
   );

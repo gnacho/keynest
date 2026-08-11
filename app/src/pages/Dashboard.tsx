@@ -93,9 +93,6 @@ export default function Dashboard() {
 
   const properties = data.getProperties();
   const reservations = data.getReservations();
-  const me = cachedUser();
-  const myPropertyIds = me ? new Set(properties.filter((p) => p.ownerId === me.id).map((p) => p.id)) : null;
-  const myReservations = myPropertyIds ? reservations.filter((r) => myPropertyIds.has(r.propertyId)) : reservations;
   const cleanings = data.getCleanings();
   const maintenance = data.getMaintenance();
   const tedeeAccess = data.getTedeeAccess();
@@ -133,8 +130,8 @@ export default function Dashboard() {
 
   const monthNow = today.getMonth();
   const yearNow = today.getFullYear();
-  const expectedMonthIncome = proratedIncome(myReservations, null, monthNow, yearNow);
-  const monthReservations = myReservations.filter(
+  const expectedMonthIncome = proratedIncome(reservations, null, monthNow, yearNow);
+  const monthReservations = reservations.filter(
     (r) => (r.checkIn.getMonth() === monthNow && r.checkIn.getFullYear() === yearNow)
       || (r.checkOut.getMonth() === monthNow && r.checkOut.getFullYear() === yearNow),
   ).length;
