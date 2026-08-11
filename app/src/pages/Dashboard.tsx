@@ -354,7 +354,7 @@ export default function Dashboard() {
       <Sheet open={statsProp !== null} onOpenChange={(o) => !o && setStatsProp(null)}>
         <SheetContent
           side="bottom"
-          className="rounded-t-3xl border-[var(--border)] bg-[var(--surface)] pb-[calc(24px+env(safe-area-inset-bottom))] lg:inset-y-0 lg:right-0 lg:left-auto lg:h-full lg:w-[420px] lg:rounded-none lg:border-l"
+          className="max-h-[85dvh] overflow-y-auto rounded-t-3xl border-[var(--border)] bg-[var(--surface)] pb-[calc(24px+env(safe-area-inset-bottom))] lg:inset-y-0 lg:right-0 lg:left-auto lg:h-full lg:max-h-none lg:w-[420px] lg:overflow-hidden lg:rounded-none lg:border-l"
         >
           {statsProp && (() => {
             const income = proratedIncome(reservations, statsProp.id, monthNow, yearNow);
