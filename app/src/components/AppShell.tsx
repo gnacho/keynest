@@ -34,6 +34,7 @@ import type { ThemeMode } from '@/theme/ThemeProvider';
 import { useData } from '@/data/useData';
 import { cachedUser, logout } from '@/lib/auth';
 import { APP_VERSION } from '@/components/settings/settings-cards';
+import PersonAvatar from '@/components/PersonAvatar';
 import { cn } from '@/lib/utils';
 
 const EASE_OUT_QUART: [number, number, number, number] = [0.25, 1, 0.5, 1];
@@ -182,6 +183,42 @@ function ThemeCycleButton() {
         </motion.span>
       </AnimatePresence>
     </button>
+  );
+}
+
+function UserButton({ compact = false }: { compact?: boolean }) {
+  const { t } = useTranslation();
+  const user = cachedUser();
+  if (!user) return null;
+  const name = user.display_name || user.username || '';
+  const initials = (user.username ?? '')
+    .split(' ')
+    .map((w) => w[0])
+    .slice(0, 2)
+    .join('')
+    .toUpperCase();
+  return (
+    <NavLink
+      to="/ajustes"
+      aria-label={t('nav.ajustes')}
+      className={cn(
+        'flex h-9 items-center gap-2 rounded-xl transition-colors duration-150 hover:bg-[var(--surface-2)]',
+        compact ? 'w-9 justify-center' : 'px-1.5',
+      )}
+    >
+      {user.avatar ? (
+        <span className="h-7 w-7 shrink-0 overflow-hidden rounded-full">
+          <img src={user.avatar} alt="" className="h-full w-full object-cover" />
+        </span>
+      ) : (
+        <PersonAvatar name={name} initials={initials} size={28} />
+      )}
+      {!compact && (
+        <span className="hidden max-w-[110px] truncate text-sm font-medium sm:inline" style={{ color: 'var(--text)' }}>
+          {name}
+        </span>
+      )}
+    </NavLink>
   );
 }
 
@@ -466,9 +503,9 @@ export default function AppShell({ children }: { children: ReactNode }) {
             {title}
           </h1>
            <div className="flex w-auto items-center gap-1.5">
-             <NotificationsPopover />
-             <ConnectionDot />
              <ThemeCycleButton />
+             <NotificationsPopover />
+             <UserButton compact />
            </div>
         </header>
 
@@ -483,8 +520,9 @@ export default function AppShell({ children }: { children: ReactNode }) {
             style={{ borderColor: 'var(--border)', backgroundColor: 'color-mix(in srgb, var(--surface) 85%, transparent)' }}>
             <h1 className="font-display text-xl font-semibold tracking-[-0.01em]">{title}</h1>
             <div className="flex items-center gap-2">
-              <NotificationsPopover />
               <ThemeToggle />
+              <NotificationsPopover />
+              <UserButton />
             </div>
           </header>
 
