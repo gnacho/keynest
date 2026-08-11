@@ -77,20 +77,14 @@ export default function PropertyCard({ property, className }: PropertyCardProps)
         </div>
       </div>
 
-      <div className="flex items-center gap-1.5 px-3 pt-1.5 pb-2">
-        <span
-          className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold"
-          style={{ backgroundColor: 'var(--surface-2)', color: 'var(--text-muted)' }}
-        >
-          <BedDouble className="h-3.5 w-3.5" />
-          {property.bedrooms} dorm
+      <div className="flex items-center gap-3 px-3 pt-1.5 pb-2">
+        <span className="inline-flex items-center gap-1 text-[13px] font-semibold" style={{ color: 'var(--text-muted)' }}>
+          <BedDouble className="h-4 w-4" />
+          <span className="font-display tnum">{property.bedrooms}</span>
         </span>
-        <span
-          className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold"
-          style={{ backgroundColor: 'var(--surface-2)', color: 'var(--text-muted)' }}
-        >
-          <Ruler className="h-3.5 w-3.5" />
-          {property.area} m²
+        <span className="inline-flex items-center gap-1 text-[13px] font-semibold" style={{ color: 'var(--text-muted)' }}>
+          <Ruler className="h-4 w-4" />
+          <span className="font-display tnum">{property.area}</span>
         </span>
       </div>
 
