@@ -9,7 +9,6 @@ import {
   CheckCircle2,
   ChevronDown,
   Euro,
-  MoonStar,
   Plus,
   Search,
   Users,
@@ -202,31 +201,26 @@ export default function Reservas() {
 
   /* KPIs de vista (ámbito = inmueble filtrado) */
   const scoped = filteredProp ? base.filter((r) => r.propertyId === filteredProp.id) : base;
+  const lookaheadDays = data.getSettings().lookaheadDays;
   const kpis = useMemo(() => {
-    const m = now.getMonth();
-    const y = now.getFullYear();
-    let nightsMonth = 0;
-    let income30 = 0;
+    let incomeNext = 0;
     let nightsTotal = 0;
-    const in30 = addDays(today, 30).getTime();
+    const inNext = addDays(today, lookaheadDays).getTime();
     for (const r of scoped) {
       const nights = nightsOf(r);
       nightsTotal += nights;
       const perNight = r.amount / nights;
       for (let n = 0; n < nights; n++) {
-        const d = addDays(startOfDay(r.checkIn), n);
-        if (d.getMonth() === m && d.getFullYear() === y) nightsMonth++;
-        const t = d.getTime();
-        if (t >= today.getTime() && t < in30) income30 += perNight;
+        const t = startOfDay(addDays(r.checkIn, n)).getTime();
+        if (t >= today.getTime() && t < inNext) incomeNext += perNight;
       }
     }
     return {
-      nightsMonth,
-      income30: Math.round(income30),
+      incomeNext: Math.round(incomeNext),
       avgStay: scoped.length ? nightsTotal / scoped.length : 0,
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [base, filteredProp?.id]);
+  }, [base, filteredProp?.id, lookaheadDays]);
 
   /* ?reserva=<id>: auto-expandir, resaltar y scroll suave */
   useEffect(() => {
@@ -332,20 +326,25 @@ export default function Reservas() {
     <div className="flex flex-col gap-5">
       {/* Filtros + buscador + botón añadir (misma fila) */}
       <div className="flex flex-wrap items-center gap-2">
-        <FilterBar hideAll className="mx-0 px-0" typeOptions={STATUS_OPTIONS.map((o) => ({ value: o.value, label: t(o.labelKey) }))} />
-        <div className="relative">
-          <Search
-            className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2"
-            style={{ color: 'var(--text-faint)' }}
-          />
-          <input
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder={t('res.buscar')}
-            className={cn(inputCls, 'w-[190px] pl-9')}
-            style={{ borderColor: 'var(--border)' }}
-          />
-        </div>
+        <FilterBar
+          hideAll
+          className="mx-0 min-w-0 flex-1 px-0 sm:flex-none"
+          typeOptions={STATUS_OPTIONS.map((o) => ({ value: o.value, label: t(o.labelKey) }))}
+        >
+          <div className="relative min-w-0 flex-1">
+            <Search
+              className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2"
+              style={{ color: 'var(--text-faint)' }}
+            />
+            <input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder={t('res.buscar')}
+              className={cn(inputCls, 'w-full pl-9')}
+              style={{ borderColor: 'var(--border)' }}
+            />
+          </div>
+        </FilterBar>
         {filteredProp && (
           <button
             type="button"
@@ -374,11 +373,10 @@ export default function Reservas() {
       </div>
 
       {/* KPIs de vista */}
-      <div className="snap-carousel -mx-4 flex gap-3 overflow-x-auto px-4 lg:mx-0 lg:grid lg:grid-cols-3 lg:overflow-visible lg:px-0">
+      <div className="snap-carousel -mx-4 flex gap-3 overflow-x-auto px-4 lg:mx-0 lg:grid lg:grid-cols-2 lg:overflow-visible lg:px-0">
         {(
           [
-            <KpiCard key="n" icon={MoonStar} tone="blue" label={t('res.nochesMes')} value={kpis.nightsMonth} />,
-            <KpiCard key="i" icon={Euro} tone="emerald" label={t('res.ingresos30')} value={kpis.income30} unit="€" money />,
+            <KpiCard key="i" icon={Euro} tone="emerald" label={t('res.ingresos30', { days: lookaheadDays })} value={kpis.incomeNext} unit="€" money />,
             <KpiCard key="e" icon={CalendarRange} tone="indigo" label={t('res.estanciaMedia')} value={kpis.avgStay} decimals={1} unit={t('res.noches')} />,
           ] as const
         ).map((card, i) => (

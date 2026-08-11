@@ -178,7 +178,7 @@
     "filtrado": "Filtered: {{name}}",
     "misInmuebles": "My properties",
     "nochesMes": "Booked nights (month)",
-    "ingresos30": "Income next 30 days",
+    "ingresos30": "Next {{days}} days",
     "estanciaMedia": "Average stay",
     "noches": "nights",
     "huesped": "Guest",

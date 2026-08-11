@@ -179,7 +179,7 @@
     "filtrado": "Filtrado: {{name}}",
     "misInmuebles": "Mis inmuebles",
     "nochesMes": "Noches reservadas (mes)",
-    "ingresos30": "Ingresos próximos 30 días",
+    "ingresos30": "Próximos {{days}} días",
     "estanciaMedia": "Estancia media",
     "noches": "noches",
     "huesped": "Huésped",

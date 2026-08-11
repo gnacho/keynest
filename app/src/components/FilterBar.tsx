@@ -1,4 +1,5 @@
 import { useSearchParams } from 'react-router';
+import type { ReactNode } from 'react';
 import {
   Select,
   SelectContent,
@@ -22,13 +23,15 @@ interface FilterBarProps {
   showMine?: boolean;
   /** Valor por defecto del select cuando no hay param (default "todos") */
   defaultProperty?: string;
+  /** Contenido extra (p. ej. buscador) dentro de la misma fila de filtros */
+  children?: ReactNode;
 }
 
 /**
  * Select de inmueble ("Todos" + "Mis inmuebles" + 5) + chips de tipo.
  * Lee/escribe query params (?inmueble=<slug|mis>&tipo=…). Sticky bajo el topbar en móvil.
  */
-export default function FilterBar({ typeOptions, typeParam = 'tipo', className, hideAll = false, showMine = true, defaultProperty = 'todos' }: FilterBarProps) {
+export default function FilterBar({ typeOptions, typeParam = 'tipo', className, hideAll = false, showMine = true, defaultProperty = 'todos', children }: FilterBarProps) {
   const { t } = useTranslation();
   const { getProperties } = useData();
   const [params, setParams] = useSearchParams();
@@ -52,22 +55,25 @@ export default function FilterBar({ typeOptions, typeParam = 'tipo', className, 
     <div
       className={cn('flex flex-wrap items-center gap-2', className)}
     >
-      <Select value={inmueble} onValueChange={(v) => setParam('inmueble', v, v === 'todos')}>
-        <SelectTrigger className="h-9 w-auto min-w-[180px] gap-2 rounded-xl border-[var(--border)] bg-[var(--surface)] text-sm font-medium shadow-none">
-          <SelectValue placeholder={t('cal.todos')} />
-        </SelectTrigger>
-        <SelectContent className="rounded-xl border-[var(--border)] bg-[var(--surface)]">
-          <SelectItem value="todos">{t('cal.todos')}</SelectItem>
-          {showMine && hasOwn && (
-            <SelectItem value="mis">{t('cal.misInmuebles')}</SelectItem>
-          )}
-          {getProperties().map((p) => (
-            <SelectItem key={p.slug} value={p.slug}>
-              {p.name}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
+      <div className="flex min-w-0 flex-1 items-center gap-2 sm:flex-none">
+        <Select value={inmueble} onValueChange={(v) => setParam('inmueble', v, v === 'todos')}>
+          <SelectTrigger className="h-9 w-full min-w-0 flex-1 gap-2 rounded-xl border-[var(--border)] bg-[var(--surface)] text-sm font-medium shadow-none sm:w-auto sm:min-w-[180px] sm:flex-none">
+            <SelectValue placeholder={t('cal.todos')} />
+          </SelectTrigger>
+          <SelectContent className="rounded-xl border-[var(--border)] bg-[var(--surface)]">
+            <SelectItem value="todos">{t('cal.todos')}</SelectItem>
+            {showMine && hasOwn && (
+              <SelectItem value="mis">{t('cal.misInmuebles')}</SelectItem>
+            )}
+            {getProperties().map((p) => (
+              <SelectItem key={p.slug} value={p.slug}>
+                {p.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        {children}
+      </div>
 
       {typeOptions && (
         <div className="flex max-w-full flex-wrap items-center gap-1 rounded-xl border p-1" style={{ borderColor: 'var(--border)', backgroundColor: 'var(--surface)' }}>
