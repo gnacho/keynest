@@ -242,21 +242,6 @@ export default function Inmuebles() {
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex flex-wrap items-center justify-end gap-2">
-        {!isDemoUser && (
-          <>
-            <button
-              type="button"
-              onClick={openNewProp}
-              className="brand-gradient flex h-10 items-center gap-1.5 rounded-xl px-4 text-sm font-semibold text-white transition-all duration-150 hover:brightness-110 active:scale-[0.98]"
-            >
-              <Plus className="h-4 w-4" />
-              {tr('aj.nuevoInmueble')}
-            </button>
-          </>
-        )}
-      </div>
-
       <motion.div variants={containerV} initial="hidden" animate="show" className="grid gap-4 lg:grid-cols-2">
         {properties.map((p) => {
           const name = p.name;
@@ -360,6 +345,19 @@ export default function Inmuebles() {
           );
         })}
       </motion.div>
+
+      {!isDemoUser && (
+        <div className="flex justify-center">
+          <button
+            type="button"
+            onClick={openNewProp}
+            className="brand-gradient flex h-11 items-center gap-1.5 rounded-xl px-6 text-sm font-semibold text-white transition-all duration-150 hover:brightness-110 active:scale-[0.98]"
+          >
+            <Plus className="h-4 w-4" />
+            {tr('aj.nuevoInmueble')}
+          </button>
+        </div>
+      )}
 
       {/* ============================== Dialog edición inmueble */}
       <Dialog open={!!editProp} onOpenChange={(o) => !o && setEditProp(null)}>
