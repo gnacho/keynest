@@ -9,7 +9,6 @@ import {
   CheckCircle2,
   ChevronDown,
   Euro,
-  Home,
   MoonStar,
   Plus,
   Search,
@@ -128,15 +127,15 @@ export default function Reservas() {
   const inmueble = params.get('inmueble') ?? 'todos';
   const tipo = params.get('tipo') ?? 'activas';
   const reservaParam = params.get('reserva');
-  const filteredProp = inmueble !== 'todos' ? data.getProperty(inmueble) : undefined;
+  const filteredProp = inmueble !== 'todos' && inmueble !== 'mis' ? data.getProperty(inmueble) : undefined;
 
-  // "Mis inmuebles": filtra por las propiedades asignadas al usuario actual (?usuario=<id>)
+  // "Mis inmuebles": filtra por las propiedades asignadas al usuario actual (select inmueble=mis)
   const me = cachedUser();
   const misProperties = useMemo(
     () => (me ? data.getProperties().filter((p) => p.ownerId === me.id) : []),
     [me, data.version],
   );
-  const soloMis = params.get('usuario') === me?.id;
+  const soloMis = inmueble === 'mis';
   const misPropertyIds = useMemo(() => new Set(misProperties.map((p) => p.id)), [misProperties]);
 
   const base = useMemo(() => data.getReservations(), [data.version]);
@@ -360,26 +359,6 @@ export default function Reservas() {
             style={{ backgroundImage: 'linear-gradient(135deg,#6366F1,#8B5CF6)' }}
           >
             {t('res.filtrado', { name: filteredProp.name })} ×
-          </button>
-        )}
-        {me && (
-          <button
-            type="button"
-            aria-pressed={soloMis}
-            onClick={() => {
-              const p = new URLSearchParams(params);
-              if (soloMis) p.delete('usuario');
-              else p.set('usuario', me.id);
-              setParams(p, { replace: true });
-            }}
-            className={cn(
-              'flex h-9 items-center gap-1.5 rounded-xl border px-3 text-[13px] font-semibold transition-colors',
-              soloMis ? 'text-white' : 'hover:bg-[var(--surface-2)]',
-            )}
-            style={soloMis ? { borderColor: '#6366F1', backgroundImage: 'linear-gradient(135deg,#6366F1,#8B5CF6)' } : { borderColor: 'var(--border)', color: 'var(--text-muted)' }}
-          >
-            <Home className="h-4 w-4" />
-            {t('res.misInmuebles')}
           </button>
         )}
         {!data.isDemo && (

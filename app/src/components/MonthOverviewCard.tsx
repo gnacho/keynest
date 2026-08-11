@@ -16,6 +16,7 @@ interface Metric {
   label: string;
   value: string;
   to: string;
+  big?: boolean;
 }
 
 interface MonthOverviewCardProps {
@@ -52,6 +53,7 @@ export default function MonthOverviewCard({ occupancyPct, spark, income, reserva
       label: t('dash.ingresosPrevistosMes'),
       value: `${fmtNumber(income)} €`,
       to: '/rentabilidad',
+      big: true,
     },
     {
       icon: CalendarCheck2,
@@ -65,34 +67,40 @@ export default function MonthOverviewCard({ occupancyPct, spark, income, reserva
 
   return (
     <div className={`card flex h-full flex-col gap-3 p-3 ${className ?? ''}`}>
-      <Link
-        to="/calendario"
-        className="flex items-center gap-3 rounded-xl px-1 py-1 transition-colors duration-150 hover:bg-[var(--surface-2)]"
+      <p
+        className="text-[10px] font-semibold uppercase leading-4 tracking-[0.08em]"
+        style={{ color: 'var(--text-faint)' }}
       >
-        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl" style={{ backgroundColor: 'var(--bl-chip-bg)' }}>
-          <BedDouble className="h-[18px] w-[18px]" style={{ color: '#3B82F6' }} strokeWidth={2} />
-        </span>
-        <span className="min-w-0 flex-1">
-          <span className="block text-xs font-semibold uppercase tracking-[0.08em]" style={{ color: 'var(--text-faint)' }}>
-            {t('dash.ocupacionActual')}
+        {t('dash.tusInmueblesEsteMes')}
+      </p>
+      <div className="flex flex-col gap-1">
+        <Link
+          to="/calendario"
+          className="flex items-center gap-3 rounded-xl px-1 py-1 transition-colors duration-150 hover:bg-[var(--surface-2)]"
+        >
+          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl" style={{ backgroundColor: 'var(--bl-chip-bg)' }}>
+            <BedDouble className="h-[18px] w-[18px]" style={{ color: '#3B82F6' }} strokeWidth={2} />
           </span>
-          <span className="font-display tnum text-[20px] font-semibold leading-6" style={{ color: 'var(--text)' }}>
-            {fmtPct(display)}
+          <span className="min-w-0 flex-1">
+            <span className="block text-xs font-medium" style={{ color: 'var(--text-muted)' }}>
+              {t('dash.ocupacionActual')}
+            </span>
+            <span className="font-display tnum text-[20px] font-semibold leading-7" style={{ color: 'var(--text)' }}>
+              {fmtPct(display)}
+            </span>
           </span>
-        </span>
-        {spark.length > 1 && (
-          <span className="h-7 w-14 shrink-0">
-            <Sparkline data={spark} color="#3B82F6" />
-          </span>
-        )}
-      </Link>
+          {spark.length > 1 && (
+            <span className="h-7 w-14 shrink-0">
+              <Sparkline data={spark} color="#3B82F6" />
+            </span>
+          )}
+        </Link>
 
-      <div className="flex flex-col border-t" style={{ borderColor: 'var(--border)' }}>
-        {metrics.map(({ icon: Icon, color, bg, label, value, to }) => (
+        {metrics.map(({ icon: Icon, color, bg, label, value, to, big }) => (
           <Link
             key={to + label}
             to={to}
-            className="flex items-center gap-3 rounded-xl px-1 py-1.5 transition-colors duration-150 hover:bg-[var(--surface-2)]"
+            className="flex items-center gap-3 rounded-xl px-1 py-1 transition-colors duration-150 hover:bg-[var(--surface-2)]"
           >
             <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl" style={{ backgroundColor: bg }}>
               <Icon className="h-[18px] w-[18px]" style={{ color }} strokeWidth={2} />
@@ -100,7 +108,10 @@ export default function MonthOverviewCard({ occupancyPct, spark, income, reserva
             <span className="min-w-0 flex-1 truncate text-xs font-medium" style={{ color: 'var(--text-muted)' }}>
               {label}
             </span>
-            <span className="shrink-0 font-display tnum text-[18px] font-semibold" style={{ color: 'var(--text)' }}>
+            <span
+              className="shrink-0 font-display tnum font-semibold"
+              style={{ color: 'var(--text)', fontSize: big ? '24px' : '20px', lineHeight: '1.5' }}
+            >
               {value}
             </span>
           </Link>

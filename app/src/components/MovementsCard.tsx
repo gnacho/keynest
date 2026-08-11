@@ -23,7 +23,7 @@ interface MovementsCardProps {
   className?: string;
 }
 
-/** Tarjeta unificada de movimientos (entradas · salidas · limpiezas) con número + etiqueta por fila. */
+/** Tarjeta unificada de movimientos (entradas · salidas · limpiezas): número y etiqueta al mismo tamaño, con leyenda del plazo. */
 export default function MovementsCard({ checkIns, checkOuts, cleanings, unassigned, lookaheadDays, className }: MovementsCardProps) {
   const { t } = useTranslation();
   const reduce = useReducedMotion();
@@ -35,7 +35,7 @@ export default function MovementsCard({ checkIns, checkOuts, cleanings, unassign
       color: '#10B981',
       bg: 'var(--em-chip-bg)',
       value: checkIns,
-      label: t('dash.entradasPeriodo', { days: lookaheadDays }),
+      label: t('dash.entradas'),
       ariaLabel: t('dash.entradas'),
     },
     {
@@ -44,7 +44,7 @@ export default function MovementsCard({ checkIns, checkOuts, cleanings, unassign
       color: '#F97316',
       bg: 'var(--or-chip-bg)',
       value: checkOuts,
-      label: t('dash.salidasPeriodo', { days: lookaheadDays }),
+      label: t('dash.salidas'),
       ariaLabel: t('dash.salidas'),
     },
     {
@@ -53,13 +53,19 @@ export default function MovementsCard({ checkIns, checkOuts, cleanings, unassign
       color: '#8B5CF6',
       bg: 'var(--vi-chip-bg)',
       value: cleanings,
-      label: t('dash.limpiezasPeriodo', { days: lookaheadDays }),
+      label: t('dash.limpiezas'),
       ariaLabel: t('dash.limpiezas'),
     },
   ];
 
   return (
     <div className={`card flex h-full flex-col justify-between gap-3 p-3 ${className ?? ''}`}>
+      <p
+        className="text-[10px] font-semibold uppercase leading-4 tracking-[0.08em]"
+        style={{ color: 'var(--text-faint)' }}
+      >
+        {t('dash.proximosDias', { days: lookaheadDays })}
+      </p>
       <div className="flex flex-col">
         {rows.map(({ to, icon: Icon, color, bg, value, label, ariaLabel }) => (
           <Link
@@ -71,11 +77,13 @@ export default function MovementsCard({ checkIns, checkOuts, cleanings, unassign
             <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl" style={{ backgroundColor: bg }}>
               <Icon className="h-[18px] w-[18px]" style={{ color }} strokeWidth={2} />
             </span>
-            <span className="min-w-0 flex-1 font-display tnum text-[20px] font-semibold leading-6" style={{ color: 'var(--text)' }}>
-              {value}
-            </span>
-            <span className="truncate text-xs font-medium" style={{ color: 'var(--text-muted)' }}>
-              {label}
+            <span className="flex items-baseline gap-2">
+              <span className="font-display tnum text-[22px] font-semibold leading-7" style={{ color: 'var(--text)' }}>
+                {value}
+              </span>
+              <span className="font-display text-[17px] font-semibold" style={{ color: 'var(--text-muted)' }}>
+                {label}
+              </span>
             </span>
           </Link>
         ))}

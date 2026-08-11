@@ -27,6 +27,7 @@ import {
 import { useTranslation } from 'react-i18next';
 import { useData } from '@/data/useData';
 import type { CleaningStatus } from '@/data/types';
+import { myPropertyIds } from '@/lib/auth';
 import { fmtDateShort, fmtMoney, isSameDay } from '@/lib/format';
 
 const EASE_OUT_QUART: [number, number, number, number] = [0.25, 1, 0.5, 1];
@@ -62,6 +63,7 @@ export default function Limpieza() {
 
   const all = data.getCleanings();
   const now = new Date();
+  const mine = myPropertyIds(data.getProperties());
 
   /* ---- KPIs computados ---- */
   const pendientesHoy = all.filter((c) => isSameDay(c.date, now) && c.status !== 'archivada').length;
@@ -85,7 +87,9 @@ export default function Limpieza() {
   /* ---- Lista filtrada + orden: activas primero, archivadas solo si se piden ---- */
   const filtered = useMemo(() => {
     const list = all.filter((c) => {
-      if (inmueble !== 'todos' && data.getProperty(c.propertyId)?.slug !== inmueble) return false;
+      if (inmueble === 'mis') {
+        if (!mine.has(c.propertyId)) return false;
+      } else if (inmueble !== 'todos' && data.getProperty(c.propertyId)?.slug !== inmueble) return false;
       if (estado === 'todos' && c.status === 'archivada') return false;
       if (estado !== 'todos' && c.status !== (estado as CleaningStatus)) return false;
       return true;
@@ -99,7 +103,7 @@ export default function Limpieza() {
         : a.date.getTime() - b.date.getTime();
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [all, inmueble, estado, data.version]);
+  }, [all, inmueble, estado, mine, data.version]);
 
   return (
     <div className="flex flex-col gap-5">

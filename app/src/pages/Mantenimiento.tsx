@@ -9,6 +9,7 @@ import Fab from '@/components/Fab';
 import FilterBar from '@/components/FilterBar';
 import MaintenanceCard from '@/components/tareas/MaintenanceCard';
 import { catIcon } from '@/lib/cat-icons';
+import { myPropertyIds } from '@/lib/auth';
 import { getFreeWindow } from '@/components/tareas/free-window';
 import ToastHost from '@/components/tareas/toast';
 import { useToasts } from '@/components/tareas/use-toasts';
@@ -84,6 +85,7 @@ export default function Mantenimiento() {
 
   const inmueble = params.get('inmueble') ?? 'todos';
   const all = data.getMaintenance();
+  const mine = myPropertyIds(data.getProperties());
   const urgentes = all.filter((t) => t.urgent && t.status !== 'finalizada').length;
   const avisoDias = data.getSettings().nDays;
   const [mostrarAntiguas, setMostrarAntiguas] = useState(false);
@@ -96,14 +98,16 @@ export default function Mantenimiento() {
   const filtered = useMemo(
     () =>
       all.filter((t) => {
-        if (inmueble !== 'todos' && data.getProperty(t.propertyId)?.slug !== inmueble) return false;
+        if (inmueble === 'mis') {
+          if (!mine.has(t.propertyId)) return false;
+        } else if (inmueble !== 'todos' && data.getProperty(t.propertyId)?.slug !== inmueble) return false;
         if (categoria !== 'todas' && t.category !== categoria) return false;
         if (soloUrgentes && !t.urgent) return false;
         if (!mostrarAntiguas && t.status === 'finalizada' && t.scheduledDate && t.scheduledDate.getTime() < umbralAntiguas) return false;
         return true;
       }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [all, inmueble, categoria, soloUrgentes, mostrarAntiguas, data.version],
+    [all, inmueble, categoria, soloUrgentes, mostrarAntiguas, mine, data.version],
   );
 
   const byStatus = (s: MaintenanceStatus) =>
@@ -111,7 +115,7 @@ export default function Mantenimiento() {
       .filter((t) => t.status === s)
       .sort((a, b) => Number(b.urgent) - Number(a.urgent) || b.createdAt.getTime() - a.createdAt.getTime());
 
-  const selectedProperty = inmueble !== 'todos' ? data.getProperty(inmueble) : undefined;
+  const selectedProperty = inmueble !== 'todos' && inmueble !== 'mis' ? data.getProperty(inmueble) : undefined;
   const freeWindow = useMemo(
     () => (selectedProperty ? getFreeWindow(data, selectedProperty.id) : undefined),
     // eslint-disable-next-line react-hooks/exhaustive-deps

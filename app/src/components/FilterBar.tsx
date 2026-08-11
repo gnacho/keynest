@@ -8,6 +8,7 @@ import {
 } from '@/components/ui/select';
 import { useTranslation } from 'react-i18next';
 import { useData } from '@/data/useData';
+import { cachedUser } from '@/lib/auth';
 import { cn } from '@/lib/utils';
 
 interface FilterBarProps {
@@ -17,18 +18,28 @@ interface FilterBarProps {
   className?: string;
   /** Oculta la opción "todos" (el filtro siempre tiene un estado concreto) */
   hideAll?: boolean;
+  /** Muestra la opción "Mis inmuebles" en el select (default true) */
+  showMine?: boolean;
+  /** Valor por defecto del select cuando no hay param (default "todos") */
+  defaultProperty?: string;
 }
 
 /**
- * Select de inmueble ("Todos los inmuebles" + 5) + chips de tipo.
- * Lee/escribe query params (?inmueble=<slug>&tipo=…). Sticky bajo el topbar en móvil.
+ * Select de inmueble ("Todos" + "Mis inmuebles" + 5) + chips de tipo.
+ * Lee/escribe query params (?inmueble=<slug|mis>&tipo=…). Sticky bajo el topbar en móvil.
  */
-export default function FilterBar({ typeOptions, typeParam = 'tipo', className, hideAll = false }: FilterBarProps) {
+export default function FilterBar({ typeOptions, typeParam = 'tipo', className, hideAll = false, showMine = true, defaultProperty = 'todos' }: FilterBarProps) {
   const { t } = useTranslation();
   const { getProperties } = useData();
   const [params, setParams] = useSearchParams();
-  const inmueble = params.get('inmueble') ?? 'todos';
   const tipo = params.get(typeParam) ?? (hideAll ? typeOptions?.[0]?.value ?? 'todos' : 'todos');
+
+  const me = cachedUser();
+  const hasOwn = me ? getProperties().some((p) => p.ownerId === me.id) : false;
+
+  // Si el default es "mis" pero el usuario no tiene propiedades propias, cae a "todos".
+  const effectiveDefault = defaultProperty === 'mis' && !hasOwn ? 'todos' : defaultProperty;
+  const inmueble = params.get('inmueble') ?? effectiveDefault;
 
   const setParam = (key: string, value: string, isDefault: boolean) => {
     const next = new URLSearchParams(params);
@@ -43,10 +54,13 @@ export default function FilterBar({ typeOptions, typeParam = 'tipo', className, 
     >
       <Select value={inmueble} onValueChange={(v) => setParam('inmueble', v, v === 'todos')}>
         <SelectTrigger className="h-9 w-auto min-w-[180px] gap-2 rounded-xl border-[var(--border)] bg-[var(--surface)] text-sm font-medium shadow-none">
-          <SelectValue placeholder={t('cal.todosInmuebles')} />
+          <SelectValue placeholder={t('cal.todos')} />
         </SelectTrigger>
         <SelectContent className="rounded-xl border-[var(--border)] bg-[var(--surface)]">
-          <SelectItem value="todos">{t('cal.todosInmuebles')}</SelectItem>
+          <SelectItem value="todos">{t('cal.todos')}</SelectItem>
+          {showMine && hasOwn && (
+            <SelectItem value="mis">{t('cal.misInmuebles')}</SelectItem>
+          )}
           {getProperties().map((p) => (
             <SelectItem key={p.slug} value={p.slug}>
               {p.name}
