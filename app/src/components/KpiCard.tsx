@@ -169,41 +169,41 @@ export default function KpiCard({
   const up = (deltaPct ?? 0) >= 0;
 
   const rootCls = cn(
-    'card flex h-full flex-col gap-2 p-4',
+    'card flex h-full flex-col gap-1.5 p-3',
     to && 'transition-all duration-150 hover:-translate-y-0.5 hover:shadow-overlay',
     className,
   );
 
   const inner = (
     <>
-      <div className="flex items-center justify-between">
-        <span
-          className="flex h-9 w-9 items-center justify-center rounded-xl"
-          style={{ backgroundColor: TINT[tone].bg }}
-        >
-          <Icon className="h-[18px] w-[18px]" style={{ color: TINT[tone].fg }} strokeWidth={2} />
-        </span>
-        {spark && spark.length > 1 && (
-          <div className="h-7 w-16">
-            <Sparkline data={spark} color={sparkColor ?? TINT[tone].fg} reduce={!!reduce} />
-          </div>
-        )}
-      </div>
       <p
-        className="text-[11px] font-semibold uppercase leading-4 tracking-[0.08em]"
+        className="text-[10px] font-semibold uppercase leading-4 tracking-[0.08em]"
         style={{ color: 'var(--text-faint)' }}
       >
         {label}
       </p>
-      <p className="font-display tnum text-[28px] font-semibold leading-8 tracking-[-0.02em]">
-        {prefix}
-        {formatted}
-        {unit && (
-          <span className="whitespace-nowrap font-medium" style={{ fontSize: '0.6em', color: 'var(--text-faint)', marginLeft: 2 }}>
-            {unit}
-          </span>
+      <div className="flex items-center gap-2.5">
+        <span
+          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl"
+          style={{ backgroundColor: TINT[tone].bg }}
+        >
+          <Icon className="h-[18px] w-[18px]" style={{ color: TINT[tone].fg }} strokeWidth={2} />
+        </span>
+        <p className="min-w-0 flex-1 font-display tnum text-[22px] font-semibold leading-8 tracking-[-0.02em]">
+          {prefix}
+          {formatted}
+          {unit && (
+            <span className="whitespace-nowrap font-medium" style={{ fontSize: '0.6em', color: 'var(--text-faint)', marginLeft: 2 }}>
+              {unit}
+            </span>
+          )}
+        </p>
+        {spark && spark.length > 1 && (
+          <div className="h-7 w-14 shrink-0">
+            <Sparkline data={spark} color={sparkColor ?? TINT[tone].fg} reduce={!!reduce} />
+          </div>
         )}
-      </p>
+      </div>
       <div className="flex items-center gap-2">
         {deltaPct !== undefined && (
           <span
