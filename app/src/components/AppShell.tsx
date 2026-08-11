@@ -553,7 +553,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
               </motion.div>
             </AnimatePresence>
             </PullToRefresh>
-            <p className="mt-4 text-right text-[9px] font-medium" style={{ color: 'var(--text-faint)' }}>
+            <p className="pointer-events-none fixed bottom-[68px] right-2 z-30 text-[9px] font-medium md:bottom-2 md:right-3" style={{ color: 'var(--text-faint)' }}>
               v{APP_VERSION}
             </p>
           </main>

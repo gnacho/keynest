@@ -56,7 +56,7 @@ export default function FilterBar({ typeOptions, typeParam = 'tipo', className, 
       className={cn('flex flex-wrap items-center gap-2', className)}
     >
       <div className="flex min-w-0 flex-1 items-center gap-2 sm:flex-none">
-        <Select value={inmueble} onValueChange={(v) => setParam('inmueble', v, v === 'todos')}>
+        <Select value={inmueble} onValueChange={(v) => setParam('inmueble', v, v === effectiveDefault)}>
           <SelectTrigger className="h-9 w-full min-w-0 flex-1 gap-2 rounded-xl border-[var(--border)] bg-[var(--surface)] text-sm font-medium shadow-none sm:w-auto sm:min-w-[180px] sm:flex-none">
             <SelectValue placeholder={t('cal.todos')} />
           </SelectTrigger>
@@ -76,7 +76,7 @@ export default function FilterBar({ typeOptions, typeParam = 'tipo', className, 
       </div>
 
       {typeOptions && (
-        <div className="flex max-w-full flex-wrap items-center gap-1 rounded-xl border p-1" style={{ borderColor: 'var(--border)', backgroundColor: 'var(--surface)' }}>
+        <div className="flex w-full max-w-full flex-wrap items-center gap-1 rounded-xl border p-1 sm:w-auto" style={{ borderColor: 'var(--border)', backgroundColor: 'var(--surface)' }}>
           {!hideAll && (
             <button
               type="button"
