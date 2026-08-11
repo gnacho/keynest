@@ -390,6 +390,9 @@ export default function AppShell({ children }: { children: ReactNode }) {
                 </button>
               </div>
             )}
+            <p className="text-center text-[9px] font-medium" style={{ color: 'var(--text-faint)' }}>
+              v{APP_VERSION}
+            </p>
           </div>
         </aside>
 
