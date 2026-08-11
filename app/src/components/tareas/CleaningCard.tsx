@@ -332,8 +332,8 @@ export default function CleaningCard({ cleaning: c, variants, highlight = false,
       {/* Sheet de edición con el cuerpo completo */}
       <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
         <SheetContent
-          side="bottom"
-          className="flex flex-col gap-3 overflow-y-auto rounded-t-3xl border-[var(--border)] bg-[var(--surface)] pb-[calc(24px+env(safe-area-inset-bottom))] lg:inset-y-0 lg:right-0 lg:left-auto lg:h-full lg:w-[420px] lg:rounded-none lg:border-l"
+          side="right"
+          className="flex flex-col gap-3 overflow-y-auto border-[var(--border)] bg-[var(--surface)] w-full sm:max-w-[420px]"
         >
         {/* 1) CHECKLIST DEL INMUEBLE — lo primero que mira la persona de limpieza */}
         <div className="rounded-2xl border p-3" style={{ borderColor: 'var(--border)', backgroundColor: 'var(--surface-2)' }}>
