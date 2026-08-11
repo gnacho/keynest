@@ -390,9 +390,6 @@ export default function AppShell({ children }: { children: ReactNode }) {
                 </button>
               </div>
             )}
-            <p className="text-center text-[9px] font-medium" style={{ color: 'var(--text-faint)' }}>
-              v{APP_VERSION}
-            </p>
           </div>
         </aside>
 
@@ -526,6 +523,9 @@ export default function AppShell({ children }: { children: ReactNode }) {
               </motion.div>
             </AnimatePresence>
             </PullToRefresh>
+            <p className="mt-4 text-right text-[9px] font-medium" style={{ color: 'var(--text-faint)' }}>
+              v{APP_VERSION}
+            </p>
           </main>
         </div>
 
@@ -579,9 +579,6 @@ export default function AppShell({ children }: { children: ReactNode }) {
               );
             })}
           </div>
-          <p className="pb-2 pt-1 text-center text-[9px] font-medium" style={{ color: 'var(--text-faint)' }}>
-            v{APP_VERSION}
-          </p>
         </nav>
       </div>
     </TooltipProvider>
