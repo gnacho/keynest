@@ -9,6 +9,32 @@ y este proyecto se adhiere a [Versionado Semántico](https://semver.org/lang/es/
 
 ### Todo
 
+## [1.5.33] - 2026-08-11
+
+### Added
+
+- Resumen con dos tarjetas KPI consolidadas: movimientos (entradas, salidas,
+  limpiezas) y visión del mes (ocupación con sparkline, ingresos previstos,
+  reservas). Lado a lado desde el breakpoint `sm` para que quepan en plegables
+  desplegados tipo OnePlus Open. (#167, #174, #175, #182)
+- Topbar con el usuario a la derecha (avatar + nombre → Ajustes), orden
+  tema / campana / usuario; en móvil solo el icono y sin punto de conexión.
+  (#181)
+- Al navegar, la vista nueva arranca arriba (scroll reset); re-tocar el tab
+  activo de la barra inferior o el logo hace scroll suave al principio. (#184)
+
+### Fixed
+
+- Filtros de Reservas y Limpieza en una sola fila en desktop y en dos filas en
+  móvil; el estado activo queda en una segunda línea. (#176)
+- Rentabilidad: elegir "Todos los inmuebles" en el desplegable desactiva el
+  filtro "Mis inmuebles". (#178)
+- Limpieza: la vista archivada ya no se desborda horizontalmente en móvil y el
+  filtro de estado por defecto es "Pendientes". (#169, #170)
+- Hoja de estadísticas del inmueble responsive en todas las pantallas. (#172)
+- El botón de crear inmueble pasa al final de la página. (#171)
+- "Acerca de" con enlaces a Ko-fi, la web propia y el club. (#179, #180)
+
 ## [1.5.5] - 2026-08-10
 
 ### Added
