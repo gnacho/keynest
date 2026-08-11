@@ -362,7 +362,7 @@ export default function Dashboard() {
       <Sheet open={statsProp !== null} onOpenChange={(o) => !o && setStatsProp(null)}>
         <SheetContent
           side="bottom"
-          className="max-h-[85dvh] overflow-y-auto rounded-t-3xl border-[var(--border)] bg-[var(--surface)] pb-[calc(24px+env(safe-area-inset-bottom))] lg:inset-y-0 lg:right-0 lg:left-auto lg:h-full lg:max-h-none lg:w-[420px] lg:overflow-hidden lg:rounded-none lg:border-l"
+          className="max-h-[85dvh] overflow-y-auto rounded-t-3xl border-[var(--border)] bg-[var(--surface)] pb-[calc(24px+env(safe-area-inset-bottom))] lg:inset-x-auto lg:inset-y-auto lg:top-1/2 lg:left-1/2 lg:h-auto lg:max-h-[82vh] lg:w-[560px] lg:max-w-[calc(100vw-32px)] lg:-translate-x-1/2 lg:-translate-y-1/2 lg:rounded-2xl lg:border lg:shadow-overlay"
         >
           {statsProp && (() => {
             const income = proratedIncome(reservations, statsProp.id, monthNow, yearNow);
@@ -383,27 +383,40 @@ export default function Dashboard() {
             ];
             const rows = [
               { label: t('dash.ingresosPrevistosMes'), value: `${fmtNumber(income)} €`, color: '#10B981' },
-              { label: t('dash.ocupacionMes'), value: `${fmtPct(occPct)} · ${t('dash.noches', { count: nights })}`, color: '#3B82F6' },
+              { label: t('dash.ocupacionMes'), value: `${fmtPct(occPct)}`, sub: t('dash.noches', { count: nights }), color: '#3B82F6' },
               { label: t('dash.reservasProximas'), value: String(upcoming), color: '#6366F1' },
               { label: t('dash.limpiezasPendientes'), value: String(pendClean), color: '#8B5CF6' },
               { label: t('dash.reparacionesAbiertas'), value: String(openMaint), color: '#F97316' },
             ];
             return (
-              <div className="flex flex-col gap-4">
+              <div className="flex flex-col gap-5">
                 <SheetHeader className="pb-0 text-left">
-                  <SheetTitle className="font-display text-lg font-semibold">{statsProp.name}</SheetTitle>
+                  <div className="flex items-center gap-3">
+                    <PropertyAvatar property={statsProp} size={44} />
+                    <div className="min-w-0">
+                      <SheetTitle className="font-display text-lg font-semibold">{statsProp.name}</SheetTitle>
+                      {statsProp.address && (
+                        <p className="truncate text-[13px]" style={{ color: 'var(--text-muted)' }}>{statsProp.address}</p>
+                      )}
+                    </div>
+                  </div>
                 </SheetHeader>
-                <div className="card divide-y divide-[var(--border)]">
+
+                <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
                   {rows.map((r) => (
-                    <div key={r.label} className="flex items-center justify-between px-4 py-2.5">
-                      <span className="flex items-center gap-2 text-sm" style={{ color: 'var(--text-muted)' }}>
-                        <span className="h-2 w-2 rounded-full" style={{ backgroundColor: r.color }} />
-                        {r.label}
+                    <div key={r.label} className="card flex items-center justify-between gap-2 px-3 py-2.5">
+                      <span className="flex min-w-0 items-center gap-2 text-sm" style={{ color: 'var(--text-muted)' }}>
+                        <span className="h-2 w-2 shrink-0 rounded-full" style={{ backgroundColor: r.color }} />
+                        <span className="truncate">{r.label}</span>
                       </span>
-                      <span className="tnum text-sm font-semibold">{r.value}</span>
+                      <span className="shrink-0 tnum text-sm font-semibold">
+                        {r.value}
+                        {r.sub && <span className="ml-1 text-xs font-medium" style={{ color: 'var(--text-faint)' }}>{r.sub}</span>}
+                      </span>
                     </div>
                   ))}
                 </div>
+
                 <div>
                   <p className="mb-2 text-[11px] font-semibold uppercase tracking-[0.08em]" style={{ color: 'var(--text-faint)' }}>
                     {t('dash.accesosRecientes')}
@@ -421,6 +434,7 @@ export default function Dashboard() {
                     </div>
                   )}
                 </div>
+
                 <div className="flex flex-wrap gap-2">
                   {links.map((l) => (
                     <Link
