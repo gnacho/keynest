@@ -65,7 +65,7 @@ export default function PropertyCard({ property, className }: PropertyCardProps)
               : t('common2.libre')}
         </span>
         <Link
-          to="/inmuebles"
+          to={`/inmuebles?editar=${property.id}`}
           className="group/edit absolute right-2 top-2 flex h-7 w-7 items-center justify-center rounded-lg bg-black/25 transition-colors hover:bg-black/45"
           style={{ color: '#fff' }}
         >

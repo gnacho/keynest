@@ -1,5 +1,5 @@
-import { useRef, useState } from 'react';
-import { Link } from 'react-router';
+import { useEffect, useRef, useState } from 'react';
+import { Link, useSearchParams } from 'react-router';
 import { motion } from 'framer-motion';
 import type { Variants } from 'framer-motion';
 import {
@@ -84,6 +84,17 @@ export default function Inmuebles() {
   const properties = data.getProperties();
   const syncStatus = data.getSyncStatus();
   const [editProp, setEditProp] = useState<string | 'new' | null>(null);
+  const [params, setParams] = useSearchParams();
+  useEffect(() => {
+    const editId = params.get('editar');
+    if (editId && editId !== 'todos') {
+      setEditProp(editId);
+      const next = new URLSearchParams(params);
+      next.delete('editar');
+      setParams(next, { replace: true });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   const [icalCheck, setIcalCheck] = useState<{ state: 'idle' | 'checking' | 'ok' | 'error'; count?: number; code?: string; status?: number }>({ state: 'idle' });
   const [editingIcal, setEditingIcal] = useState(false);
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
