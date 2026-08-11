@@ -27,7 +27,9 @@ import {
 import { useTranslation } from 'react-i18next';
 import { useData } from '@/data/useData';
 import type { CleaningStatus } from '@/data/types';
+import { myPropertyIds } from '@/lib/auth';
 import { fmtDateShort, fmtMoney, isSameDay } from '@/lib/format';
+import { cn } from '@/lib/utils';
 
 const EASE_OUT_QUART: [number, number, number, number] = [0.25, 1, 0.5, 1];
 
@@ -57,15 +59,17 @@ export default function Limpieza() {
   const navigate = useNavigate();
 
   const inmueble = params.get('inmueble') ?? 'todos';
-  const estado = params.get('estado') ?? 'todos';
+  const estado = params.get('estado') ?? 'pendiente';
   const tareaParam = params.get('tarea');
 
   const all = data.getCleanings();
   const now = new Date();
+  const mine = myPropertyIds(data.getProperties());
 
   /* ---- KPIs computados ---- */
   const pendientesHoy = all.filter((c) => isSameDay(c.date, now) && c.status !== 'archivada').length;
   const sinAsignar = all.filter((c) => c.status !== 'archivada' && c.assigneeIds.length === 0).length;
+  const kpiCount = 2 + (pendientesHoy > 0 ? 1 : 0) + (sinAsignar > 0 ? 1 : 0);
   const alertas = all.filter((c) => c.status === 'pendiente' && c.assigneeIds.length === 0);
   const monthDone = all.filter(
     (c) =>
@@ -85,7 +89,9 @@ export default function Limpieza() {
   /* ---- Lista filtrada + orden: activas primero, archivadas solo si se piden ---- */
   const filtered = useMemo(() => {
     const list = all.filter((c) => {
-      if (inmueble !== 'todos' && data.getProperty(c.propertyId)?.slug !== inmueble) return false;
+      if (inmueble === 'mis') {
+        if (!mine.has(c.propertyId)) return false;
+      } else if (inmueble !== 'todos' && data.getProperty(c.propertyId)?.slug !== inmueble) return false;
       if (estado === 'todos' && c.status === 'archivada') return false;
       if (estado !== 'todos' && c.status !== (estado as CleaningStatus)) return false;
       return true;
@@ -99,13 +105,13 @@ export default function Limpieza() {
         : a.date.getTime() - b.date.getTime();
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [all, inmueble, estado, data.version]);
+  }, [all, inmueble, estado, mine, data.version]);
 
   return (
     <div className="flex flex-col gap-5">
       {/* ============================== Filtros + botón añadir (misma fila) */}
       <div className="flex flex-wrap items-center gap-2">
-        <FilterBar className="mx-0 px-0" typeOptions={STATUS_OPTIONS.map((o) => ({ value: o.value, label: t(o.labelKey) }))} typeParam="estado" />
+        <FilterBar hideAll className="mx-0 px-0" typeOptions={STATUS_OPTIONS.map((o) => ({ value: o.value, label: t(o.labelKey) }))} typeParam="estado" />
         {!data.isDemo && (
           <button
             type="button"
@@ -150,32 +156,41 @@ export default function Limpieza() {
         </div>
       )}
 
-      {/* ============================== KPIs */}
+      {/* ============================== KPIs (Pendientes hoy y Sin asignar ocultas si valen 0) */}
       <motion.section variants={containerV} initial="hidden" animate="show">
-        <div className="snap-carousel -mx-4 flex gap-3 overflow-x-auto px-4 lg:mx-0 lg:grid lg:grid-cols-4 lg:overflow-visible lg:px-0">
-          <motion.div variants={itemV} className="w-[42vw] min-w-[160px] shrink-0 lg:w-auto">
-            <KpiCard
-              icon={Sparkles}
-              tone="violet"
-              label={t('limp.pendientesHoy')}
-              value={pendientesHoy}
-              sub={pendientesHoy > 0 ? t('limp.requierenAtencion') : t('limp.todoAlDia')}
-              className="h-full"
-            />
-          </motion.div>
-          <motion.div variants={itemV} className="w-[42vw] min-w-[160px] shrink-0 lg:w-auto">
-            <div className={sinAsignar > 0 && !reduce ? 'animate-ring-pulse rounded-2xl' : undefined}>
+        <div
+          className={cn(
+            '-mx-4 grid grid-cols-2 gap-3 px-4 lg:mx-0 lg:grid lg:overflow-visible lg:px-0',
+            kpiCount === 2 ? 'lg:grid-cols-2' : kpiCount === 3 ? 'lg:grid-cols-3' : 'lg:grid-cols-4',
+          )}
+        >
+          {pendientesHoy > 0 && (
+            <motion.div variants={itemV}>
               <KpiCard
-                icon={UserRoundX}
-                tone="orange"
-                label={t('limp.sinAsignar')}
-                value={sinAsignar}
-                sub={sinAsignar > 0 ? t('limp.asignaCuantoAntes') : t('limp.todoAsignado')}
+                icon={Sparkles}
+                tone="violet"
+                label={t('limp.pendientesHoy')}
+                value={pendientesHoy}
+                sub={t('limp.requierenAtencion')}
                 className="h-full"
               />
-            </div>
-          </motion.div>
-          <motion.div variants={itemV} className="w-[42vw] min-w-[160px] shrink-0 lg:w-auto">
+            </motion.div>
+          )}
+          {sinAsignar > 0 && (
+            <motion.div variants={itemV}>
+              <div className={!reduce ? 'animate-ring-pulse rounded-2xl' : undefined}>
+                <KpiCard
+                  icon={UserRoundX}
+                  tone="orange"
+                  label={t('limp.sinAsignar')}
+                  value={sinAsignar}
+                  sub={t('limp.asignaCuantoAntes')}
+                  className="h-full"
+                />
+              </div>
+            </motion.div>
+          )}
+          <motion.div variants={itemV}>
             <KpiCard
               icon={Clock}
               tone="blue"
@@ -187,7 +202,7 @@ export default function Limpieza() {
               className="h-full"
             />
           </motion.div>
-          <motion.div variants={itemV} className="w-[42vw] min-w-[160px] shrink-0 lg:w-auto">
+          <motion.div variants={itemV}>
             <KpiCard
               icon={Euro}
               tone="rose"

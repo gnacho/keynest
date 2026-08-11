@@ -1,17 +1,21 @@
-import { useMemo, useRef, useState } from 'react';
-import type { ReactNode } from 'react';
+import { useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router';
 import { motion } from 'framer-motion';
 import type { Variants } from 'framer-motion';
 import {
   BedDouble,
+  Calendar,
   CalendarCheck2,
+  CalendarRange,
   CircleAlert,
   Euro,
+  Lock,
+  Sparkles,
   Users,
+  Wrench,
 } from 'lucide-react';
-import KpiCard from '@/components/KpiCard';
 import MovementsCard from '@/components/MovementsCard';
+import MonthOverviewCard from '@/components/MonthOverviewCard';
 import PropertyCard from '@/components/PropertyCard';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import PropertyAvatar from '@/components/PropertyAvatar';
@@ -32,7 +36,6 @@ import {
   fmtTime,
   isSameDay,
 } from '@/lib/format';
-import { cn } from '@/lib/utils';
 
 const EASE_OUT_QUART: [number, number, number, number] = [0.25, 1, 0.5, 1];
 
@@ -80,51 +83,6 @@ function occupiedNightsMonth(reservations: Reservation[], propertyId: string, mo
   return total;
 }
 
-/* -------------------------------------- Carrusel scroll-snap con indicadores */
-function Carousel({ children, itemClassName }: { children: ReactNode[]; itemClassName: string }) {
-  const ref = useRef<HTMLDivElement>(null);
-  const [active, setActive] = useState(0);
-
-  const onScroll = () => {
-    const el = ref.current;
-    if (!el || el.children.length === 0) return;
-    const first = el.children[0] as HTMLElement;
-    const step = first.offsetWidth + 12;
-    setActive(Math.min(children.length - 1, Math.round(el.scrollLeft / step)));
-  };
-
-  return (
-    <div>
-      <div
-        ref={ref}
-        onScroll={onScroll}
-        className="snap-carousel -mx-4 flex gap-3 overflow-x-auto px-4 lg:mx-0 lg:grid lg:overflow-visible lg:px-0"
-        style={{ gridTemplateColumns: `repeat(${children.length}, minmax(0,1fr))`, gap: undefined }}
-      >
-        {children.map((child, i) => (
-          <div key={i} className={cn('shrink-0 lg:w-auto', itemClassName)}>
-            {child}
-          </div>
-        ))}
-      </div>
-      {children.length > 1 && (
-        <div className="mt-3 flex justify-center gap-1.5 lg:hidden">
-          {children.map((_, i) => (
-            <span
-              key={i}
-              className={cn(
-                'h-1.5 rounded-full transition-all duration-200',
-                i === active ? 'brand-gradient w-[18px]' : 'w-1.5',
-              )}
-              style={i === active ? undefined : { backgroundColor: 'var(--border)' }}
-            />
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
-
 /* ------------------------------------------------------------------ Página */
 export default function Dashboard() {
   const { t } = useTranslation();
@@ -142,9 +100,6 @@ export default function Dashboard() {
 
   const properties = data.getProperties();
   const reservations = data.getReservations();
-  const me = cachedUser();
-  const myPropertyIds = me ? new Set(properties.filter((p) => p.ownerId === me.id).map((p) => p.id)) : null;
-  const myReservations = myPropertyIds ? reservations.filter((r) => myPropertyIds.has(r.propertyId)) : reservations;
   const cleanings = data.getCleanings();
   const maintenance = data.getMaintenance();
   const tedeeAccess = data.getTedeeAccess();
@@ -180,10 +135,20 @@ export default function Dashboard() {
   const pendingCleanings = data.getPendingCleanings().filter((c) => inWindow(c.date));
   const unassigned = pendingCleanings.filter((c) => c.assigneeIds.length === 0);
 
+  // Entradas que coinciden con una salida el mismo día en el mismo inmueble (rotación).
+  const sameDayCheckIns = checkInsNext.filter((r) =>
+    reservations.some(
+      (x) =>
+        x.propertyId === r.propertyId
+        && x.id !== r.id
+        && isSameDay(x.checkOut, r.checkIn),
+    ),
+  ).length;
+
   const monthNow = today.getMonth();
   const yearNow = today.getFullYear();
-  const expectedMonthIncome = proratedIncome(myReservations, null, monthNow, yearNow);
-  const monthReservations = myReservations.filter(
+  const expectedMonthIncome = proratedIncome(reservations, null, monthNow, yearNow);
+  const monthReservations = reservations.filter(
     (r) => (r.checkIn.getMonth() === monthNow && r.checkIn.getFullYear() === yearNow)
       || (r.checkOut.getMonth() === monthNow && r.checkOut.getFullYear() === yearNow),
   ).length;
@@ -313,26 +278,27 @@ export default function Dashboard() {
       </div>
 
       {/* ============================== Sección 1 — KPIs */}
-      <motion.section variants={containerV} initial="hidden" animate="show">
-        <Carousel itemClassName="w-[42vw] min-w-[160px]">
-          {[
-            <motion.div variants={itemV} key="k1" className="h-full">
-              <MovementsCard
-                checkIns={checkInsNext.length}
-                checkOuts={checkOutsNext.length}
-                cleanings={pendingCleanings.length}
-                unassigned={unassigned.length}
-                className="h-full"
-              />
-            </motion.div>,
-            <motion.div variants={itemV} key="k2" className="h-full">
-              <KpiCard icon={BedDouble} tone="blue" label={t('dash.ocupacionActual')} value={occupancyPct} unit="%" spark={spark14} sparkColor="#3B82F6" to="/calendario" className="h-full" />
-            </motion.div>,
-            <motion.div variants={itemV} key="k3" className="h-full">
-              <KpiCard icon={Euro} tone="emerald" label={t('dash.misInmueblesPrevistosMes')} value={expectedMonthIncome} unit="€" money sub={t('dash.reservasMes', { count: monthReservations })} to="/rentabilidad" className="h-full" />
-            </motion.div>,
-          ]}
-        </Carousel>
+      <motion.section className="grid gap-5 sm:grid-cols-2" variants={containerV} initial="hidden" animate="show">
+        <motion.div variants={itemV} className="h-full">
+          <MovementsCard
+            checkIns={checkInsNext.length}
+            checkOuts={checkOutsNext.length}
+            cleanings={pendingCleanings.length}
+            unassigned={unassigned.length}
+            sameDayCheckIns={sameDayCheckIns}
+            lookaheadDays={lookaheadDays}
+            className="h-full"
+          />
+        </motion.div>
+        <motion.div variants={itemV} className="h-full">
+          <MonthOverviewCard
+            occupancyPct={occupancyPct}
+            spark={spark14}
+            income={expectedMonthIncome}
+            reservationsCount={monthReservations}
+            className="h-full"
+          />
+        </motion.div>
       </motion.section>
 
       {/* ============================== Sección 2 — Hoy: entradas y salidas */}
@@ -403,7 +369,7 @@ export default function Dashboard() {
       <Sheet open={statsProp !== null} onOpenChange={(o) => !o && setStatsProp(null)}>
         <SheetContent
           side="bottom"
-          className="rounded-t-3xl border-[var(--border)] bg-[var(--surface)] pb-[calc(24px+env(safe-area-inset-bottom))] lg:inset-y-0 lg:right-0 lg:left-auto lg:h-full lg:w-[420px] lg:rounded-none lg:border-l"
+          className="max-h-[85dvh] overflow-y-auto rounded-t-3xl border-[var(--border)] bg-[var(--surface)] pb-[calc(24px+env(safe-area-inset-bottom))] lg:inset-x-auto lg:inset-y-auto lg:top-1/2 lg:left-1/2 lg:h-auto lg:max-h-[85vh] lg:w-[720px] lg:max-w-[calc(100vw-32px)] lg:-translate-x-1/2 lg:-translate-y-1/2 lg:rounded-2xl lg:border lg:shadow-overlay"
         >
           {statsProp && (() => {
             const income = proratedIncome(reservations, statsProp.id, monthNow, yearNow);
@@ -416,35 +382,51 @@ export default function Dashboard() {
             const accs = tedeeAccess.filter((a) => a.propertyId === statsProp.id).slice(0, 5);
             const q = `?inmueble=${statsProp.slug}`;
             const links = [
-              { to: `/calendario${q}`, label: t('calendario') },
-              { to: `/reservas${q}`, label: t('reservas') },
-              { to: `/limpieza${q}`, label: t('limpieza') },
-              { to: `/mantenimiento${q}`, label: t('mantenimiento') },
-              { to: `/rentabilidad${q}`, label: t('rentabilidad') },
+              { to: `/calendario${q}`, label: t('calendario'), icon: Calendar },
+              { to: `/reservas${q}`, label: t('reservas'), icon: CalendarRange },
+              { to: `/limpieza${q}`, label: t('limpieza'), icon: Sparkles },
+              { to: `/mantenimiento${q}`, label: t('mantenimiento'), icon: Wrench },
+              { to: `/rentabilidad${q}`, label: t('rentabilidad'), icon: Euro },
+              { to: `/tedee${q}`, label: t('tedee'), icon: Lock },
             ];
             const rows = [
-              { label: t('dash.ingresosPrevistosMes'), value: `${fmtNumber(income)} €`, color: '#10B981' },
-              { label: t('dash.ocupacionMes'), value: `${fmtPct(occPct)} · ${t('dash.noches', { count: nights })}`, color: '#3B82F6' },
-              { label: t('dash.reservasProximas'), value: String(upcoming), color: '#6366F1' },
-              { label: t('dash.limpiezasPendientes'), value: String(pendClean), color: '#8B5CF6' },
-              { label: t('dash.reparacionesAbiertas'), value: String(openMaint), color: '#F97316' },
+              { label: t('dash.ingresosPrevistosMes'), value: `${fmtNumber(income)} €`, color: '#10B981', icon: Euro },
+              { label: t('dash.ocupacionMes'), value: `${fmtPct(occPct)}`, sub: t('dash.noches', { count: nights }), color: '#3B82F6', icon: BedDouble },
+              { label: t('dash.reservasProximas'), value: String(upcoming), color: '#6366F1', icon: CalendarCheck2 },
+              { label: t('dash.limpiezasPendientes'), value: String(pendClean), color: '#8B5CF6', icon: Sparkles },
+              { label: t('dash.reparacionesAbiertas'), value: String(openMaint), color: '#F97316', icon: Wrench },
             ];
             return (
-              <div className="flex flex-col gap-4">
-                <SheetHeader className="pb-0 text-left">
-                  <SheetTitle className="font-display text-lg font-semibold">{statsProp.name}</SheetTitle>
+              <div className="flex flex-col gap-5 px-5 pb-5">
+                <SheetHeader className="px-0 pb-0 pt-1 text-left">
+                  <div className="flex items-center gap-3">
+                    <PropertyAvatar property={statsProp} size={44} />
+                    <div className="min-w-0">
+                      <SheetTitle className="font-display text-lg font-semibold">{statsProp.name}</SheetTitle>
+                      {statsProp.address && (
+                        <p className="truncate text-[13px]" style={{ color: 'var(--text-muted)' }}>{statsProp.address}</p>
+                      )}
+                    </div>
+                  </div>
                 </SheetHeader>
-                <div className="card divide-y divide-[var(--border)]">
-                  {rows.map((r) => (
-                    <div key={r.label} className="flex items-center justify-between px-4 py-2.5">
-                      <span className="flex items-center gap-2 text-sm" style={{ color: 'var(--text-muted)' }}>
-                        <span className="h-2 w-2 rounded-full" style={{ backgroundColor: r.color }} />
-                        {r.label}
+
+                <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                  {rows.map(({ icon: RowIcon, label, value, sub, color }) => (
+                    <div key={label} className="card flex items-center justify-between gap-2 px-3 py-2.5">
+                      <span className="flex min-w-0 items-center gap-2 text-sm" style={{ color: 'var(--text-muted)' }}>
+                        <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg" style={{ backgroundColor: `${color}1A` }}>
+                          <RowIcon className="h-4 w-4" style={{ color }} strokeWidth={2} />
+                        </span>
+                        <span className="truncate">{label}</span>
                       </span>
-                      <span className="tnum text-sm font-semibold">{r.value}</span>
+                      <span className="shrink-0 tnum text-sm font-semibold">
+                        {value}
+                        {sub && <span className="ml-1 text-xs font-medium" style={{ color: 'var(--text-faint)' }}>{sub}</span>}
+                      </span>
                     </div>
                   ))}
                 </div>
+
                 <div>
                   <p className="mb-2 text-[11px] font-semibold uppercase tracking-[0.08em]" style={{ color: 'var(--text-faint)' }}>
                     {t('dash.accesosRecientes')}
@@ -462,16 +444,18 @@ export default function Dashboard() {
                     </div>
                   )}
                 </div>
-                <div className="flex flex-wrap gap-2">
-                  {links.map((l) => (
+
+                <div className="flex flex-wrap justify-center gap-2">
+                  {links.map(({ icon: LinkIcon, to, label }) => (
                     <Link
-                      key={l.to}
-                      to={l.to}
+                      key={to}
+                      to={to}
                       onClick={() => setStatsProp(null)}
-                      className="rounded-full border px-3 py-1.5 text-xs font-semibold transition-colors hover:bg-[var(--surface-2)]"
+                      className="flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-semibold transition-colors hover:bg-[var(--surface-2)]"
                       style={{ borderColor: 'var(--border)', color: 'var(--text-muted)' }}
                     >
-                      {l.label}
+                      <LinkIcon className="h-3.5 w-3.5" strokeWidth={2} />
+                      {label}
                     </Link>
                   ))}
                 </div>

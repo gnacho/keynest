@@ -29,6 +29,7 @@ import {
 } from '@/components/ui/dialog';
 import { useTranslation } from 'react-i18next';
 import { useData } from '@/data/useData';
+import { myPropertyIds } from '@/lib/auth';
 import type { Lock as LockT, TedeeAccess } from '@/data/types';
 import { fmtDateShort, fmtRelative, fmtTime, isSameDay, startOfDay, addDays } from '@/lib/format';
 import { cn } from '@/lib/utils';
@@ -241,13 +242,17 @@ export default function Tedee() {
 
   const allAccesses = useMemo(() => {
     const accesses = data.getTedeeAccess();
+    const mine = myPropertyIds(data.getProperties());
     return accesses
       .filter((a) => {
-        if (inmueble !== 'todos' && data.getProperty(a.propertyId)?.slug !== inmueble) return false;
+        if (inmueble === 'mis') {
+          if (!mine.has(a.propertyId)) return false;
+        } else if (inmueble !== 'todos' && data.getProperty(a.propertyId)?.slug !== inmueble) return false;
         if (tipo !== 'todos' && a.type !== tipo) return false;
         return true;
       })
       .sort((a, b) => b.at.getTime() - a.at.getTime());
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [data, inmueble, tipo]);
 
   const visible = allAccesses.slice(0, visibleCount);

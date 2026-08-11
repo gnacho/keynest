@@ -9,8 +9,6 @@ import {
   CheckCircle2,
   ChevronDown,
   Euro,
-  Home,
-  MoonStar,
   Plus,
   Search,
   Users,
@@ -128,15 +126,15 @@ export default function Reservas() {
   const inmueble = params.get('inmueble') ?? 'todos';
   const tipo = params.get('tipo') ?? 'activas';
   const reservaParam = params.get('reserva');
-  const filteredProp = inmueble !== 'todos' ? data.getProperty(inmueble) : undefined;
+  const filteredProp = inmueble !== 'todos' && inmueble !== 'mis' ? data.getProperty(inmueble) : undefined;
 
-  // "Mis inmuebles": filtra por las propiedades asignadas al usuario actual (?usuario=<id>)
+  // "Mis inmuebles": filtra por las propiedades asignadas al usuario actual (select inmueble=mis)
   const me = cachedUser();
   const misProperties = useMemo(
     () => (me ? data.getProperties().filter((p) => p.ownerId === me.id) : []),
     [me, data.version],
   );
-  const soloMis = params.get('usuario') === me?.id;
+  const soloMis = inmueble === 'mis';
   const misPropertyIds = useMemo(() => new Set(misProperties.map((p) => p.id)), [misProperties]);
 
   const base = useMemo(() => data.getReservations(), [data.version]);
@@ -203,31 +201,26 @@ export default function Reservas() {
 
   /* KPIs de vista (ámbito = inmueble filtrado) */
   const scoped = filteredProp ? base.filter((r) => r.propertyId === filteredProp.id) : base;
+  const lookaheadDays = data.getSettings().lookaheadDays;
   const kpis = useMemo(() => {
-    const m = now.getMonth();
-    const y = now.getFullYear();
-    let nightsMonth = 0;
-    let income30 = 0;
+    let incomeNext = 0;
     let nightsTotal = 0;
-    const in30 = addDays(today, 30).getTime();
+    const inNext = addDays(today, lookaheadDays).getTime();
     for (const r of scoped) {
       const nights = nightsOf(r);
       nightsTotal += nights;
       const perNight = r.amount / nights;
       for (let n = 0; n < nights; n++) {
-        const d = addDays(startOfDay(r.checkIn), n);
-        if (d.getMonth() === m && d.getFullYear() === y) nightsMonth++;
-        const t = d.getTime();
-        if (t >= today.getTime() && t < in30) income30 += perNight;
+        const t = startOfDay(addDays(r.checkIn, n)).getTime();
+        if (t >= today.getTime() && t < inNext) incomeNext += perNight;
       }
     }
     return {
-      nightsMonth,
-      income30: Math.round(income30),
+      incomeNext: Math.round(incomeNext),
       avgStay: scoped.length ? nightsTotal / scoped.length : 0,
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [base, filteredProp?.id]);
+  }, [base, filteredProp?.id, lookaheadDays]);
 
   /* ?reserva=<id>: auto-expandir, resaltar y scroll suave */
   useEffect(() => {
@@ -333,20 +326,25 @@ export default function Reservas() {
     <div className="flex flex-col gap-5">
       {/* Filtros + buscador + botón añadir (misma fila) */}
       <div className="flex flex-wrap items-center gap-2">
-        <FilterBar hideAll className="mx-0 px-0" typeOptions={STATUS_OPTIONS.map((o) => ({ value: o.value, label: t(o.labelKey) }))} />
-        <div className="relative">
-          <Search
-            className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2"
-            style={{ color: 'var(--text-faint)' }}
-          />
-          <input
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder={t('res.buscar')}
-            className={cn(inputCls, 'w-[190px] pl-9')}
-            style={{ borderColor: 'var(--border)' }}
-          />
-        </div>
+        <FilterBar
+          hideAll
+          className="mx-0 min-w-0 flex-1 px-0 sm:flex-none"
+          typeOptions={STATUS_OPTIONS.map((o) => ({ value: o.value, label: t(o.labelKey) }))}
+        >
+          <div className="relative min-w-0 flex-1">
+            <Search
+              className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2"
+              style={{ color: 'var(--text-faint)' }}
+            />
+            <input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder={t('res.buscar')}
+              className={cn(inputCls, 'w-full pl-9')}
+              style={{ borderColor: 'var(--border)' }}
+            />
+          </div>
+        </FilterBar>
         {filteredProp && (
           <button
             type="button"
@@ -362,26 +360,6 @@ export default function Reservas() {
             {t('res.filtrado', { name: filteredProp.name })} ×
           </button>
         )}
-        {me && (
-          <button
-            type="button"
-            aria-pressed={soloMis}
-            onClick={() => {
-              const p = new URLSearchParams(params);
-              if (soloMis) p.delete('usuario');
-              else p.set('usuario', me.id);
-              setParams(p, { replace: true });
-            }}
-            className={cn(
-              'flex h-9 items-center gap-1.5 rounded-xl border px-3 text-[13px] font-semibold transition-colors',
-              soloMis ? 'text-white' : 'hover:bg-[var(--surface-2)]',
-            )}
-            style={soloMis ? { borderColor: '#6366F1', backgroundImage: 'linear-gradient(135deg,#6366F1,#8B5CF6)' } : { borderColor: 'var(--border)', color: 'var(--text-muted)' }}
-          >
-            <Home className="h-4 w-4" />
-            {t('res.misInmuebles')}
-          </button>
-        )}
         {!data.isDemo && (
           <button
             type="button"
@@ -395,11 +373,10 @@ export default function Reservas() {
       </div>
 
       {/* KPIs de vista */}
-      <div className="snap-carousel -mx-4 flex gap-3 overflow-x-auto px-4 lg:mx-0 lg:grid lg:grid-cols-3 lg:overflow-visible lg:px-0">
+      <div className="grid grid-cols-2 gap-3">
         {(
           [
-            <KpiCard key="n" icon={MoonStar} tone="blue" label={t('res.nochesMes')} value={kpis.nightsMonth} />,
-            <KpiCard key="i" icon={Euro} tone="emerald" label={t('res.ingresos30')} value={kpis.income30} unit="€" money />,
+            <KpiCard key="i" icon={Euro} tone="emerald" label={t('res.ingresos30', { days: lookaheadDays })} value={kpis.incomeNext} unit="€" money />,
             <KpiCard key="e" icon={CalendarRange} tone="indigo" label={t('res.estanciaMedia')} value={kpis.avgStay} decimals={1} unit={t('res.noches')} />,
           ] as const
         ).map((card, i) => (
@@ -408,7 +385,7 @@ export default function Reservas() {
             initial={painted || reduce ? false : { opacity: 0, y: 24 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: i * 0.07, ease: EASE_OUT_QUART }}
-            className="h-full w-[46%] min-w-[170px] shrink-0 lg:w-auto lg:min-w-0"
+            className="min-w-0"
           >
             {card}
           </motion.div>

@@ -112,7 +112,7 @@ export default function CleaningCard({ cleaning: c, variants, highlight = false,
         ref={ref}
         layout="position"
         variants={variants}
-        className="card border-l-[3px] p-4 opacity-90"
+        className="card min-w-0 overflow-hidden border-l-[3px] p-4 opacity-90"
         style={{ borderLeftColor: STATUS_BORDER[c.status] }}
       >
         <button

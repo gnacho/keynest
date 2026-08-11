@@ -9,7 +9,6 @@ import {
   ChevronLeft,
   ChevronRight,
   Euro,
-  Home,
   PieChart as PieChartIcon,
   Plus,
   TrendingDown,
@@ -32,6 +31,7 @@ import { toast } from 'sonner';
 import ChartCard from '@/components/ChartCard';
 import EmptyState from '@/components/EmptyState';
 import Fab from '@/components/Fab';
+import FilterBar from '@/components/FilterBar';
 import MoneyText from '@/components/MoneyText';
 import PropertyAvatar from '@/components/PropertyAvatar';
 import FinKpiCard from '@/components/fin/FinKpiCard';
@@ -271,8 +271,7 @@ export default function Rentabilidad() {
   const [params, setParams] = useSearchParams();
 
   const me = cachedUser();
-  const inmueble = params.get('inmueble') ?? 'todos';
-  const usuarioParam = params.get('usuario') ?? (me?.id ?? 'todos');
+  const inmueble = params.get('inmueble') ?? 'mis';
   const g = (params.get('g') as Granularity) || 'mes';
   const anclaParam = params.get('ancla');
   const anchor = anclaParam ? new Date(`${anclaParam}T12:00:00`) : new Date();
@@ -280,9 +279,14 @@ export default function Rentabilidad() {
   const hasta = params.get('hasta') ?? '';
 
   const allProperties = data.getProperties();
-  // Filtro de rentabilidad por usuario (dueño del inmueble); por defecto todos.
+  // "Mis inmuebles" (inmueble=mis) = propiedades del usuario; un slug concreto aísla esa propiedad.
+  const mine = me ? allProperties.filter((p) => p.ownerId === me.id) : [];
   const properties =
-    usuarioParam === 'todos' ? allProperties : allProperties.filter((p) => p.ownerId === usuarioParam);
+    inmueble === 'mis'
+      ? mine
+      : inmueble === 'todos'
+        ? allProperties
+        : allProperties.filter((p) => p.slug === inmueble);
   const propertyIds = useMemo(() => new Set(properties.map((p) => p.id)), [properties]);
   const allReservations = data.getReservations();
   const allExpenses = data.getExpenses();
@@ -295,7 +299,7 @@ export default function Rentabilidad() {
     [allExpenses, propertyIds],
   );
 
-  const selectedProperty = inmueble === 'todos' ? null : data.getProperty(inmueble) ?? null;
+  const selectedProperty = inmueble !== 'todos' && inmueble !== 'mis' ? data.getProperty(inmueble) ?? null : null;
   const propertyId = selectedProperty?.id ?? null;
 
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -510,39 +514,7 @@ export default function Rentabilidad() {
 
       {/* ============================== Filtros */}
       <div className="flex flex-wrap items-center gap-2">
-        <Select value={inmueble} onValueChange={(v) => setParam('inmueble', v, v === 'todos')}>
-          <SelectTrigger className="h-9 w-auto min-w-[180px] gap-2 rounded-xl border-[var(--border)] bg-[var(--surface)] text-sm font-medium shadow-none">
-            <SelectValue placeholder={t('rent.general')} />
-          </SelectTrigger>
-          <SelectContent className="rounded-xl border-[var(--border)] bg-[var(--surface)]">
-            <SelectItem value="todos">{t('rent.general')}</SelectItem>
-            {allProperties.map((p) => (
-              <SelectItem key={p.slug} value={p.slug}>
-                {p.name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-
-        {me && (
-          <button
-            type="button"
-            aria-pressed={usuarioParam === me.id}
-            onClick={() => setParam('usuario', usuarioParam === me.id ? 'todos' : me.id, false)}
-            className={cn(
-              'flex h-9 items-center gap-1.5 rounded-xl border px-3 text-[13px] font-semibold transition-colors',
-              usuarioParam === me.id ? 'text-white' : 'hover:bg-[var(--surface-2)]',
-            )}
-            style={
-              usuarioParam === me.id
-                ? { borderColor: '#6366F1', backgroundImage: 'linear-gradient(135deg,#6366F1,#8B5CF6)' }
-                : { borderColor: 'var(--border)', color: 'var(--text-muted)' }
-            }
-          >
-            <Home className="h-4 w-4" />
-            {t('rent.misInmuebles')}
-          </button>
-        )}
+        <FilterBar defaultProperty="mis" />
 
         {/* Selector de periodo estilo Helios: granularidad + navegación + Este mes */}
         <div

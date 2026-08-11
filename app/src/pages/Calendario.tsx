@@ -12,6 +12,7 @@ import {
   parseTipoParam,
 } from '@/components/cal-res/calendar-utils';
 import type { DayInfo } from '@/components/cal-res/calendar-utils';
+import { myPropertyIds } from '@/lib/auth';
 import { useTranslation } from 'react-i18next';
 import { useData } from '@/data/useData';
 import { addDays, capitalize, fmtMonth, isSameDay } from '@/lib/format';
@@ -112,18 +113,29 @@ export default function Calendario() {
     typeFilters.desocupado && !typeFilters.entrada && !typeFilters.salida && !typeFilters.estancia;
   const allProps = data.getProperties();
   const reservations = data.getReservations();
+  // "Mis inmuebles" (inmueble=mis) = propiedades del usuario actual.
+  const mine = useMemo(() => myPropertyIds(allProps), [allProps]);
   // ?reserva=<id> (deep-link desde el detalle de reserva): reserva objetivo + sus
   // adyacentes del mismo inmueble (previous/next por check-in) para ver solapes.
   const selectedRes = reservaParam ? reservations.find((r) => r.id === reservaParam) : undefined;
   const scopedSlug =
-    inmueble !== 'todos'
+    inmueble !== 'todos' && inmueble !== 'mis'
       ? inmueble
       : selectedRes
         ? (allProps.find((p) => p.id === selectedRes.propertyId)?.slug ?? 'todos')
-        : 'todos';
-  const scopedProps =
-    scopedSlug === 'todos' ? allProps : allProps.filter((p) => p.slug === scopedSlug);
-  const filteredProp = scopedSlug !== 'todos' ? data.getProperty(scopedSlug) : undefined;
+        : inmueble === 'mis'
+          ? 'mis'
+          : 'todos';
+  const scopedProps = useMemo(
+    () =>
+      scopedSlug === 'todos'
+        ? allProps
+        : scopedSlug === 'mis'
+          ? allProps.filter((p) => mine.has(p.id))
+          : allProps.filter((p) => p.slug === scopedSlug),
+    [allProps, scopedSlug, mine],
+  );
+  const filteredProp = scopedSlug !== 'todos' && scopedSlug !== 'mis' ? data.getProperty(scopedSlug) : undefined;
   const single = scopedProps.length === 1;
   const adjacentIds = useMemo(() => {
     if (!selectedRes) return [];

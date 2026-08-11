@@ -36,6 +36,13 @@ export function isAuthed(): boolean {
   return cachedUser() !== null;
 }
 
+/** Ids de las propiedades cuyo ownerId coincide con el usuario actual. */
+export function myPropertyIds(properties: { id: string; ownerId?: string | null }[]): Set<string> {
+  const me = cachedUser();
+  if (!me) return new Set();
+  return new Set(properties.filter((p) => p.ownerId === me.id).map((p) => p.id));
+}
+
 export async function login(username: string, password: string, remember = true): Promise<SessionUser> {
   const res = await api<{ user: SessionUser }>('/api/auth/login', {
     method: 'POST',
