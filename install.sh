@@ -372,6 +372,13 @@ else
         $SUDO install -m 0755 "$RELEASE_DIR/deploy/keynest-update.sh" "$OPT_DIR/keynest-update.sh"
         $SUDO cp "$RELEASE_DIR/deploy/keynest-update.service" "/etc/systemd/system/$SERVICE_NAME-update.service"
         $SUDO cp "$RELEASE_DIR/deploy/keynest-update.timer" "/etc/systemd/system/$SERVICE_NAME-update.timer"
+        # .path: el apply in-app escribe un flag en el dir de datos y este lo
+        # detecta (inotify) y lanza el .service (root) on-demand. Obligatorio
+        # para el botón "Actualizar ahora" (el servicio va sandboxeado).
+        if [ -f "$RELEASE_DIR/deploy/keynest-update.path" ]; then
+            $SUDO cp "$RELEASE_DIR/deploy/keynest-update.path" "/etc/systemd/system/$SERVICE_NAME-update.path"
+            $SUDO systemctl enable --now "$SERVICE_NAME-update.path"
+        fi
         $SUDO systemctl daemon-reload
         $SUDO systemctl enable --now "$SERVICE_NAME-update.timer"
         ok "auto-update timer instalado (semanal; releases estables + sha256)"

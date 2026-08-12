@@ -14,7 +14,7 @@ import { syncAll, syncStatus } from './sync.js'
 import { fetchIcs, icsToReservations, parseIcs } from './ical.js'
 import { seedDemo } from './seed-demo.js'
 import { saveTedeeConfig, tedeeConfig, tedeeLocks, tedeeAccesses } from './tedee.js'
-import { applyUpdate, currentId, updateStatus, getUpdateHistory, consumePendingUpdate } from './update.js'
+import { currentId, updateStatus, getUpdateHistory, consumePendingUpdate, requestUpdate } from './update.js'
 import { importAirbnb, parseAirbnbCsv } from './import-airbnb.js'
 import { syncAirbnb, airbnbStatus } from './airbnb-sync.js'
 import { configurePush, flushNotificationQueue, notifyUsers } from './push.js'
@@ -247,10 +247,14 @@ app.get('/api/updates/history', auth.requireAdmin(prodDb, demoDb), (c) => {
 
 app.post('/api/update/apply', auth.requireAdmin(prodDb, demoDb), async (c) => {
   audit(c.get('db'), c.get('user').id, 'update.apply', 'system', 'server', '')
-  const ok = await applyUpdate(c.get('db'), c.get('user').id)
-  // systemd Restart=always levanta el servicio con el código nuevo tras salir
-  setTimeout(() => process.exit(0), 1500)
-  return c.json({ ok, restarting: ok })
+  // El servicio va sandboxeado (User=keynest + ProtectSystem=full + no-root):
+  // no puede ejecutar keynest-update.sh con privilegios. Escribe un flag en el
+  // dir de datos (escribible); un systemd .path (keynest-update.path) lo
+  // detecta y lanza keynest-update.service (root) on-demand. El apply es
+  // async: el front sondea /api/version hasta que el build cambia.
+  const ok = requestUpdate(c.get('db'), c.get('user').id, config.dataDir)
+  if (!ok) return c.json({ error: 'no se pudo solicitar la actualización', code: 'UPDATE_REQUEST_FAILED' }, 500)
+  return c.json({ requested: true, restarting: true }, 202)
 })
 
 /* Audit log (solo admin, últimas 100 entradas) */
