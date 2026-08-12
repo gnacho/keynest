@@ -382,12 +382,12 @@ export default function Dashboard() {
             const accs = tedeeAccess.filter((a) => a.propertyId === statsProp.id).slice(0, 5);
             const q = `?inmueble=${statsProp.slug}`;
             const links = [
-              { to: `/calendario${q}`, label: t('calendario'), icon: Calendar },
-              { to: `/reservas${q}`, label: t('reservas'), icon: CalendarRange },
-              { to: `/limpieza${q}`, label: t('limpieza'), icon: Sparkles },
-              { to: `/mantenimiento${q}`, label: t('mantenimiento'), icon: Wrench },
-              { to: `/rentabilidad${q}`, label: t('rentabilidad'), icon: Euro },
-              { to: `/tedee${q}`, label: t('tedee'), icon: Lock },
+              { to: `/calendario${q}`, label: t('nav.calendario'), icon: Calendar },
+              { to: `/reservas${q}`, label: t('nav.reservas'), icon: CalendarRange },
+              { to: `/limpieza${q}`, label: t('nav.limpieza'), icon: Sparkles },
+              { to: `/mantenimiento${q}`, label: t('nav.mantenimiento'), icon: Wrench },
+              { to: `/rentabilidad${q}`, label: t('nav.rentabilidad'), icon: Euro },
+              { to: `/tedee${q}`, label: t('nav.tedee'), icon: Lock },
             ];
             const rows = [
               { label: t('dash.ingresosPrevistosMes'), value: `${fmtNumber(income)} €`, color: '#10B981', icon: Euro },
@@ -445,16 +445,20 @@ export default function Dashboard() {
                   )}
                 </div>
 
-                <div className="flex flex-wrap justify-center gap-2">
+                <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
                   {links.map(({ icon: LinkIcon, to, label }) => (
                     <Link
                       key={to}
                       to={to}
                       onClick={() => setStatsProp(null)}
-                      className="flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-semibold transition-colors hover:bg-[var(--surface-2)]"
-                      style={{ borderColor: 'var(--border)', color: 'var(--text-muted)' }}
+                      className="flex items-center justify-center gap-1.5 rounded-xl border px-3 py-2.5 text-xs font-semibold transition-all duration-150 hover:brightness-105 active:scale-[0.98]"
+                      style={{
+                        borderColor: 'var(--border)',
+                        backgroundColor: 'var(--surface-2)',
+                        color: 'var(--text)',
+                      }}
                     >
-                      <LinkIcon className="h-3.5 w-3.5" strokeWidth={2} />
+                      <LinkIcon className="h-3.5 w-3.5 shrink-0" strokeWidth={2} style={{ color: 'var(--brand-from)' }} />
                       {label}
                     </Link>
                   ))}
