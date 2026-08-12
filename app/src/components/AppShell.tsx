@@ -272,6 +272,11 @@ export default function AppShell({ children }: { children: ReactNode }) {
     }
   }, [collapsed]);
 
+  // Cada cambio de ruta resetea el scroll al principio (no hay ScrollRestoration).
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [location.pathname]);
+
   const urgentMaintenance = getUrgentMaintenance().length;
 
   const sessionUser = cachedUser();
@@ -308,6 +313,14 @@ export default function AppShell({ children }: { children: ReactNode }) {
   const badgeFor = (to: string): number => {
     if (to === '/mantenimiento') return urgentMaintenance;
     return 0;
+  };
+
+  /* Re-tap del tab activo (o logo): scroll suave arriba. Si la ruta es distinta,
+     el Link navega normal (el scroll se resetea con el useEffect de pathname). */
+  const scrollTopIfActive = (to: string) => () => {
+    if (isActive(to) && window.scrollY > 0) {
+      window.scrollTo({ top: 0, behavior: reduce ? 'auto' : 'smooth' });
+    }
   };
 
   /* ------------------------------------------------ Item solo-icono (raíl/colapsado) */
@@ -494,7 +507,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
                 <ArrowLeft className="h-5 w-5" />
               </button>
             ) : (
-              <Link to="/" aria-label={t('nav.irResumen')}>
+              <Link to="/" aria-label={t('nav.irResumen')} onClick={scrollTopIfActive('/')}>
                 <LogoMark size={26} />
               </Link>
             )}
@@ -615,6 +628,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
                 <Link
                   key={item.to}
                   to={item.to}
+                  onClick={scrollTopIfActive(item.to)}
                   className="relative flex flex-col items-center justify-center gap-0.5"
                 >
                   {active && (
