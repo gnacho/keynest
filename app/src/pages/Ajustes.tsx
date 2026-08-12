@@ -49,6 +49,7 @@ import { EXPENSE_META, EXPENSE_TYPES, TYPE_SWATCHES } from '@/components/fin/exp
 import { useData } from '@/data/useData';
 import { cachedUser, demoStatus, setDemoMode } from '@/lib/auth';
 import { api } from '@/lib/api';
+import { applyRelease } from '@/lib/apply-update';
 import { copyText } from '@/lib/clipboard';
 import { catIcon, CAT_ICONS } from '@/lib/cat-icons';
 import { AppearanceCard, AboutCard, Card, InstallCard, LookaheadRow, SessionCard } from '@/components/settings/settings-cards';
@@ -246,8 +247,8 @@ export default function Ajustes() {
     if (applying) return;
     setApplying(true);
     try {
-      await api('/api/update/apply', { method: 'POST' });
-      toast.success(tr('aj.actualizadoOk'));
+      const done = await applyRelease();
+      toast.success(tr(done ? 'aj.actualizadoOk' : 'aj.actualizandoTarda'));
       setUpdateInfo(null);
     } catch {
       toast.error(tr('aj.errorActualizar'));
