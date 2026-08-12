@@ -11,6 +11,10 @@ y este proyecto se adhiere a [Versionado Semántico](https://semver.org/lang/es/
 
 - La PWA no giraba en tablets: el manifest forzaba orientación vertical
   (`portrait-primary`). Ahora usa `any` para rotar con el dispositivo. (#194)
+- El path del marcador de versión instalada (`release-id`) estaba hardcodeado
+  a `/opt/keynest`; ahora es configurable vía `RELEASE_MARKER` (importante en
+  despliegues flat/demo donde la ruta no existe y el `build` caía al fallback
+  del package.json). (#196)
 
 ### Todo
 
