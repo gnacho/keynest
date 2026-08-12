@@ -1,17 +1,20 @@
 // update.js — estado y aplicación de actualizaciones. Detecta la última release
 // ESTABLE (releases/latest, tag v*) y, si hay versión nueva, la aplica ejecutando
 // keynest-update.sh (deploy/, versionado: releases + checksums + marker semver).
-// El server NO se auto-aplica en runtime: el script hace el deploy y, con
-// SKIP_RESTART=1, el server sale y systemd (Restart=always) relanza.
+// El server NO se auto-aplica en runtime: el endpoint escribe un flag en el dir
+// de datos (escribible) y un systemd .path (keynest-update.path) lo detecta y
+// lanza keynest-update.service (root, oneshot) on-demand. El script hace el
+// deploy + systemctl restart. El apply es asíncrono: el front sondea
+// /api/version hasta que el build cambia.
 // Incluye historial de actualizaciones (#153).
-import { execFile } from 'node:child_process'
+import { writeFileSync } from 'node:fs'
 import { readFileSync } from 'node:fs'
+import { join } from 'node:path'
 import { randomUUID } from 'node:crypto'
 import { kvGet, kvSet } from './db.js'
 
 const REPO = process.env.GITHUB_REPO || 'gnacho/keynest'
 const MARKER = '/opt/keynest/.release-id'
-const UPDATE_SCRIPT = process.env.UPDATE_SCRIPT || '/opt/keynest/keynest-update.sh'
 const CACHE_KEY = 'gh_latest_release'
 const CACHE_TTL = 5 * 60 * 1000
 
@@ -102,27 +105,21 @@ export function consumePendingUpdate(db) {
   } catch { return null }
 }
 
-export function applyUpdate(db, userId) {
-  const startTime = Date.now()
-  const fromVer = currentId()
-  const toVer = 'pending' // el script actualiza el marker; la versión real se verá tras el restart
-
-  recordUpdate(db, userId, fromVer, toVer, startTime)
-
-  return new Promise((resolve) => {
-    // El script del repo (deploy/keynest-update.sh) hace el deploy con checksums;
-    // SKIP_RESTART=1: el server sale y systemd (Restart=always) relanza con lo nuevo.
-    execFile(UPDATE_SCRIPT, { env: { ...process.env, SKIP_RESTART: '1' } }, (err) => {
-      // Actualizar la entrada con el resultado (mejor intento: el proceso va a
-      // salir ya, pero dejamos constancia del resultado del exec)
-      try {
-        const duration = Date.now() - startTime
-        db.prepare(`UPDATE update_history SET status = ?, duration_ms = ?
-          WHERE version_from = ? AND version_to = ? AND status = 'started'
-          ORDER BY timestamp DESC LIMIT 1`)
-          .run(err ? 'failed' : 'applied', duration, fromVer, toVer)
-      } catch { /* tabla sin crear o DB ya cerrada */ }
-      resolve(!err)
-    })
-  })
+// El endpoint de apply NO ejecuta el script directamente (el servicio va
+// sandboxeado: User=keynest + ProtectSystem=full + no-root, así que un hijo
+// hereda el sandbox y no puede escribir /opt/keynest ni systemctl restart).
+// En su lugar registra el intento en update_history y escribe un flag en el
+// dir de datos (escribible); un systemd .path (keynest-update.path) lo detecta
+// y lanza keynest-update.service (root, oneshot) on-demand. Tras el deploy, el
+// server reinicia y consumePendingUpdate() (en /api/version) marca el registro
+// como 'applied' cuando el marker cambia. Devuelve true si el flag se escribió.
+export function requestUpdate(prodDb, userId, dataDir) {
+  recordUpdate(prodDb, userId, currentId(), 'pending', Date.now())
+  const flag = join(dataDir, '.update-requested')
+  try {
+    writeFileSync(flag, new Date().toISOString())
+    return true
+  } catch {
+    return false
+  }
 }

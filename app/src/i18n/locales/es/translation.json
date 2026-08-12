@@ -720,6 +720,7 @@
     "actualizarAhora": "Actualizar ahora",
     "actualizando": "Actualizando…",
     "actualizadoOk": "Actualizada — el servicio se reinicia, recarga en unos segundos",
+    "actualizandoTarda": "La actualización está en curso, recarga en unos segundos",
     "errorActualizar": "No se pudo comprobar/aplicar la actualización",
     "diasAviso": "Días de aviso en el panel",
     "diasAvisoDesc": "Antelación con la que el panel muestra entradas, salidas y limpiezas pendientes",

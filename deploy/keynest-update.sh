@@ -20,6 +20,10 @@ trap 'rm -rf "$TMP_DIR"' EXIT INT TERM
 
 log() { logger -t "$APP-update" "$@"; }
 
+# El apply in-app escribe un flag en el dir de datos (ver update.js / el .path
+# de systemd). Borrarlo AL PRINCIPIO permite re-disparar el apply a voluntad.
+rm -f /var/lib/keynest/.update-requested /opt/keynest/data/.update-requested 2>/dev/null || true
+
 echo "STEP:detect"
 # Última release ESTABLE (no prerelease, no main).
 VER=$(curl -fsSL --max-time 20 "https://api.github.com/repos/$REPO/releases/latest" \
@@ -37,7 +41,11 @@ ARCH=$(uname -m | sed 's/x86_64/amd64/;s/aarch64/arm64/')
 TARBALL="${APP}_${VER_NO_V}_linux_${ARCH}.tar.gz"
 BASE="https://github.com/$REPO/releases/download/$VER"
 curl -fL --max-time 120 "$BASE/$TARBALL" -o "$TMP_DIR/app.tar.gz"
-curl -fL --max-time 30 "$BASE/checksums.txt" -o "$TMP_DIR/checksums.txt"
+# Cache-buster: la URL de checksums.txt es estable entre versiones y la CDN
+# sirve la copia vieja justo tras publicar → el tarball nuevo "no está en
+# checksums". Añadir ?nc=<ts> fuerza la revalidación.
+TS=$(date +%s)
+curl -fL --max-time 30 "$BASE/checksums.txt?nc=$TS" -o "$TMP_DIR/checksums.txt"
 
 echo "STEP:verify"
 expected=$(awk -v f="$TARBALL" '$2=="'"$TARBALL"'" || index($0, "  '"$TARBALL"'") {print $1; exit}' "$TMP_DIR/checksums.txt" 2>/dev/null || true)
@@ -65,16 +73,26 @@ if [ -L "$OPT_DIR/current" ]; then
   ln -sfn "$RELEASE_DIR" "$OPT_DIR/current"
   [ -x "$OPT_DIR/node/bin/node" ] && ln -sfn "$OPT_DIR/node/bin/node" "$RELEASE_DIR/server/node" 2>/dev/null || true
 else
-  # Plano: backup + copia directa (el patrón del CT 226).
+  # Plano: backup + reemplazo quirúrgico (preserva .env y config local).
+  # NUNCA volar server/ entero: el .env (SESSION_SECRET/ENC_KEY/VAPID/PORT) y
+  # otros ficheros locales viven ahí y el tarball NO los trae. Solo se
+  # reemplazan src, node_modules y package.json.
   [ -d "$OPT_DIR/public" ] && cp -a "$OPT_DIR/public" "$OPT_DIR/public.bak-$TS"
   [ -d "$OPT_DIR/server" ] && cp -a "$OPT_DIR/server" "$OPT_DIR/server.bak-$TS"
   rm -rf "$OPT_DIR/public"
   mkdir -p "$OPT_DIR/public"
   cp -a "$TMP_DIR/pkg/dist/." "$OPT_DIR/public/"
-  rm -rf "$OPT_DIR/server"
   mkdir -p "$OPT_DIR/server"
-  cp -a "$TMP_DIR/pkg/server/." "$OPT_DIR/server/"
-  chown -R "$APP:$APP" "$OPT_DIR"
+  rm -rf "$OPT_DIR/server/src"
+  cp -a "$TMP_DIR/pkg/server/src" "$OPT_DIR/server/src"
+  if [ -d "$TMP_DIR/pkg/server/node_modules" ]; then
+    rm -rf "$OPT_DIR/server/node_modules"
+    cp -a "$TMP_DIR/pkg/server/node_modules" "$OPT_DIR/server/node_modules"
+  fi
+  cp "$TMP_DIR/pkg/server/package.json" "$OPT_DIR/server/package.json"
+  # El .env NO se toca (queda en server/.env). chown solo sobre lo nuevo.
+  chown -R "$APP:$APP" "$OPT_DIR/public" "$OPT_DIR/server/src" \
+    "$OPT_DIR/server/node_modules" "$OPT_DIR/server/package.json" 2>/dev/null || true
 fi
 # Datos NUNCA se tocan: SQLite y uploads viven en $DATA_DIR (fuera de server/).
 

@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { RefreshCw } from 'lucide-react';
 import { toast } from 'sonner';
 import { api } from '@/lib/api';
+import { applyRelease } from '@/lib/apply-update';
 
 const CHECK_KEY = 'keynest-last-update-check';
 const CHECK_INTERVAL = 7 * 24 * 60 * 60 * 1000; // 1 vez por semana (regla app-auto-update)
@@ -15,8 +16,9 @@ interface UpdateStatus {
 
 /**
  * Ribbon de actualización (patrón app-auto-update: check semanal + aviso si hay
- * versión nueva). Solo admin (el endpoint es requireAdmin). El apply lo ejecuta
- * keynest-update.sh del repo (releases estables + checksums); aquí solo se lanza.
+ * versión nueva). Solo admin (el endpoint es requireAdmin). El apply es async
+ * (flag + systemd .path): applyRelease() sondea /api/version hasta que el build
+ * cambia o timeout.
  */
 export default function UpdateRibbon() {
   const { t } = useTranslation();
@@ -48,8 +50,8 @@ export default function UpdateRibbon() {
     if (applying) return;
     setApplying(true);
     try {
-      await api('/api/update/apply', { method: 'POST' });
-      toast.success(t('aj.actualizadoOk'));
+      const done = await applyRelease();
+      toast.success(done ? t('aj.actualizadoOk') : t('aj.actualizandoTarda'));
       setInfo((s) => (s ? { ...s, available: false } : s));
     } catch {
       toast.error(t('aj.errorActualizar'));

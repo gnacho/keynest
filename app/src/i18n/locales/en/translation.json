@@ -719,6 +719,7 @@
     "actualizarAhora": "Update now",
     "actualizando": "Updating…",
     "actualizadoOk": "Updated — the service is restarting, reload in a few seconds",
+    "actualizandoTarda": "The update is in progress, reload in a few seconds",
     "errorActualizar": "Could not check/apply the update",
     "diasAviso": "Lookahead days on dashboard",
     "diasAvisoDesc": "How far ahead the dashboard shows check-ins, check-outs and pending cleanings",
