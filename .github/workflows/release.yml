@@ -1,7 +1,10 @@
 name: release
 
 # Release estable por tag v*: empaqueta la webapp completa (frontend build +
-# server + node_modules de producción PRE-BUILT por arch) + checksums.txt.
+# server + node_modules de producción PRE-BUILT por arch). El checksums.txt se
+# genera en un job `release` SEPARADO (needs: build) que combina AMBOS arch —
+# si cada job de la matriz generara el suyo y lo subiera, el último en subir
+# pisaría al otro y la release quedaría con un solo arch (bug real #192).
 # install.sh consume estos assets (perfil Node del skill installer-one-liner:
 # el servidor no necesita gcc/python/make — crítico para better-sqlite3).
 
@@ -59,23 +62,38 @@ jobs:
           cp -r server/node_modules stage/server/node_modules
           cp -r deploy stage/deploy
           tar -czf "keynest_${VERSION}_linux_${{ matrix.arch }}.tar.gz" -C stage .
+
+      - name: Sube artifact (tarball por arch; sin checksums aquí)
+        uses: actions/upload-artifact@v4
+        with:
+          name: keynest-tarball-${{ matrix.arch }}
+          path: keynest_*.tar.gz
+          if-no-files-found: error
+          retention-days: 7
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    if: github.ref_type == 'tag'
+    steps:
+      - name: Descarga ambos tarballs
+        uses: actions/download-artifact@v4
+        with:
+          pattern: keynest-tarball-*
+          merge-multiple: true
+          path: dist
+
+      - name: Genera checksums.txt combinado
+        working-directory: dist
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          ls -la
           sha256sum keynest_*.tar.gz > checksums.txt
           cat checksums.txt
 
-      - name: Publica en la release (solo tags)
-        if: github.ref_type == 'tag'
+      - name: Publica en la release
         uses: softprops/action-gh-release@v2
         with:
           files: |
-            keynest_*.tar.gz
-            checksums.txt
-
-      - name: Sube artifact de prueba (solo workflow_dispatch)
-        if: github.ref_type != 'tag'
-        uses: actions/upload-artifact@v4
-        with:
-          name: keynest-snapshot-linux-${{ matrix.arch }}
-          path: |
-            keynest_*.tar.gz
-            checksums.txt
-          retention-days: 7
+            dist/keynest_*.tar.gz
+            dist/checksums.txt
