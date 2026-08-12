@@ -14,7 +14,7 @@ import { randomUUID } from 'node:crypto'
 import { kvGet, kvSet } from './db.js'
 
 const REPO = process.env.GITHUB_REPO || 'gnacho/keynest'
-const MARKER = '/opt/keynest/.release-id'
+const MARKER = process.env.RELEASE_MARKER || '/opt/keynest/.release-id'
 const CACHE_KEY = 'gh_latest_release'
 const CACHE_TTL = 5 * 60 * 1000
 
