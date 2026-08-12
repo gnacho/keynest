@@ -74,8 +74,9 @@ const VISIBLE_NAV: NavItem[] = NAV_ITEMS.filter((i) => !HIDDEN_ROUTES.includes(i
 const SETTINGS_ITEM: NavItem = { to: '/ajustes', labelKey: 'ajustes', icon: Settings };
 
 /* Móvil (bottom-nav): esenciales (Resumen/Reservas/Limpieza/Rentabilidad) sin
-   Ajustes — Ajustes se accede desde el avatar de usuario del header. */
-const BOTTOM_ITEMS: NavItem[] = VISIBLE_NAV;
+   Ajustes — Ajustes se accede desde el avatar de usuario del header. Inmuebles
+   tampoco va: se gestiona desde el Sheet del inmueble en Resumen. */
+const BOTTOM_ITEMS: NavItem[] = VISIBLE_NAV.filter((i) => i.to !== '/inmuebles');
 
 const TITLE_KEYS: Record<string, string> = {
   '/': 'resumen',
@@ -604,7 +605,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
               </motion.div>
             </AnimatePresence>
             </PullToRefresh>
-            <p className="pointer-events-none fixed bottom-[68px] right-2 z-30 text-[9px] font-medium md:bottom-2 md:right-3" style={{ color: 'var(--text-faint)' }}>
+            <p className="pointer-events-none fixed bottom-[68px] right-2 z-30 hidden text-[9px] font-medium md:bottom-2 md:right-3 md:block" style={{ color: 'var(--text-faint)' }}>
               v{APP_VERSION}
             </p>
           </main>
@@ -620,7 +621,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
             paddingBottom: 'env(safe-area-inset-bottom)',
           }}
         >
-          <div className="grid h-16 grid-cols-5">
+          <div className="grid h-16 grid-cols-4">
             {BOTTOM_ITEMS.map((item) => {
               const active = isActive(item.to);
               const badge = badgeFor(item.to);

@@ -288,7 +288,7 @@
     "archivadas_one": "{{count}} archived",
     "archivadas_other": "{{count}} archived",
     "costeMes": "Expenses this month",
-    "horasProductos": "In cleaning and supplies",
+    "horasProductos": "In cleaning",
     "sinLimpiezas": "No cleanings in this status",
     "sinLimpiezasTxt": "Change the status or property filter to see more tasks.",
     "confirmadaArchivada": "Cleaning confirmed and archived · {{total}}",
