@@ -559,6 +559,8 @@ export default function Rentabilidad() {
     if (!deletingExpense) return;
     const id = deletingExpense.id;
     setDeletingExpense(null);
+    setDialogOpen(false);
+    setEditingExpense(null);
     await data.deleteExpense(id);
     toast.success(t('rent.gastoBorrado'));
   };
@@ -1012,15 +1014,6 @@ export default function Rentabilidad() {
                         >
                           <Pencil className="h-3.5 w-3.5" />
                         </button>
-                        <button
-                          type="button"
-                          onClick={() => setDeletingExpense(e)}
-                          aria-label={t('rent.borrarGasto')}
-                          className="flex h-7 w-7 items-center justify-center rounded-lg transition-colors hover:bg-[var(--surface-2)]"
-                          style={{ color: 'var(--text-faint)' }}
-                        >
-                          <Trash2 className="h-3.5 w-3.5" />
-                        </button>
                       </span>
                     )}
                   </motion.div>
@@ -1269,26 +1262,15 @@ export default function Rentabilidad() {
                     const e = expenses.find((x) => `mov-${x.id}` === m.id);
                     if (!e) return null;
                     return (
-                      <span className="flex shrink-0 items-center gap-0.5">
-                        <button
-                          type="button"
-                          onClick={() => openEditDialog(e)}
-                          aria-label={t('rent.editarGasto')}
-                          className="flex h-7 w-7 items-center justify-center rounded-lg transition-colors hover:bg-[var(--surface-2)]"
-                          style={{ color: 'var(--text-faint)' }}
-                        >
-                          <Pencil className="h-3.5 w-3.5" />
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setDeletingExpense(e)}
-                          aria-label={t('rent.borrarGasto')}
-                          className="flex h-7 w-7 items-center justify-center rounded-lg transition-colors hover:bg-[var(--surface-2)]"
-                          style={{ color: 'var(--text-faint)' }}
-                        >
-                          <Trash2 className="h-3.5 w-3.5" />
-                        </button>
-                      </span>
+                      <button
+                        type="button"
+                        onClick={() => openEditDialog(e)}
+                        aria-label={t('rent.editarGasto')}
+                        className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg transition-colors hover:bg-[var(--surface-2)]"
+                        style={{ color: 'var(--text-faint)' }}
+                      >
+                        <Pencil className="h-3.5 w-3.5" />
+                      </button>
                     );
                   })()}
                 </motion.div>
@@ -1404,13 +1386,29 @@ export default function Rentabilidad() {
               />
             </label>
 
-            <button
-              type="button"
-              onClick={() => void saveExpense()}
-              className="brand-gradient mt-1 flex h-11 items-center justify-center rounded-xl text-sm font-semibold text-white transition-all duration-150 hover:brightness-110 active:scale-[0.98]"
-            >
-              {t('rent.guardarGasto')}
-            </button>
+            <div className="mt-1 flex items-center gap-2">
+              {editingExpense && !data.isDemo && (
+                <button
+                  type="button"
+                  onClick={() => setDeletingExpense(editingExpense)}
+                  className="mr-auto flex h-11 items-center gap-1.5 rounded-xl border px-3 text-sm font-semibold text-rose-500 transition-colors hover:bg-[var(--ro-chip-bg)]"
+                  style={{ borderColor: 'rgb(244 63 94 / 0.5)' }}
+                >
+                  <Trash2 className="h-4 w-4" />
+                  {t('rent.borrarGasto')}
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={() => void saveExpense()}
+                className={cn(
+                  'brand-gradient flex h-11 flex-1 items-center justify-center rounded-xl text-sm font-semibold text-white transition-all duration-150 hover:brightness-110 active:scale-[0.98]',
+                  editingExpense && 'max-w-[220px]',
+                )}
+              >
+                {t('rent.guardarGasto')}
+              </button>
+            </div>
           </div>
         </DialogContent>
       </Dialog>
