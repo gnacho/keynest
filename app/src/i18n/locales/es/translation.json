@@ -221,7 +221,13 @@
     "notasReserva": "Notas",
     "notasReservaPlaceholder": "Texto libre sobre esta reserva…",
     "reservaActualizada": "Reserva actualizada",
-    "errorCrearReserva": "No se pudo crear la reserva"
+    "errorCrearReserva": "No se pudo crear la reserva",
+    "editarReserva": "Editar reserva",
+    "eliminarReserva": "Eliminar reserva",
+    "eliminarTitulo": "Eliminar reserva",
+    "eliminarDesc": "¿Seguro que quieres eliminar esta reserva manual? La acción no se puede deshacer.",
+    "reservaBorrada": "Reserva eliminada",
+    "errorBorrarReserva": "No se pudo eliminar la reserva"
   },
   "estadoReserva": {
     "confirmada": "Confirmada",

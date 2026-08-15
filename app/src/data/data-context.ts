@@ -97,8 +97,10 @@ export interface DataApi {
   /** Elimina una limpieza no realizada (pendiente/asignada sin horas, productos ni fotos). */
   deleteCleaning: (id: string) => Promise<void>;
 
-  /** Actualiza importe manual y/o notas de una reserva. */
-  updateReservation: (id: string, patch: { amount?: number; notes?: string }) => Promise<void>;
+  /** Actualiza importe manual y/o notas de una reserva; las manuales también sus datos completos. */
+  updateReservation: (id: string, patch: { amount?: number; notes?: string; guestName?: string; checkin?: string; checkout?: string; guests?: number }) => Promise<void>;
+  /** Elimina una reserva manual (las del iCal/CSV no se tocan). */
+  deleteReservation: (id: string) => Promise<void>;
   addReservation: (input: {
     propertyId: string;
     guestName: string;

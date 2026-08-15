@@ -50,7 +50,7 @@ export default function MonthOverviewCard({ occupancyPct, spark, income, reserva
       icon: Euro,
       color: '#10B981',
       bg: 'var(--em-chip-bg)',
-      label: t('dash.ingresosPrevistosMes'),
+      label: t('dash.misInmueblesPrevistosMes'),
       value: `${fmtNumber(income)} €`,
       to: '/rentabilidad',
       big: true,

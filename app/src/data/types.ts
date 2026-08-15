@@ -44,6 +44,8 @@ export interface Reservation {
   notes?: string;
   /** Fecha REAL de reserva (CSV Airbnb); '' = desconocida (p.ej. venidas del iCal). */
   bookedDate?: string;
+  /** Reserva creada a mano en la app (uid `manual-*`); solo estas se editan/borran. */
+  isManual?: boolean;
 }
 
 export type AccessType = 'entrada' | 'salida' | 'remota';

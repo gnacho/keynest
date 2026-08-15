@@ -146,11 +146,28 @@ export default function Mantenimiento() {
         e.dataTransfer.setData('text/plain', t.id);
         e.dataTransfer.effectAllowed = 'move';
         setDraggingId(t.id);
+        // Drag image ampliada: el clon del navegador es diminuto y no da control.
+        // Renderizamos un clon a escala con sombra y rotación sutil para que la
+        // tarjeta se lea como "la que se mueve" (#109).
+        const src = e.currentTarget;
+        const clone = src.cloneNode(true) as HTMLElement;
+        clone.style.position = 'absolute';
+        clone.style.top = '-10000px';
+        clone.style.left = '0';
+        clone.style.width = '320px';
+        clone.style.opacity = '0.95';
+        clone.style.transform = 'scale(1.04) rotate(1deg)';
+        clone.style.boxShadow = '0 16px 40px rgba(0,0,0,0.28)';
+        clone.style.borderRadius = '16px';
+        clone.style.pointerEvents = 'none';
+        document.body.appendChild(clone);
+        e.dataTransfer.setDragImage(clone, 60, 40);
+        requestAnimationFrame(() => clone.remove());
       }}
       onDragEnd={endDrag}
       className={cn(
         data.isDemo ? '' : 'cursor-grab active:cursor-grabbing',
-        draggingId === t.id && 'opacity-40',
+        draggingId === t.id && 'scale-[1.02] opacity-60 shadow-lg ring-1 ring-[#6366F1]/50',
       )}
     >
       {renderCard(t, animateEntry)}
@@ -171,41 +188,25 @@ export default function Mantenimiento() {
 
   return (
     <div className="flex flex-col gap-5">
-      {/* ============================== FilterBar + chips de categoría + urgentes */}
+      {/* ============================== FilterBar + dropdown categoría + urgentes */}
       <div className="flex flex-wrap items-center gap-2">
         <FilterBar className="mx-0 px-0" />
-        <div
-          className="flex items-center gap-1 overflow-x-auto rounded-xl border p-1 no-scrollbar"
-          style={{ borderColor: 'var(--border)', backgroundColor: 'var(--surface)' }}
-        >
-          <button
-            type="button"
-            onClick={() => setCategoria('todas')}
-            className={cn(
-              'whitespace-nowrap rounded-lg px-3 py-1 text-xs font-semibold transition-colors duration-150',
-              categoria === 'todas' ? 'text-white' : 'text-[var(--text-muted)] hover:text-[var(--text)]',
-            )}
-            style={categoria === 'todas' ? { backgroundImage: 'linear-gradient(135deg,#6366F1,#8B5CF6)' } : undefined}
-          >
-            {tr('mant.todas')}
-          </button>
-          {CATEGORY_OPTIONS.map((o) => (
-            <button
-              key={o.value}
-              type="button"
-              title={o.label}
-              aria-label={o.label}
-              onClick={() => setCategoria(categoria === o.value ? 'todas' : o.value)}
-              className={cn(
-                'flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-xs font-semibold transition-colors duration-150',
-                categoria === o.value ? 'text-white' : 'text-[var(--text-muted)] hover:text-[var(--text)]',
-              )}
-              style={categoria === o.value ? { backgroundImage: 'linear-gradient(135deg,#6366F1,#8B5CF6)' } : undefined}
-            >
-              <o.icon className="h-3.5 w-3.5" />
-            </button>
-          ))}
-        </div>
+        <Select value={categoria} onValueChange={(v) => setCategoria(v as MaintenanceCategory | 'todas')}>
+          <SelectTrigger className="h-9 w-[190px] rounded-xl border-[var(--border)] bg-[var(--surface)] text-xs font-semibold shadow-none">
+            <SelectValue placeholder={tr('mant.todas')} />
+          </SelectTrigger>
+          <SelectContent className="rounded-xl border-[var(--border)] bg-[var(--surface)]">
+            <SelectItem value="todas">{tr('mant.todas')}</SelectItem>
+            {CATEGORY_OPTIONS.map((o) => (
+              <SelectItem key={o.value} value={o.value}>
+                <span className="flex items-center gap-2">
+                  <o.icon className="h-3.5 w-3.5" />
+                  {o.label}
+                </span>
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
         <button
           type="button"
           onClick={() => setSoloUrgentes((v) => !v)}
