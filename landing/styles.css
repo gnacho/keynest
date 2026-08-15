@@ -113,17 +113,19 @@ body {
   display: inline-flex; align-items: center; justify-content: center;
   padding: 13px 26px; border-radius: 12px; font-size: 15px; font-weight: 600;
   background: var(--accent); color: var(--accent-fg); text-decoration: none; border: none; cursor: pointer;
-  transition: opacity var(--dur) var(--ease);
+  transition: opacity var(--dur) var(--ease), transform var(--dur) var(--ease);
 }
 .btn-primary:hover { opacity: 0.9; }
+.btn-primary:active { transform: translateY(0) scale(0.97); }
 .btn-ghost {
   display: inline-flex; align-items: center; justify-content: center;
   padding: 13px 26px; border-radius: 12px; font-size: 15px; font-weight: 600;
   background: var(--surface); color: var(--text); text-decoration: none;
   border: 1px solid var(--border); cursor: pointer;
-  transition: border-color var(--dur) var(--ease), color var(--dur) var(--ease);
+  transition: border-color var(--dur) var(--ease), color var(--dur) var(--ease), transform var(--dur) var(--ease);
 }
 .btn-ghost:hover { border-color: var(--accent); color: var(--accent); }
+.btn-ghost:active { transform: translateY(0) scale(0.97); }
 .btn-primary:focus-visible, .btn-ghost:focus-visible {
   outline: 2px solid var(--accent); outline-offset: 2px;
 }
