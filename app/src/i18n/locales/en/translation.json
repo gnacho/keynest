@@ -556,6 +556,7 @@
     "eliminar": "Delete",
     "eliminarTitulo": "Delete cleaning",
     "eliminarDesc": "This cleaning will be permanently deleted. This cannot be undone.",
+    "eliminarDescDatos": "The cleaning will be deleted along with its hours, products and photos, and the linked cleaning expense. This cannot be undone.",
     "detalles": "Details"
   },
   "aj": {
