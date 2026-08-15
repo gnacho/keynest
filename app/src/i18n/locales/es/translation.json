@@ -814,6 +814,8 @@
       "mantenimiento_recordatorio": "Recordatorio de mantenimiento"
     },
     "administracion": "Administración",
+    "administracionColapsar": "Colapsar zona de administración",
+    "administracionExpandir": "Expandir zona de administración",
     "rolUser": "Usuario",
     "rolAdmin": "Admin",
     "resetPassword": "Restablecer contraseña",

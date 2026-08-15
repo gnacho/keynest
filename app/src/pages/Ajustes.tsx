@@ -224,6 +224,8 @@ export default function Ajustes() {
   const [applying, setApplying] = useState(false);
   const [rollingBack, setRollingBack] = useState(false);
   const [openPanel, setOpenPanel] = useState<'backup' | 'users' | 'audit' | null>(null);
+  // Zona admin colapsable (#44): recordar la preferencia del usuario.
+  const [adminOpen, setAdminOpen] = useState<boolean>(() => window.localStorage.getItem('keynest-admin-open') !== '0');
   const isAdmin = cachedUser()?.role === 'admin';
   const isDemoUser = Boolean(cachedUser()?.is_demo);
   const [syncingManual, setSyncingManual] = useState(false);
@@ -1006,14 +1008,31 @@ export default function Ajustes() {
                   className="flex flex-col gap-4 rounded-2xl border p-4 sm:p-5"
                   style={{ borderColor: 'rgb(var(--warn-rgb) / 0.35)', backgroundColor: 'rgb(var(--warn-rgb) / 0.04)' }}
                 >
+                  {/* Cabecera siempre visible con el toggle de colapso (#44) */}
+                  <div className="flex h-9 items-center gap-2 shrink-0">
+                    <ShieldCheck className="h-5 w-5" style={{ color: 'rgb(var(--warn-rgb))' }} />
+                    <h3 className="font-display text-[15px] font-semibold tracking-[-0.01em]">{tr('aj.administracion')}</h3>
+                    <button
+                      type="button"
+                      aria-label={adminOpen ? tr('aj.administracionColapsar') : tr('aj.administracionExpandir')}
+                      onClick={() => {
+                        const next = !adminOpen;
+                        setAdminOpen(next);
+                        window.localStorage.setItem('keynest-admin-open', next ? '1' : '0');
+                        if (!next) setOpenPanel(null);
+                      }}
+                      className="flex h-7 w-7 items-center justify-center rounded-lg transition-colors hover:bg-[var(--surface-2)]"
+                      style={{ color: 'var(--text-muted)' }}
+                    >
+                      <ChevronDown className={cn('h-4 w-4 transition-transform duration-200', adminOpen && 'rotate-180')} />
+                    </button>
+                  </div>
+
+                  {adminOpen && (
+                  <>
                   {/* AdminBar canónica: Actualizaciones → Respaldos → Usuarios →
                       Auditoría; Modo demo a la derecha. Paneles debajo. */}
                   <div className="flex flex-wrap items-start gap-3">
-                    <div className="flex h-9 items-center gap-2 shrink-0">
-                      <ShieldCheck className="h-5 w-5" style={{ color: 'rgb(var(--warn-rgb))' }} />
-                      <h3 className="font-display text-[15px] font-semibold tracking-[-0.01em]">{tr('aj.administracion')}</h3>
-                    </div>
-
                     {/* 1. Comprobar actualizaciones (widget inline) */}
                     <div className="flex flex-col gap-1">
                       {updateInfo === null ? (
@@ -1243,6 +1262,8 @@ export default function Ajustes() {
                   {/* Importar CSV de Airbnb (al lado de Tedee en la misma fila) */}
                   <ImportAirbnbCard />
                   </div>
+                    </>
+                    )}
                 </div>
               )}
 

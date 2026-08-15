@@ -813,6 +813,8 @@
       "mantenimiento_recordatorio": "Maintenance reminder"
     },
     "administracion": "Administration",
+    "administracionColapsar": "Collapse admin zone",
+    "administracionExpandir": "Expand admin zone",
     "rolUser": "User",
     "rolAdmin": "Admin",
     "resetPassword": "Reset password",
