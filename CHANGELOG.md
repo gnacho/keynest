@@ -7,6 +7,28 @@ y este proyecto se adhiere a [Versionado Semántico](https://semver.org/lang/es/
 
 ## [Unreleased]
 
+## [1.5.39] - 2026-08-15
+
+### Added
+
+- Gastos persistentes: nueva tabla `expenses` en el servidor con CRUD completo
+  (crear, editar, eliminar). Antes vivían solo en memoria del navegador y se
+  perdían al recargar. La migración usa el número 21 porque el 20 ya estaba
+  ocupado en el servidor de producción por un cambio de otra sesión. (#207)
+- Rentabilidad gana la sección "Todos los gastos": filtros por tipo, inmueble,
+  mes y año, búsqueda por texto y paginación de 20 por página. Los filtros de
+  mes/año abren por defecto en el mes y año actuales. El desglose por tipo
+  (quesito) se mantiene como resumen. (#207)
+- El botón "Eliminar gasto" vive dentro del diálogo de edición, en acento
+  rojo, para evitar borrados accidentales desde las filas. (#207)
+- La demo online incluye gastos de ejemplo. (#207)
+
+### Fixed
+
+- El botón "Editar" de una limpieza archivada no abría ningún diálogo (estaba
+  conectado a un diálogo que solo se renderiza para limpiezas activas). Ahora
+  abre el editor de horas y productos de esa limpieza. (#206)
+
 ## [1.5.38] - 2026-08-15
 
 ### Added
