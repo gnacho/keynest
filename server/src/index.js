@@ -120,6 +120,7 @@ const SSE_ENTITY_ROUTES = [
   { match: '/maintenance', entity: 'maintenance' },
   { match: '/task', entity: 'maintenance' },
   { match: '/cleanings', entity: 'cleanings' },
+  { match: '/expenses', entity: 'expenses' },
   { match: '/reservations', entity: 'reservations' },
   { match: '/properties', entity: 'properties' },
   { match: '/people', entity: 'people' },
@@ -424,6 +425,7 @@ guarded.get('/bootstrap', async (c) => {
     .map((t) => ({ ...t, has_token: Boolean(t.token_hash), token_hash: undefined }))
   const people = db.prepare('SELECT id, name, phone, role, specialty, hourly_rate, token_hash, created_at FROM people ORDER BY created_at').all()
     .map((p) => ({ ...p, has_token: Boolean(p.token_hash), token_hash: undefined }))
+  const expenses = db.prepare('SELECT * FROM expenses ORDER BY year DESC, month DESC, created_at DESC').all()
   let categories = kvGet(db, 'maint_categories')
   if (!categories) categories = JSON.stringify(DEFAULT_CATEGORIES)
   const settings = {
@@ -448,7 +450,7 @@ guarded.get('/bootstrap', async (c) => {
     locks = lk
     accesses = ac
   } catch { /* tedee no configurado o caído */ }
-  return c.json({ properties, reservations, cleanings, maintenance, people, categories: JSON.parse(categories), config: { ...settings }, sync: syncStatus(db), users, locks, accesses, demo: c.get('user').is_demo, demoEnabled: auth.demoEnabled(prodDb) })
+  return c.json({ properties, reservations, cleanings, maintenance, people, expenses, categories: JSON.parse(categories), config: { ...settings }, sync: syncStatus(db), users, locks, accesses, demo: c.get('user').is_demo, demoEnabled: auth.demoEnabled(prodDb) })
 })
 
 const propertySchema = z.object({
@@ -760,6 +762,64 @@ guarded.delete('/maintenance/:id', (c) => {
   if (existing.status === 'finalizada') return c.json({ error: 'no se puede eliminar una tarea finalizada', code: 'not-deletable' }, 409)
   db.prepare('DELETE FROM maintenance_tasks WHERE id = ?').run(existing.id)
   aud(c, 'delete', 'maintenance', existing.id, `${existing.property_id} ${existing.title}`)
+  return c.json({ ok: true })
+})
+
+/* ---------------------------------------------------------- Gastos (expenses)
+   Gastos mensuales por inmueble (agua, luz, internet, administración, extras).
+   Antes vivían solo en memoria del frontend; ahora persisten en BD (issue #207). */
+const expenseSchema = z.object({
+  propertyId: z.string().min(1),
+  type: z.enum(['agua', 'luz', 'internet', 'administración', 'extras']),
+  label: z.string().min(1),
+  amount: z.coerce.number().positive(),
+  month: z.coerce.number().int().min(0).max(11),
+  year: z.coerce.number().int().min(2000).max(2100),
+})
+
+guarded.post('/expenses', async (c) => {
+  const db = c.get('db')
+  const body = await c.req.json().catch(() => null)
+  const parsed = expenseSchema.safeParse(body)
+  if (!parsed.success) return c.json({ error: 'formato inválido' }, 400)
+  const d = parsed.data
+  if (!db.prepare('SELECT id FROM properties WHERE id = ?').get(d.propertyId)) return c.json({ error: 'inmueble no encontrado' }, 404)
+  const id = crypto.randomUUID()
+  db.prepare(`INSERT INTO expenses (id, property_id, type, label, amount, month, year, created_at)
+              VALUES (?, ?, ?, ?, ?, ?, ?, ?)`)
+    .run(id, d.propertyId, d.type, d.label, d.amount, d.month, d.year, Date.now())
+  aud(c, 'create', 'expense', id, `${d.label} ${d.amount}€ ${d.month + 1}/${d.year}`)
+  return c.json({ ok: true, expense: db.prepare('SELECT * FROM expenses WHERE id = ?').get(id) }, 201)
+})
+
+guarded.put('/expenses/:id', async (c) => {
+  const db = c.get('db')
+  const existing = db.prepare('SELECT * FROM expenses WHERE id = ?').get(c.req.param('id'))
+  if (!existing) return c.json({ error: 'no encontrado' }, 404)
+  const body = await c.req.json().catch(() => null)
+  const parsed = expenseSchema.partial().safeParse(body)
+  if (!parsed.success) return c.json({ error: 'formato inválido' }, 400)
+  const d = parsed.data
+  if (d.propertyId && !db.prepare('SELECT id FROM properties WHERE id = ?').get(d.propertyId)) return c.json({ error: 'inmueble no encontrado' }, 404)
+  db.prepare(`UPDATE expenses SET
+    property_id = COALESCE(?, property_id),
+    type = COALESCE(?, type),
+    label = COALESCE(?, label),
+    amount = COALESCE(?, amount),
+    month = COALESCE(?, month),
+    year = COALESCE(?, year)
+    WHERE id = ?`)
+    .run(d.propertyId ?? null, d.type ?? null, d.label ?? null, d.amount ?? null, d.month ?? null, d.year ?? null, existing.id)
+  aud(c, 'update', 'expense', existing.id, JSON.stringify(Object.keys(d)))
+  return c.json({ ok: true, expense: db.prepare('SELECT * FROM expenses WHERE id = ?').get(existing.id) })
+})
+
+guarded.delete('/expenses/:id', (c) => {
+  const db = c.get('db')
+  const existing = db.prepare('SELECT * FROM expenses WHERE id = ?').get(c.req.param('id'))
+  if (!existing) return c.json({ error: 'no encontrado' }, 404)
+  db.prepare('DELETE FROM expenses WHERE id = ?').run(existing.id)
+  aud(c, 'delete', 'expense', existing.id, `${existing.label} ${existing.amount}€ ${existing.month + 1}/${existing.year}`)
   return c.json({ ok: true })
 })
 

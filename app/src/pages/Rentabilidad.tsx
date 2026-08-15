@@ -9,8 +9,11 @@ import {
   ChevronLeft,
   ChevronRight,
   Euro,
+  Pencil,
   PieChart as PieChartIcon,
   Plus,
+  Search,
+  Trash2,
   TrendingDown,
   TrendingUp,
 } from 'lucide-react';
@@ -34,6 +37,7 @@ import Fab from '@/components/Fab';
 import FilterBar from '@/components/FilterBar';
 import MoneyText from '@/components/MoneyText';
 import PropertyAvatar from '@/components/PropertyAvatar';
+import ConfirmDialog from '@/components/ConfirmDialog';
 import FinKpiCard from '@/components/fin/FinKpiCard';
 import { EXPENSE_META, EXPENSE_TYPES } from '@/components/fin/expenseMeta';
 import {
@@ -305,6 +309,17 @@ export default function Rentabilidad() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [lastAddedId, setLastAddedId] = useState<string | null>(null);
   const [activePie, setActivePie] = useState<number>(-1);
+  // Gasto en edición (null = alta nueva); confirmación de borrado
+  const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
+  const [deletingExpense, setDeletingExpense] = useState<Expense | null>(null);
+  // Lista "Todos los gastos": filtros + paginación. Por defecto: mes actual.
+  const [expFilterType, setExpFilterType] = useState<'todos' | ExpenseType>('todos');
+  const [expFilterProp, setExpFilterProp] = useState<string>('todos');
+  const [expFilterMonth, setExpFilterMonth] = useState<'todos' | number>(new Date().getMonth());
+  const [expFilterYear, setExpFilterYear] = useState<'todos' | number>(new Date().getFullYear());
+  const [expSearch, setExpSearch] = useState('');
+  const [expPage, setExpPage] = useState(0);
+  const PAGE_SIZE = 20;
 
   // Formulario alta de gasto
   const [fProperty, setFProperty] = useState<string>('');
@@ -398,6 +413,26 @@ export default function Rentabilidad() {
     .sort((a, b) => b.value - a.value);
   const totalByType = byType.reduce((a, x) => a + x.value, 0);
 
+  /* ---------------- Lista "Todos los gastos": filtros + paginación ---------------- */
+  const expYears = useMemo(
+    () => [...new Set(expenses.map((e) => e.year))].sort((a, b) => b - a),
+    [expenses],
+  );
+  const expFiltered = useMemo(() => {
+    const q = expSearch.trim().toLowerCase();
+    return expenses
+      .filter((e) => (expFilterType === 'todos' || e.type === expFilterType))
+      .filter((e) => (expFilterProp === 'todos' || e.propertyId === expFilterProp))
+      .filter((e) => (expFilterMonth === 'todos' || e.month === expFilterMonth))
+      .filter((e) => (expFilterYear === 'todos' || e.year === expFilterYear))
+      .filter((e) => !q || e.label.toLowerCase().includes(q))
+      .sort((a, b) => (b.year - a.year) || (b.month - a.month));
+  }, [expenses, expFilterType, expFilterProp, expFilterMonth, expFilterYear, expSearch]);
+  const expTotalPages = Math.max(1, Math.ceil(expFiltered.length / PAGE_SIZE));
+  const expPageClamped = Math.min(expPage, expTotalPages - 1);
+  const expPageItems = expFiltered.slice(expPageClamped * PAGE_SIZE, expPageClamped * PAGE_SIZE + PAGE_SIZE);
+  const resetExpPage = () => setExpPage(0);
+
   /* ---------------- Desglose por inmueble ---------------- */
   const periodDays = daysIn(range);
   const breakdown = properties.map((p) => {
@@ -470,6 +505,7 @@ export default function Rentabilidad() {
 
   /* ---------------- Acciones ---------------- */
   const openDialog = () => {
+    setEditingExpense(null);
     setFProperty(propertyId ?? '');
     setFType('agua');
     setFAmount('');
@@ -479,27 +515,54 @@ export default function Rentabilidad() {
     setDialogOpen(true);
   };
 
-  const saveExpense = () => {
+  const openEditDialog = (e: Expense) => {
+    setEditingExpense(e);
+    setFProperty(e.propertyId);
+    setFType(e.type);
+    setFAmount(String(e.amount));
+    setFDate(`${e.year}-${String(e.month + 1).padStart(2, '0')}-15`);
+    setFRecurrent(false);
+    setFNote(e.label);
+    setDialogOpen(true);
+  };
+
+  const saveExpense = async () => {
     const amount = Number(fAmount.replace(',', '.'));
     const d = new Date(`${fDate}T12:00:00`);
     if (!fProperty || !Number.isFinite(amount) || amount <= 0 || Number.isNaN(d.getTime())) {
       toast.error(t('rent.revisaCampos'));
       return;
     }
-    const label = fNote.trim() || t(EXPENSE_META[fType].labelKey);
-    data.addExpense({
+    const payload = {
       propertyId: fProperty,
       type: fType,
-      label,
+      label: fNote.trim() || t(EXPENSE_META[fType].labelKey),
       amount: Math.round(amount * 100) / 100,
       month: d.getMonth(),
       year: d.getFullYear(),
-    });
+    };
+    if (editingExpense) {
+      await data.updateExpense(editingExpense.id, payload);
+      setDialogOpen(false);
+      toast.success(t('rent.gastoEditado'));
+      return;
+    }
+    await data.addExpense(payload);
     setDialogOpen(false);
     toast.success(t('rent.gastoAnadido', { amount: fmtMoney(amount) }));
     // El id lo genera el provider; marcamos el último movimiento tras el bump
     setTimeout(() => setLastAddedId('__latest__'), 0);
     setTimeout(() => setLastAddedId(null), 1600);
+  };
+
+  const confirmDeleteExpense = async () => {
+    if (!deletingExpense) return;
+    const id = deletingExpense.id;
+    setDeletingExpense(null);
+    setDialogOpen(false);
+    setEditingExpense(null);
+    await data.deleteExpense(id);
+    toast.success(t('rent.gastoBorrado'));
   };
 
   const applyPropertyFilter = (slug: string) => {
@@ -839,6 +902,157 @@ export default function Rentabilidad() {
         )}
       </section>
 
+      {/* ============================== Todos los gastos (filtros + paginación) */}
+      <section className="card p-4 sm:p-5">
+        <h2 className="mb-3 font-display text-[17px] font-semibold tracking-[-0.01em]">{t('rent.todosGastos')}</h2>
+
+        {/* Filtros */}
+        <div className="mb-3 flex flex-wrap items-center gap-2">
+          <Select value={expFilterType} onValueChange={(v) => { setExpFilterType(v as 'todos' | ExpenseType); resetExpPage(); }}>
+            <SelectTrigger className="h-9 w-auto min-w-[140px] rounded-xl border-[var(--border)] bg-[var(--surface)] px-3 text-[13px] shadow-none">
+              <SelectValue placeholder={t('rent.tipo')} />
+            </SelectTrigger>
+            <SelectContent className="rounded-xl border-[var(--border)] bg-[var(--surface)]">
+              <SelectItem value="todos">{t('rent.todosTipos')}</SelectItem>
+              {EXPENSE_TYPES.map((etype) => (
+                <SelectItem key={etype} value={etype}>
+                  <span className="flex items-center gap-2">
+                    <span className="h-2 w-2 rounded-full" style={{ backgroundColor: EXPENSE_META[etype].color }} />
+                    {t(EXPENSE_META[etype].labelKey)}
+                  </span>
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
+          <Select value={expFilterProp} onValueChange={(v) => { setExpFilterProp(v); resetExpPage(); }}>
+            <SelectTrigger className="h-9 w-auto min-w-[140px] rounded-xl border-[var(--border)] bg-[var(--surface)] px-3 text-[13px] shadow-none">
+              <SelectValue placeholder={t('rent.inmueble')} />
+            </SelectTrigger>
+            <SelectContent className="rounded-xl border-[var(--border)] bg-[var(--surface)]">
+              <SelectItem value="todos">{t('rent.todosInmuebles')}</SelectItem>
+              {allProperties.map((p) => (
+                <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
+          <Select value={String(expFilterMonth)} onValueChange={(v) => { setExpFilterMonth(v === 'todos' ? 'todos' : Number(v)); resetExpPage(); }}>
+            <SelectTrigger className="h-9 w-auto min-w-[130px] rounded-xl border-[var(--border)] bg-[var(--surface)] px-3 text-[13px] shadow-none">
+              <SelectValue placeholder={t('rent.mes')} />
+            </SelectTrigger>
+            <SelectContent className="rounded-xl border-[var(--border)] bg-[var(--surface)]">
+              <SelectItem value="todos">{t('rent.todosMeses')}</SelectItem>
+              {Array.from({ length: 12 }, (_, i) => (
+                <SelectItem key={i} value={String(i)}>{fmtMonth(new Date(2026, i, 1), false)}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
+          <Select value={String(expFilterYear)} onValueChange={(v) => { setExpFilterYear(v === 'todos' ? 'todos' : Number(v)); resetExpPage(); }}>
+            <SelectTrigger className="h-9 w-auto min-w-[110px] rounded-xl border-[var(--border)] bg-[var(--surface)] px-3 text-[13px] shadow-none">
+              <SelectValue placeholder={t('rent.ano')} />
+            </SelectTrigger>
+            <SelectContent className="rounded-xl border-[var(--border)] bg-[var(--surface)]">
+              <SelectItem value="todos">{t('rent.todosAnios')}</SelectItem>
+              {expYears.map((y) => (
+                <SelectItem key={y} value={String(y)}>{y}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
+          <span className="relative min-w-0 flex-1 sm:max-w-[240px]">
+            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2" style={{ color: 'var(--text-faint)' }} />
+            <input
+              type="text"
+              value={expSearch}
+              onChange={(e) => { setExpSearch(e.target.value); resetExpPage(); }}
+              placeholder={t('rent.buscarGasto')}
+              className="h-9 w-full rounded-xl border bg-[var(--surface)] pl-9 pr-3 text-[13px] outline-none focus:ring-2 focus:ring-[#6366F1]/40"
+              style={{ borderColor: 'var(--border)' }}
+            />
+          </span>
+        </div>
+
+        {expFiltered.length === 0 ? (
+          <p className="py-6 text-center text-sm" style={{ color: 'var(--text-muted)' }}>
+            {t('rent.sinGastosPeriodo')}
+          </p>
+        ) : (
+          <>
+            <motion.div variants={rowV} initial="hidden" animate="show" className="flex flex-col">
+              {expPageItems.map((e) => {
+                const p = data.getProperty(e.propertyId);
+                return (
+                  <motion.div
+                    key={e.id}
+                    variants={itemV}
+                    className="flex items-center gap-3 rounded-xl border-b px-2 py-2.5 last:border-0"
+                    style={{ borderColor: 'var(--border)' }}
+                  >
+                    <span
+                      className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full"
+                      style={{ backgroundColor: `${EXPENSE_META[e.type].color}1A` }}
+                    >
+                      <span className="h-3 w-3 rounded-full" style={{ backgroundColor: EXPENSE_META[e.type].color }} />
+                    </span>
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate text-sm font-medium">{e.label}</span>
+                      <span className="block truncate text-xs" style={{ color: 'var(--text-muted)' }}>
+                        {p?.name ?? '—'} · {capitalize(fmtMonth(new Date(e.year, e.month, 15), false))} {e.year} · {t(EXPENSE_META[e.type].labelKey)}
+                      </span>
+                    </span>
+                    <MoneyText value={e.amount} className="shrink-0 text-sm" />
+                    {!data.isDemo && (
+                      <span className="flex shrink-0 items-center gap-0.5">
+                        <button
+                          type="button"
+                          onClick={() => openEditDialog(e)}
+                          aria-label={t('rent.editarGasto')}
+                          className="flex h-7 w-7 items-center justify-center rounded-lg transition-colors hover:bg-[var(--surface-2)]"
+                          style={{ color: 'var(--text-faint)' }}
+                        >
+                          <Pencil className="h-3.5 w-3.5" />
+                        </button>
+                      </span>
+                    )}
+                  </motion.div>
+                );
+              })}
+            </motion.div>
+
+            {/* Paginación */}
+            {expTotalPages > 1 && (
+              <div className="mt-3 flex items-center justify-between gap-2">
+                <button
+                  type="button"
+                  disabled={expPageClamped <= 0}
+                  onClick={() => setExpPage((p) => Math.max(0, p - 1))}
+                  className="flex h-8 items-center gap-1 rounded-xl border px-3 text-xs font-semibold transition-colors hover:bg-[var(--surface-2)] disabled:opacity-40"
+                  style={{ borderColor: 'var(--border)', color: 'var(--text-muted)' }}
+                >
+                  <ChevronLeft size={14} />
+                  {t('rent.anterior')}
+                </button>
+                <span className="text-xs font-medium tnum" style={{ color: 'var(--text-muted)' }}>
+                  {t('rent.pagina', { n: expPageClamped + 1, total: expTotalPages })}
+                </span>
+                <button
+                  type="button"
+                  disabled={expPageClamped >= expTotalPages - 1}
+                  onClick={() => setExpPage((p) => Math.min(expTotalPages - 1, p + 1))}
+                  className="flex h-8 items-center gap-1 rounded-xl border px-3 text-xs font-semibold transition-colors hover:bg-[var(--surface-2)] disabled:opacity-40"
+                  style={{ borderColor: 'var(--border)', color: 'var(--text-muted)' }}
+                >
+                  {t('rent.siguiente')}
+                  <ChevronRight size={14} />
+                </button>
+              </div>
+            )}
+          </>
+        )}
+      </section>
+
       {/* ============================== Desglose por inmueble */}
       <section className="card p-4 sm:p-5">
         <h2 className="mb-3 font-display text-[17px] font-semibold tracking-[-0.01em]">{t('rent.desglose')}</h2>
@@ -1044,6 +1258,21 @@ export default function Rentabilidad() {
                   <span className="w-14 shrink-0 text-right text-xs" style={{ color: 'var(--text-faint)' }}>
                     {fmtDateShort(m.date)}
                   </span>
+                  {!data.isDemo && m.kind === 'gasto' && (() => {
+                    const e = expenses.find((x) => `mov-${x.id}` === m.id);
+                    if (!e) return null;
+                    return (
+                      <button
+                        type="button"
+                        onClick={() => openEditDialog(e)}
+                        aria-label={t('rent.editarGasto')}
+                        className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg transition-colors hover:bg-[var(--surface-2)]"
+                        style={{ color: 'var(--text-faint)' }}
+                      >
+                        <Pencil className="h-3.5 w-3.5" />
+                      </button>
+                    );
+                  })()}
                 </motion.div>
               );
             })}
@@ -1051,11 +1280,13 @@ export default function Rentabilidad() {
         )}
       </section>
 
-      {/* ============================== Dialog alta de gasto */}
-      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+      {/* ============================== Dialog alta/edición de gasto */}
+      <Dialog open={dialogOpen} onOpenChange={(o) => { setDialogOpen(o); if (!o) setEditingExpense(null); }}>
         <DialogContent className="rounded-2xl border-[var(--border)] bg-[var(--surface)] shadow-overlay sm:max-w-md">
           <DialogHeader>
-            <DialogTitle className="font-display text-lg font-semibold">{t('rent.anadirGasto')}</DialogTitle>
+            <DialogTitle className="font-display text-lg font-semibold">
+              {editingExpense ? t('rent.editarGasto') : t('rent.anadirGasto')}
+            </DialogTitle>
             <DialogDescription style={{ color: 'var(--text-muted)' }}>
               {t('rent.dialogDesc')}
             </DialogDescription>
@@ -1070,7 +1301,7 @@ export default function Rentabilidad() {
                   <SelectValue placeholder={t('rent.seleccionaInmueble')} />
                 </SelectTrigger>
                 <SelectContent className="rounded-xl border-[var(--border)] bg-[var(--surface)]">
-                  {properties.map((p) => (
+                  {allProperties.map((p) => (
                     <SelectItem key={p.id} value={p.id}>
                       {p.name}
                     </SelectItem>
@@ -1155,16 +1386,42 @@ export default function Rentabilidad() {
               />
             </label>
 
-            <button
-              type="button"
-              onClick={saveExpense}
-              className="brand-gradient mt-1 flex h-11 items-center justify-center rounded-xl text-sm font-semibold text-white transition-all duration-150 hover:brightness-110 active:scale-[0.98]"
-            >
-              {t('rent.guardarGasto')}
-            </button>
+            <div className="mt-1 flex items-center gap-2">
+              {editingExpense && !data.isDemo && (
+                <button
+                  type="button"
+                  onClick={() => setDeletingExpense(editingExpense)}
+                  className="mr-auto flex h-11 items-center gap-1.5 rounded-xl border px-3 text-sm font-semibold text-rose-500 transition-colors hover:bg-[var(--ro-chip-bg)]"
+                  style={{ borderColor: 'rgb(244 63 94 / 0.5)' }}
+                >
+                  <Trash2 className="h-4 w-4" />
+                  {t('rent.borrarGasto')}
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={() => void saveExpense()}
+                className={cn(
+                  'brand-gradient flex h-11 flex-1 items-center justify-center rounded-xl text-sm font-semibold text-white transition-all duration-150 hover:brightness-110 active:scale-[0.98]',
+                  editingExpense && 'max-w-[220px]',
+                )}
+              >
+                {t('rent.guardarGasto')}
+              </button>
+            </div>
           </div>
         </DialogContent>
       </Dialog>
+
+      <ConfirmDialog
+        open={deletingExpense !== null}
+        onOpenChange={(o) => { if (!o) setDeletingExpense(null); }}
+        title={t('rent.borrarGasto')}
+        description={t('rent.borrarGastoDesc')}
+        tone="danger"
+        confirmLabel={t('rent.borrarGasto')}
+        onConfirm={() => void confirmDeleteExpense()}
+      />
 
       {!data.isDemo && <Fab onClick={openDialog} aria-label={t('rent.anadirGasto')} />}
     </div>
