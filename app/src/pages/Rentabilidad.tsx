@@ -7,12 +7,12 @@ import {
   ArrowUpRight,
   BedDouble,
   ChevronLeft,
-  ChevronDown,
   ChevronRight,
   Euro,
   Pencil,
   PieChart as PieChartIcon,
   Plus,
+  Search,
   Trash2,
   TrendingDown,
   TrendingUp,
@@ -309,10 +309,17 @@ export default function Rentabilidad() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [lastAddedId, setLastAddedId] = useState<string | null>(null);
   const [activePie, setActivePie] = useState<number>(-1);
-  // Gasto en edición (null = alta nueva); confirmación de borrado; tipo expandido del quesito
+  // Gasto en edición (null = alta nueva); confirmación de borrado
   const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
   const [deletingExpense, setDeletingExpense] = useState<Expense | null>(null);
-  const [expandedType, setExpandedType] = useState<ExpenseType | null>(null);
+  // Lista "Todos los gastos": filtros + paginación
+  const [expFilterType, setExpFilterType] = useState<'todos' | ExpenseType>('todos');
+  const [expFilterProp, setExpFilterProp] = useState<string>('todos');
+  const [expFilterMonth, setExpFilterMonth] = useState<'todos' | number>('todos');
+  const [expFilterYear, setExpFilterYear] = useState<'todos' | number>('todos');
+  const [expSearch, setExpSearch] = useState('');
+  const [expPage, setExpPage] = useState(0);
+  const PAGE_SIZE = 20;
 
   // Formulario alta de gasto
   const [fProperty, setFProperty] = useState<string>('');
@@ -405,6 +412,26 @@ export default function Rentabilidad() {
     .filter((x) => x.value > 0)
     .sort((a, b) => b.value - a.value);
   const totalByType = byType.reduce((a, x) => a + x.value, 0);
+
+  /* ---------------- Lista "Todos los gastos": filtros + paginación ---------------- */
+  const expYears = useMemo(
+    () => [...new Set(expenses.map((e) => e.year))].sort((a, b) => b - a),
+    [expenses],
+  );
+  const expFiltered = useMemo(() => {
+    const q = expSearch.trim().toLowerCase();
+    return expenses
+      .filter((e) => (expFilterType === 'todos' || e.type === expFilterType))
+      .filter((e) => (expFilterProp === 'todos' || e.propertyId === expFilterProp))
+      .filter((e) => (expFilterMonth === 'todos' || e.month === expFilterMonth))
+      .filter((e) => (expFilterYear === 'todos' || e.year === expFilterYear))
+      .filter((e) => !q || e.label.toLowerCase().includes(q))
+      .sort((a, b) => (b.year - a.year) || (b.month - a.month));
+  }, [expenses, expFilterType, expFilterProp, expFilterMonth, expFilterYear, expSearch]);
+  const expTotalPages = Math.max(1, Math.ceil(expFiltered.length / PAGE_SIZE));
+  const expPageClamped = Math.min(expPage, expTotalPages - 1);
+  const expPageItems = expFiltered.slice(expPageClamped * PAGE_SIZE, expPageClamped * PAGE_SIZE + PAGE_SIZE);
+  const resetExpPage = () => setExpPage(0);
 
   /* ---------------- Desglose por inmueble ---------------- */
   const periodDays = daysIn(range);
@@ -829,118 +856,207 @@ export default function Rentabilidad() {
               </div>
             </div>
             <div className="flex flex-col gap-1 lg:col-span-7">
-              {byType.map((x, i) => {
-                const expanded = expandedType === x.type;
-                const items = expenses
-                  .filter((e) => e.type === x.type && monthOverlapsRange(e.month, e.year, range))
-                  .sort((a, b) => (b.year - a.year) || (b.month - a.month));
-                return (
-                  <div
-                    key={x.type}
-                    onMouseEnter={() => setActivePie(i)}
-                    onMouseLeave={() => setActivePie(-1)}
-                    className={cn(
-                      'rounded-xl px-3 py-2 transition-colors duration-150',
-                      activePie === i && 'bg-[var(--surface-2)]',
-                    )}
-                  >
-                    <button
-                      type="button"
-                      onClick={() => setExpandedType(expanded ? null : x.type)}
-                      className="flex w-full items-center gap-2.5 text-left"
-                      aria-expanded={expanded}
-                    >
-                      <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ backgroundColor: x.color }} />
-                      <span className="min-w-0 flex-1 truncate text-sm font-medium">
-                        {t(x.labelKey)}
-                        {x.type === 'internet' && (
-                          <span
-                            className="ml-2 inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold"
-                            style={{ backgroundColor: 'var(--vi-chip-bg)', color: 'var(--vi-chip-text)' }}
-                          >
-                            {t('rent.recurrenteMes', { amount: fmtMoney(39.99) })}
-                          </span>
-                        )}
-                      </span>
-                      <MoneyText value={x.value} className="text-sm" />
-                      <span className="w-12 text-right text-xs font-medium tnum" style={{ color: 'var(--text-faint)' }}>
-                        {fmtPct((x.value / totalByType) * 100, 0)}
-                      </span>
-                      <ChevronDown
-                        className={cn('h-4 w-4 shrink-0 transition-transform duration-200', expanded && 'rotate-180')}
-                        style={{ color: 'var(--text-faint)' }}
-                      />
-                    </button>
-                    <span className="ml-5 mt-1.5 block h-1 overflow-hidden rounded-full" style={{ backgroundColor: 'var(--surface-2)' }}>
-                      <motion.span
-                        className="block h-full rounded-full"
-                        style={{ backgroundColor: x.color }}
-                        initial={reduce ? { width: `${(x.value / totalByType) * 100}%` } : { width: 0 }}
-                        animate={{ width: `${(x.value / totalByType) * 100}%` }}
-                        transition={{ delay: 0.15 + i * 0.05, duration: 0.6, ease: EASE_OUT_QUART }}
-                      />
-                    </span>
-                    <AnimatePresence initial={false}>
-                      {expanded && (
-                        <motion.div
-                          initial={reduce ? { opacity: 0 } : { height: 0, opacity: 0 }}
-                          animate={reduce ? { opacity: 1 } : { height: 'auto', opacity: 1 }}
-                          exit={reduce ? { opacity: 0 } : { height: 0, opacity: 0 }}
-                          transition={{ duration: 0.2 }}
-                          className="overflow-hidden"
+              {byType.map((x, i) => (
+                <div
+                  key={x.type}
+                  onMouseEnter={() => setActivePie(i)}
+                  onMouseLeave={() => setActivePie(-1)}
+                  className={cn(
+                    'rounded-xl px-3 py-2 transition-colors duration-150',
+                    activePie === i && 'bg-[var(--surface-2)]',
+                  )}
+                >
+                  <div className="flex items-center gap-2.5">
+                    <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ backgroundColor: x.color }} />
+                    <span className="min-w-0 flex-1 truncate text-sm font-medium">
+                      {t(x.labelKey)}
+                      {x.type === 'internet' && (
+                        <span
+                          className="ml-2 inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold"
+                          style={{ backgroundColor: 'var(--vi-chip-bg)', color: 'var(--vi-chip-text)' }}
                         >
-                          <div className="mt-1.5 flex flex-col gap-0.5 border-t pt-1.5" style={{ borderColor: 'var(--border)' }}>
-                            {items.length === 0 ? (
-                              <p className="py-2 text-[13px]" style={{ color: 'var(--text-muted)' }}>
-                                {t('rent.sinGastosPeriodo')}
-                              </p>
-                            ) : (
-                              items.map((e) => {
-                                const p = data.getProperty(e.propertyId);
-                                return (
-                                  <div key={e.id} className="flex items-center gap-2 rounded-lg px-1 py-1.5 text-[13px] hover:bg-[var(--surface-2)]">
-                                    <span className="min-w-0 flex-1 truncate">
-                                      <span className="block truncate">{e.label}</span>
-                                      <span className="block truncate text-[11px]" style={{ color: 'var(--text-faint)' }}>
-                                        {p?.name ?? '—'} · {capitalize(fmtMonth(new Date(e.year, e.month, 15), true))} {e.year}
-                                      </span>
-                                    </span>
-                                    <MoneyText value={e.amount} className="shrink-0 text-sm" />
-                                    {!data.isDemo && (
-                                      <span className="flex shrink-0 items-center gap-0.5">
-                                        <button
-                                          type="button"
-                                          onClick={() => openEditDialog(e)}
-                                          aria-label={t('rent.editarGasto')}
-                                          className="flex h-7 w-7 items-center justify-center rounded-lg transition-colors hover:bg-[var(--surface)]"
-                                          style={{ color: 'var(--text-faint)' }}
-                                        >
-                                          <Pencil className="h-3.5 w-3.5" />
-                                        </button>
-                                        <button
-                                          type="button"
-                                          onClick={() => setDeletingExpense(e)}
-                                          aria-label={t('rent.borrarGasto')}
-                                          className="flex h-7 w-7 items-center justify-center rounded-lg transition-colors hover:bg-[var(--surface)]"
-                                          style={{ color: 'var(--text-faint)' }}
-                                        >
-                                          <Trash2 className="h-3.5 w-3.5" />
-                                        </button>
-                                      </span>
-                                    )}
-                                  </div>
-                                );
-                              })
-                            )}
-                          </div>
-                        </motion.div>
+                          {t('rent.recurrenteMes', { amount: fmtMoney(39.99) })}
+                        </span>
                       )}
-                    </AnimatePresence>
+                    </span>
+                    <MoneyText value={x.value} className="text-sm" />
+                    <span className="w-12 text-right text-xs font-medium tnum" style={{ color: 'var(--text-faint)' }}>
+                      {fmtPct((x.value / totalByType) * 100, 0)}
+                    </span>
                   </div>
-                );
-              })}
+                  <span className="ml-5 mt-1.5 block h-1 overflow-hidden rounded-full" style={{ backgroundColor: 'var(--surface-2)' }}>
+                    <motion.span
+                      className="block h-full rounded-full"
+                      style={{ backgroundColor: x.color }}
+                      initial={reduce ? { width: `${(x.value / totalByType) * 100}%` } : { width: 0 }}
+                      animate={{ width: `${(x.value / totalByType) * 100}%` }}
+                      transition={{ delay: 0.15 + i * 0.05, duration: 0.6, ease: EASE_OUT_QUART }}
+                    />
+                  </span>
+                </div>
+              ))}
             </div>
           </div>
+        )}
+      </section>
+
+      {/* ============================== Todos los gastos (filtros + paginación) */}
+      <section className="card p-4 sm:p-5">
+        <h2 className="mb-3 font-display text-[17px] font-semibold tracking-[-0.01em]">{t('rent.todosGastos')}</h2>
+
+        {/* Filtros */}
+        <div className="mb-3 flex flex-wrap items-center gap-2">
+          <Select value={expFilterType} onValueChange={(v) => { setExpFilterType(v as 'todos' | ExpenseType); resetExpPage(); }}>
+            <SelectTrigger className="h-9 w-auto min-w-[140px] rounded-xl border-[var(--border)] bg-[var(--surface)] px-3 text-[13px] shadow-none">
+              <SelectValue placeholder={t('rent.tipo')} />
+            </SelectTrigger>
+            <SelectContent className="rounded-xl border-[var(--border)] bg-[var(--surface)]">
+              <SelectItem value="todos">{t('rent.todosTipos')}</SelectItem>
+              {EXPENSE_TYPES.map((etype) => (
+                <SelectItem key={etype} value={etype}>
+                  <span className="flex items-center gap-2">
+                    <span className="h-2 w-2 rounded-full" style={{ backgroundColor: EXPENSE_META[etype].color }} />
+                    {t(EXPENSE_META[etype].labelKey)}
+                  </span>
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
+          <Select value={expFilterProp} onValueChange={(v) => { setExpFilterProp(v); resetExpPage(); }}>
+            <SelectTrigger className="h-9 w-auto min-w-[140px] rounded-xl border-[var(--border)] bg-[var(--surface)] px-3 text-[13px] shadow-none">
+              <SelectValue placeholder={t('rent.inmueble')} />
+            </SelectTrigger>
+            <SelectContent className="rounded-xl border-[var(--border)] bg-[var(--surface)]">
+              <SelectItem value="todos">{t('rent.todosInmuebles')}</SelectItem>
+              {allProperties.map((p) => (
+                <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
+          <Select value={String(expFilterMonth)} onValueChange={(v) => { setExpFilterMonth(v === 'todos' ? 'todos' : Number(v)); resetExpPage(); }}>
+            <SelectTrigger className="h-9 w-auto min-w-[130px] rounded-xl border-[var(--border)] bg-[var(--surface)] px-3 text-[13px] shadow-none">
+              <SelectValue placeholder={t('rent.mes')} />
+            </SelectTrigger>
+            <SelectContent className="rounded-xl border-[var(--border)] bg-[var(--surface)]">
+              <SelectItem value="todos">{t('rent.todosMeses')}</SelectItem>
+              {Array.from({ length: 12 }, (_, i) => (
+                <SelectItem key={i} value={String(i)}>{fmtMonth(new Date(2026, i, 1), false)}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
+          <Select value={String(expFilterYear)} onValueChange={(v) => { setExpFilterYear(v === 'todos' ? 'todos' : Number(v)); resetExpPage(); }}>
+            <SelectTrigger className="h-9 w-auto min-w-[110px] rounded-xl border-[var(--border)] bg-[var(--surface)] px-3 text-[13px] shadow-none">
+              <SelectValue placeholder={t('rent.ano')} />
+            </SelectTrigger>
+            <SelectContent className="rounded-xl border-[var(--border)] bg-[var(--surface)]">
+              <SelectItem value="todos">{t('rent.todosAnios')}</SelectItem>
+              {expYears.map((y) => (
+                <SelectItem key={y} value={String(y)}>{y}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
+          <span className="relative min-w-0 flex-1 sm:max-w-[240px]">
+            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2" style={{ color: 'var(--text-faint)' }} />
+            <input
+              type="text"
+              value={expSearch}
+              onChange={(e) => { setExpSearch(e.target.value); resetExpPage(); }}
+              placeholder={t('rent.buscarGasto')}
+              className="h-9 w-full rounded-xl border bg-[var(--surface)] pl-9 pr-3 text-[13px] outline-none focus:ring-2 focus:ring-[#6366F1]/40"
+              style={{ borderColor: 'var(--border)' }}
+            />
+          </span>
+        </div>
+
+        {expFiltered.length === 0 ? (
+          <p className="py-6 text-center text-sm" style={{ color: 'var(--text-muted)' }}>
+            {t('rent.sinGastosPeriodo')}
+          </p>
+        ) : (
+          <>
+            <motion.div variants={rowV} initial="hidden" animate="show" className="flex flex-col">
+              {expPageItems.map((e) => {
+                const p = data.getProperty(e.propertyId);
+                return (
+                  <motion.div
+                    key={e.id}
+                    variants={itemV}
+                    className="flex items-center gap-3 rounded-xl border-b px-2 py-2.5 last:border-0"
+                    style={{ borderColor: 'var(--border)' }}
+                  >
+                    <span
+                      className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full"
+                      style={{ backgroundColor: `${EXPENSE_META[e.type].color}1A` }}
+                    >
+                      <span className="h-3 w-3 rounded-full" style={{ backgroundColor: EXPENSE_META[e.type].color }} />
+                    </span>
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate text-sm font-medium">{e.label}</span>
+                      <span className="block truncate text-xs" style={{ color: 'var(--text-muted)' }}>
+                        {p?.name ?? '—'} · {capitalize(fmtMonth(new Date(e.year, e.month, 15), false))} {e.year} · {t(EXPENSE_META[e.type].labelKey)}
+                      </span>
+                    </span>
+                    <MoneyText value={e.amount} className="shrink-0 text-sm" />
+                    {!data.isDemo && (
+                      <span className="flex shrink-0 items-center gap-0.5">
+                        <button
+                          type="button"
+                          onClick={() => openEditDialog(e)}
+                          aria-label={t('rent.editarGasto')}
+                          className="flex h-7 w-7 items-center justify-center rounded-lg transition-colors hover:bg-[var(--surface-2)]"
+                          style={{ color: 'var(--text-faint)' }}
+                        >
+                          <Pencil className="h-3.5 w-3.5" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setDeletingExpense(e)}
+                          aria-label={t('rent.borrarGasto')}
+                          className="flex h-7 w-7 items-center justify-center rounded-lg transition-colors hover:bg-[var(--surface-2)]"
+                          style={{ color: 'var(--text-faint)' }}
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </button>
+                      </span>
+                    )}
+                  </motion.div>
+                );
+              })}
+            </motion.div>
+
+            {/* Paginación */}
+            {expTotalPages > 1 && (
+              <div className="mt-3 flex items-center justify-between gap-2">
+                <button
+                  type="button"
+                  disabled={expPageClamped <= 0}
+                  onClick={() => setExpPage((p) => Math.max(0, p - 1))}
+                  className="flex h-8 items-center gap-1 rounded-xl border px-3 text-xs font-semibold transition-colors hover:bg-[var(--surface-2)] disabled:opacity-40"
+                  style={{ borderColor: 'var(--border)', color: 'var(--text-muted)' }}
+                >
+                  <ChevronLeft size={14} />
+                  {t('rent.anterior')}
+                </button>
+                <span className="text-xs font-medium tnum" style={{ color: 'var(--text-muted)' }}>
+                  {t('rent.pagina', { n: expPageClamped + 1, total: expTotalPages })}
+                </span>
+                <button
+                  type="button"
+                  disabled={expPageClamped >= expTotalPages - 1}
+                  onClick={() => setExpPage((p) => Math.min(expTotalPages - 1, p + 1))}
+                  className="flex h-8 items-center gap-1 rounded-xl border px-3 text-xs font-semibold transition-colors hover:bg-[var(--surface-2)] disabled:opacity-40"
+                  style={{ borderColor: 'var(--border)', color: 'var(--text-muted)' }}
+                >
+                  {t('rent.siguiente')}
+                  <ChevronRight size={14} />
+                </button>
+              </div>
+            )}
+          </>
         )}
       </section>
 
