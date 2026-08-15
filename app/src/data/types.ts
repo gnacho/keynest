@@ -172,7 +172,7 @@ export interface MaintenanceTask {
   createdAt: Date;
 }
 
-export type ExpenseType = 'agua' | 'luz' | 'internet' | 'administración' | 'extras';
+export type ExpenseType = 'agua' | 'luz' | 'internet' | 'administración' | 'extras' | 'limpieza';
 
 export interface Expense {
   id: string;

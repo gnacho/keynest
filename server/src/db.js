@@ -98,6 +98,12 @@ const MIGRATIONS = [
     created_at INTEGER NOT NULL
   );
   CREATE INDEX IF NOT EXISTS idx_expenses_property ON expenses(property_id)`,
+  // 22: gasto de limpieza vinculado a la limpieza que lo genera (#209). Cada
+  //     limpieza confirmada crea/actualiza un gasto type='limpieza' con su
+  //     coste real (horas×€/h + materiales); el vínculo permite recalcarlo o
+  //     borrarlo automáticamente al tocar o eliminar la limpieza.
+  `ALTER TABLE expenses ADD COLUMN source_cleaning_id TEXT;
+   CREATE INDEX IF NOT EXISTS idx_expenses_source_cleaning ON expenses(source_cleaning_id)`,
 ]
 
 export function migrate(db) {
@@ -377,4 +383,40 @@ export function canDeleteCleaning(cl) {
     && JSON.parse(cl.work_log || '[]').length === 0
     && JSON.parse(cl.supplies || '[]').length === 0
     && JSON.parse(cl.photos || '[]').length === 0
+}
+
+/* ---- Gasto automático de limpieza (issue #209) ----
+ * Al confirmar una limpieza se crea/actualiza un gasto type='limpieza'
+ * (label 'Limpieza') vinculado por source_cleaning_id, con su coste real:
+ * Σ(horas reales × €/h de la persona) + materiales. Solo si el coste > 0;
+ * una limpieza sin horas ni productos no genera gasto. El vínculo permite
+ * recalcularlo al volver a guardar la limpieza o borrarlo con ella. */
+export function cleaningCostOf(db, cl) {
+  const rates = new Map(db.prepare('SELECT id, hourly_rate FROM people').all().map((p) => [p.id, p.hourly_rate ?? 0]))
+  const labor = JSON.parse(cl.work_log || '[]').reduce((acc, w) => acc + w.hours * (rates.get(w.personId) ?? 0), 0)
+  return Math.round((labor + (cl.materials ?? 0)) * 100) / 100
+}
+
+export function syncCleaningExpense(db, cl) {
+  const amount = cleaningCostOf(db, cl)
+  if (amount <= 0) {
+    removeCleaningExpense(db, cl.id)
+    return null
+  }
+  const [y, m] = cl.date.split('-').map(Number)
+  const existing = db.prepare('SELECT id FROM expenses WHERE source_cleaning_id = ?').get(cl.id)
+  if (existing) {
+    db.prepare('UPDATE expenses SET amount = ?, month = ?, year = ?, property_id = ? WHERE id = ?')
+      .run(amount, m - 1, y, cl.property_id, existing.id)
+    return existing.id
+  }
+  const id = crypto.randomUUID()
+  db.prepare(`INSERT INTO expenses (id, property_id, type, label, amount, month, year, created_at, source_cleaning_id)
+              VALUES (?, ?, 'limpieza', 'Limpieza', ?, ?, ?, ?, ?)`)
+    .run(id, cl.property_id, amount, m - 1, y, Date.now(), cl.id)
+  return id
+}
+
+export function removeCleaningExpense(db, cleaningId) {
+  db.prepare('DELETE FROM expenses WHERE source_cleaning_id = ?').run(cleaningId)
 }

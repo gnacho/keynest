@@ -492,7 +492,8 @@
     "luz": "Electricity",
     "internet": "Internet",
     "administracion": "Management",
-    "extras": "Extras"
+    "extras": "Extras",
+    "limpieza": "Cleaning"
   },
   "tareas": {
     "asignarA": "Assign to",
