@@ -14,7 +14,7 @@ import { syncAll, syncStatus } from './sync.js'
 import { fetchIcs, icsToReservations, parseIcs } from './ical.js'
 import { seedDemo } from './seed-demo.js'
 import { saveTedeeConfig, tedeeConfig, tedeeLocks, tedeeAccesses } from './tedee.js'
-import { currentId, updateStatus, getUpdateHistory, consumePendingUpdate, requestUpdate } from './update.js'
+import { currentId, updateStatus, getUpdateHistory, consumePendingUpdate, requestUpdate, requestRollback } from './update.js'
 import { importAirbnb, parseAirbnbCsv } from './import-airbnb.js'
 import { syncAirbnb, airbnbStatus } from './airbnb-sync.js'
 import { configurePush, flushNotificationQueue, notifyUsers } from './push.js'
@@ -237,9 +237,9 @@ app.post('/api/users', auth.requireAdmin(prodDb, demoDb), async (c) => {
   return c.json({ ok: true, user }, 201)
 })
 
-/* Actualización de la app (solo admin): estado y aplicar */
+/* Actualización de la app (solo admin): estado, aplicar y rollback */
 app.get('/api/update/status', auth.requireAdmin(prodDb, demoDb), async (c) => {
-  return c.json(await updateStatus(prodDb))
+  return c.json(await updateStatus(prodDb, config.dataDir))
 })
 
 app.get('/api/updates/history', auth.requireAdmin(prodDb, demoDb), (c) => {
@@ -255,6 +255,17 @@ app.post('/api/update/apply', auth.requireAdmin(prodDb, demoDb), async (c) => {
   // async: el front sondea /api/version hasta que el build cambia.
   const ok = requestUpdate(c.get('db'), c.get('user').id, config.dataDir)
   if (!ok) return c.json({ error: 'no se pudo solicitar la actualización', code: 'UPDATE_REQUEST_FAILED' }, 500)
+  return c.json({ requested: true, restarting: true }, 202)
+})
+
+/* Rollback (#154): misma mecánica que el apply — escribe el flag
+   .rollback-requested; el .path lanza keynest-update.service que restaura el
+   último backup (public.bak-X / server.bak-X) y reinicia. Async: el front
+   sondea /api/version hasta que el build cambia (o aparece el marker anterior). */
+app.post('/api/updates/rollback', auth.requireAdmin(prodDb, demoDb), async (c) => {
+  audit(c.get('db'), c.get('user').id, 'update.rollback', 'system', 'server', '')
+  const ok = requestRollback(c.get('db'), c.get('user').id, config.dataDir)
+  if (!ok) return c.json({ error: 'no se pudo solicitar el rollback', code: 'ROLLBACK_REQUEST_FAILED' }, 500)
   return c.json({ requested: true, restarting: true }, 202)
 })
 
@@ -606,22 +617,54 @@ guarded.post('/cleanings', async (c) => {
   return c.json({ ok: true, cleaning }, 201)
 })
 
-/* Importe manual + notas de una reserva (iCal no trae importes) */
+/* Importe manual + notas de una reserva (iCal no trae importes).
+   Las reservas MANUALES (uid `manual-*`) permiten editar además datos completos:
+   huésped, fechas, nº huéspedes e importe (#165). Las del iCal/CSV solo
+   aceptan amount/notes (la fuente es Airbnb). */
 const resUpdateSchema = z.object({
   amount: z.coerce.number().min(0).optional(),
   notes: z.string().optional(),
+  guestName: z.string().min(1).optional(),
+  checkin: z.string().optional(),
+  checkout: z.string().optional(),
+  guests: z.coerce.number().int().min(1).max(16).optional(),
 })
+function isManualReservation(row) {
+  return typeof row.uid === 'string' && row.uid.startsWith('manual-')
+}
 guarded.put('/reservations/:id', async (c) => {
   const db = c.get('db')
-  const existing = db.prepare('SELECT id FROM reservations WHERE id = ?').get(c.req.param('id'))
+  const existing = db.prepare('SELECT * FROM reservations WHERE id = ?').get(c.req.param('id'))
   if (!existing) return c.json({ error: 'no encontrada' }, 404)
   const body = await c.req.json().catch(() => null)
   const parsed = resUpdateSchema.safeParse(body)
   if (!parsed.success) return c.json({ error: 'formato inválido' }, 400)
   const d = parsed.data
-  db.prepare('UPDATE reservations SET amount = COALESCE(?, amount), notes = COALESCE(?, notes) WHERE id = ?')
-    .run(d.amount ?? null, d.notes ?? null, existing.id)
+  const manual = isManualReservation(existing)
+  const fullEdit = d.guestName !== undefined || d.checkin !== undefined || d.checkout !== undefined || d.guests !== undefined
+  if (fullEdit && !manual) return c.json({ error: 'solo reservas manuales', code: 'not-manual' }, 409)
+  db.prepare(`UPDATE reservations SET
+      amount = COALESCE(?, amount),
+      notes = COALESCE(?, notes),
+      guest_name = COALESCE(?, guest_name),
+      checkin = COALESCE(?, checkin),
+      checkout = COALESCE(?, checkout),
+      guests = COALESCE(?, guests)
+    WHERE id = ?`)
+    .run(d.amount ?? null, d.notes ?? null, d.guestName ?? null, d.checkin ?? null, d.checkout ?? null, d.guests ?? null, existing.id)
   return c.json({ ok: true, reservation: db.prepare('SELECT * FROM reservations WHERE id = ?').get(existing.id) })
+})
+
+/* Eliminar una reserva MANUAL (las del iCal/CSV son fuente Airbnb, no se tocan).
+   No borra limpiezas asociadas: se dejan sin tocar como en la creación. (#165) */
+guarded.delete('/reservations/:id', async (c) => {
+  const db = c.get('db')
+  const existing = db.prepare('SELECT * FROM reservations WHERE id = ?').get(c.req.param('id'))
+  if (!existing) return c.json({ error: 'no encontrada' }, 404)
+  if (!isManualReservation(existing)) return c.json({ error: 'solo reservas manuales', code: 'not-manual' }, 409)
+  db.prepare('DELETE FROM reservations WHERE id = ?').run(existing.id)
+  aud(c, 'delete', 'reservation', existing.id, existing.guest_name ?? '')
+  return c.json({ ok: true })
 })
 
 /* --------------------------------------------------- Tareas de mantenimiento */

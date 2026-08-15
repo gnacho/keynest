@@ -221,7 +221,13 @@
     "notasReserva": "Notas",
     "notasReservaPlaceholder": "Texto libre sobre esta reserva…",
     "reservaActualizada": "Reserva actualizada",
-    "errorCrearReserva": "No se pudo crear la reserva"
+    "errorCrearReserva": "No se pudo crear la reserva",
+    "editarReserva": "Editar reserva",
+    "eliminarReserva": "Eliminar reserva",
+    "eliminarTitulo": "Eliminar reserva",
+    "eliminarDesc": "¿Seguro que quieres eliminar esta reserva manual? La acción no se puede deshacer.",
+    "reservaBorrada": "Reserva eliminada",
+    "errorBorrarReserva": "No se pudo eliminar la reserva"
   },
   "estadoReserva": {
     "confirmada": "Confirmada",
@@ -737,6 +743,9 @@
     "actualizadoOk": "Actualizada — el servicio se reinicia, recarga en unos segundos",
     "actualizandoTarda": "La actualización está en curso, recarga en unos segundos",
     "errorActualizar": "No se pudo comprobar/aplicar la actualización",
+    "rollback": "Revertir a la anterior",
+    "rollbackPedido": "Revertir en curso — recarga en unos segundos",
+    "errorRollback": "No se pudo solicitar la reversión",
     "diasAviso": "Días de aviso en el panel",
     "diasAvisoDesc": "Antelación con la que el panel muestra entradas, salidas y limpiezas pendientes",
     "audit": "Auditoría",

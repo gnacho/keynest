@@ -9,10 +9,13 @@ import {
   CheckCircle2,
   ChevronDown,
   Euro,
+  Pencil,
   Plus,
   Search,
+  Trash2,
   Users,
 } from 'lucide-react';
+import ConfirmDialog from '@/components/ConfirmDialog';
 import FilterBar from '@/components/FilterBar';
 import Fab from '@/components/Fab';
 import KpiCard from '@/components/KpiCard';
@@ -99,6 +102,8 @@ export default function Reservas() {
   const [search, setSearch] = useState('');
   const [toast, setToast] = useState<string | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [editingReservation, setEditingReservation] = useState<Reservation | null>(null);
+  const [deletingReservation, setDeletingReservation] = useState<Reservation | null>(null);
   const [flashId, setFlashId] = useState<string | null>(null);
   const rowRefs = useRef(new Map<string, HTMLElement>());
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -252,6 +257,19 @@ export default function Reservas() {
     if (!prop || !form.name.trim() || Number.isNaN(ci.getTime()) || Number.isNaN(co.getTime()) || co <= ci) return;
     const name = form.name.trim();
     try {
+      if (editingReservation) {
+        await data.updateReservation(editingReservation.id, {
+          guestName: name,
+          checkin: form.checkIn,
+          checkout: form.checkOut,
+          guests: Math.max(1, Math.min(8, Number(form.guests) || 1)),
+          amount: Math.max(0, Number(form.amount) || 0),
+        });
+        setEditingReservation(null);
+        setDialogOpen(false);
+        showToast(t('res.reservaActualizada'));
+        return;
+      }
       const created = await data.addReservation({
         propertyId: prop.id,
         guestName: name,
@@ -271,6 +289,29 @@ export default function Reservas() {
       showToast(t('res.reservaCreada'));
     } catch {
       showToast(t('res.errorCrearReserva'));
+    }
+  };
+
+  const openEdit = (r: Reservation) => {
+    setEditingReservation(r);
+    setForm({
+      propertyId: r.propertyId,
+      checkIn: iso(r.checkIn),
+      checkOut: iso(r.checkOut),
+      name: r.guest.name,
+      guests: String(r.guestsCount),
+      amount: String(r.amount),
+    });
+    setDialogOpen(true);
+  };
+
+  const deleteReservation = async (r: Reservation) => {
+    try {
+      await data.deleteReservation(r.id);
+      setExpandedId(null);
+      showToast(t('res.reservaBorrada'));
+    } catch {
+      showToast(t('res.errorBorrarReserva'));
     }
   };
 
@@ -521,6 +562,28 @@ export default function Reservas() {
                       >
                         <div className="px-4 pb-4 pt-1">
                           <ReservationDetail reservation={r} />
+                          {r.isManual && !data.isDemo && (
+                            <div className="mt-2 flex gap-2">
+                              <button
+                                type="button"
+                                onClick={() => openEdit(r)}
+                                className="flex h-9 flex-1 items-center justify-center gap-1.5 rounded-xl border px-3 text-xs font-semibold transition-colors hover:bg-[var(--surface-2)]"
+                                style={{ borderColor: 'var(--border)', color: 'var(--text-muted)' }}
+                              >
+                                <Pencil className="h-3.5 w-3.5" />
+                                {t('res.editarReserva')}
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => setDeletingReservation(r)}
+                                className="flex h-9 flex-1 items-center justify-center gap-1.5 rounded-xl border px-3 text-xs font-semibold text-rose-500 transition-colors hover:bg-[var(--ro-chip-bg)]"
+                                style={{ borderColor: 'rgb(244 63 94 / 0.5)' }}
+                              >
+                                <Trash2 className="h-3.5 w-3.5" />
+                                {t('res.eliminarReserva')}
+                              </button>
+                            </div>
+                          )}
                         </div>
                       </motion.div>
                     )}
@@ -637,6 +700,28 @@ export default function Reservas() {
                       >
                         <div className="pt-3">
                           <ReservationDetail reservation={r} />
+                          {r.isManual && !data.isDemo && (
+                            <div className="mt-2 flex gap-2">
+                              <button
+                                type="button"
+                                onClick={() => openEdit(r)}
+                                className="flex h-9 flex-1 items-center justify-center gap-1.5 rounded-xl border px-3 text-xs font-semibold transition-colors hover:bg-[var(--surface-2)]"
+                                style={{ borderColor: 'var(--border)', color: 'var(--text-muted)' }}
+                              >
+                                <Pencil className="h-3.5 w-3.5" />
+                                {t('res.editarReserva')}
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => setDeletingReservation(r)}
+                                className="flex h-9 flex-1 items-center justify-center gap-1.5 rounded-xl border px-3 text-xs font-semibold text-rose-500 transition-colors hover:bg-[var(--ro-chip-bg)]"
+                                style={{ borderColor: 'rgb(244 63 94 / 0.5)' }}
+                              >
+                                <Trash2 className="h-3.5 w-3.5" />
+                                {t('res.eliminarReserva')}
+                              </button>
+                            </div>
+                          )}
                         </div>
                       </motion.div>
                     )}
@@ -652,11 +737,16 @@ export default function Reservas() {
         {t('res.reservas', { count: base.length })} · {t('res.activasAhora', { count: activasAhora })}
       </p>
 
-      {/* Dialog: nueva reserva (mock) */}
-      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+      {/* Dialog: nueva reserva / editar reserva manual */}
+      <Dialog open={dialogOpen} onOpenChange={(o) => {
+        setDialogOpen(o);
+        if (!o) setEditingReservation(null);
+      }}>
         <DialogContent className="max-w-md rounded-2xl border-[var(--border)] bg-[var(--surface)] shadow-overlay">
           <DialogHeader>
-            <DialogTitle className="font-display text-lg font-semibold">{t('res.nuevaReserva')}</DialogTitle>
+            <DialogTitle className="font-display text-lg font-semibold">
+              {editingReservation ? t('res.editarReserva') : t('res.nuevaReserva')}
+            </DialogTitle>
           </DialogHeader>
           <div className="flex flex-col gap-3">
             <label className="flex flex-col gap-1 text-xs font-semibold" style={{ color: 'var(--text-muted)' }}>
@@ -745,6 +835,20 @@ export default function Reservas() {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Confirmación de borrado de reserva manual */}
+      <ConfirmDialog
+        open={deletingReservation !== null}
+        onOpenChange={(o) => !o && setDeletingReservation(null)}
+        title={t('res.eliminarTitulo')}
+        description={t('res.eliminarDesc')}
+        tone="danger"
+        confirmLabel={t('res.eliminarReserva')}
+        onConfirm={() => {
+          if (deletingReservation) void deleteReservation(deletingReservation);
+          setDeletingReservation(null);
+        }}
+      />
 
       {/* Toast */}
       <AnimatePresence>

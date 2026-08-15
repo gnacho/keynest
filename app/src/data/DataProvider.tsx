@@ -80,6 +80,7 @@ function mapReservation(row: ApiReservation): Reservation {
     amount: row.amount ?? 0,
     notes: row.notes ?? '',
     bookedDate: row.booked_date || '',
+    isManual: typeof row.uid === 'string' && row.uid.startsWith('manual-'),
   };
 }
 
@@ -486,6 +487,11 @@ export default function DataProvider({ children }: { children: ReactNode }) {
         const mapped = mapReservation(res.reservation);
         const idx = reservations.current.findIndex((r) => r.id === id);
         if (idx >= 0) reservations.current[idx] = mapped;
+        bump();
+      },
+      deleteReservation: async (id) => {
+        await api(`/api/reservations/${id}`, { method: 'DELETE' });
+        reservations.current = reservations.current.filter((r) => r.id !== id);
         bump();
       },
       addReservation: async (input: {
