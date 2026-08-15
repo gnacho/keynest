@@ -331,15 +331,16 @@ export default function CleaningCard({ cleaning: c, variants, highlight = false,
 
       {/* Dialog de edición con el cuerpo completo */}
       <Dialog open={sheetOpen} onOpenChange={setSheetOpen}>
-        <DialogContent className="flex max-h-[85dvh] flex-col gap-3 overflow-y-auto rounded-2xl border-[var(--border)] bg-[var(--surface)] shadow-overlay sm:max-w-2xl"
-          style={{ maxWidth: 'min(672px, 94vw)' }}
-        >
+        <DialogContent className="flex max-h-[85dvh] w-[calc(100vw-1.5rem)] flex-col gap-3 overflow-y-auto rounded-2xl border-[var(--border)] bg-[var(--surface)] shadow-overlay sm:max-w-3xl">
         <DialogHeader className="px-1 pt-1 text-left">
           <DialogTitle className="font-display text-lg font-semibold">{property.name}</DialogTitle>
           <DialogDescription style={{ color: 'var(--text-muted)' }}>
             {fmtDateShort(c.date)} · {fmtTime(c.date)}
           </DialogDescription>
         </DialogHeader>
+        {/* Dos columnas en sm+: checklist+instrucciones | asignación+fotos (#211) */}
+        <div className="grid grid-cols-1 items-start gap-3 sm:grid-cols-2">
+        <div className="flex min-w-0 flex-col gap-3">
         {/* 1) CHECKLIST DEL INMUEBLE — lo primero que mira la persona de limpieza */}
         <div className="rounded-2xl border p-3" style={{ borderColor: 'var(--border)', backgroundColor: 'var(--surface-2)' }}>
           <p
@@ -461,7 +462,9 @@ export default function CleaningCard({ cleaning: c, variants, highlight = false,
             </p>
           )}
         </div>
+        </div>
 
+        <div className="flex min-w-0 flex-col gap-3">
         {/* 3) Asignación (hasta 2 personas) + previsión de horas */}
         <div>
           <p
@@ -557,6 +560,8 @@ export default function CleaningCard({ cleaning: c, variants, highlight = false,
           <p className="mt-1.5 text-[11px]" style={{ color: 'var(--text-faint)' }}>
             {t('tareas.retencion')}
           </p>
+        </div>
+        </div>
         </div>
 
         {/* Acciones de estado: confirmar directo (sin paso intermedio "iniciar") */}
