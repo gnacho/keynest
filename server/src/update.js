@@ -6,17 +6,22 @@
 // lanza keynest-update.service (root, oneshot) on-demand. El script hace el
 // deploy + systemctl restart. El apply es asíncrono: el front sondea
 // /api/version hasta que el build cambia.
-// Incluye historial de actualizaciones (#153).
+// Incluye historial de actualizaciones (#153), readiness checks (#155) y
+// rollback vía flag (#154).
 import { writeFileSync } from 'node:fs'
 import { readFileSync } from 'node:fs'
+import { statSync, accessSync, constants } from 'node:fs'
 import { join } from 'node:path'
 import { randomUUID } from 'node:crypto'
 import { kvGet, kvSet } from './db.js'
 
 const REPO = process.env.GITHUB_REPO || 'gnacho/keynest'
 const MARKER = process.env.RELEASE_MARKER || '/opt/keynest/.release-id'
+const OPT_DIR = process.env.KEYNEST_OPT_DIR || '/opt/keynest'
 const CACHE_KEY = 'gh_latest_release'
 const CACHE_TTL = 5 * 60 * 1000
+const UPDATE_FLAG = '.update-requested'
+const ROLLBACK_FLAG = '.rollback-requested'
 
 // Versión semver instalada (marker lo escribe keynest-update.sh tras cada deploy).
 export function currentId() {
@@ -58,11 +63,97 @@ function compareSemver(a, b) {
   return 0
 }
 
-export async function updateStatus(prodDb) {
+export async function updateStatus(prodDb, dataDir) {
   const current = currentId()
   const latest = await latestId(prodDb).catch(() => null)
   const available = Boolean(latest && current && compareSemver(latest, current) > 0)
-  return { current, latest, available }
+  const readiness = await readinessChecks(prodDb, dataDir, latest)
+  return { current, latest, available, readiness }
+}
+
+// Readiness checks pre-apply (#155): espacio en disco, permisos de escritura,
+// update concurrente en curso y asset de la release alcanzable. Cada check
+// devuelve { ok, detail } para mostrarse en la UI antes de habilitar el botón.
+export async function readinessChecks(prodDb, dataDir, latest) {
+  const results = {
+    disk: { ok: true, detail: '' },
+    writable: { ok: true, detail: '' },
+    concurrent: { ok: true, detail: '' },
+    asset: { ok: true, detail: '' },
+  }
+  // Disco: 200 MB libres son ~6 tarballs; el apply necesita descarga + backups.
+  try {
+    const { execFileSync } = await import('node:child_process')
+    const out = execFileSync('df', ['-B1', OPT_DIR], { encoding: 'utf8', timeout: 5000 })
+    const line = out.trim().split('\n').pop() || ''
+    const parts = line.split(/\s+/).filter(Boolean)
+    const free = parts.length >= 4 ? Number(parts[3]) : NaN
+    if (Number.isFinite(free) && free > 0) {
+      const MB = 1024 * 1024
+      if (free < 200 * MB) {
+        results.disk = { ok: false, detail: `solo ${Math.round(free / MB)} MB libres en ${OPT_DIR}` }
+      } else {
+        results.disk = { ok: true, detail: `${Math.round(free / MB)} MB libres en ${OPT_DIR}` }
+      }
+    }
+  } catch {
+    results.disk = { ok: true, detail: 'disco no comprobable' }
+  }
+  // Escritura: el apply escribe el flag en dataDir; verificar que existe y es escribible.
+  try {
+    const probe = join(dataDir, '.update-write-probe')
+    writeFileSync(probe, 'ok')
+    accessSync(probe, constants.W_OK)
+    results.writable = { ok: true, detail: 'directorio de datos escribible' }
+  } catch {
+    results.writable = { ok: false, detail: 'no se puede escribir en el directorio de datos' }
+  }
+  // Concurrente: hay un flag de update/rollback pendiente o un apply en curso.
+  try {
+    const flag = [join(dataDir, UPDATE_FLAG), join(dataDir, ROLLBACK_FLAG)].find((f) => {
+      try { statSync(f); return true } catch { return false }
+    })
+    if (flag) {
+      results.concurrent = { ok: false, detail: 'hay una actualización o rollback en curso' }
+    } else {
+      results.concurrent = { ok: true, detail: 'sin actualización en curso' }
+    }
+  } catch {
+    results.concurrent = { ok: true, detail: 'estado no comprobable' }
+  }
+  // Asset: HEAD a la release si hay versión disponible.
+  if (latest) {
+    try {
+      const arch = process.arch === 'arm64' ? 'arm64' : 'amd64'
+      const base = `https://github.com/${REPO}/releases/download/v${latest}`
+      const res = await fetch(`${base}/keynest_${latest}_linux_${arch}.tar.gz`, {
+        method: 'HEAD',
+        redirect: 'follow',
+        signal: AbortSignal.timeout(10000),
+      })
+      results.asset = res.ok
+        ? { ok: true, detail: `asset ${arch} alcanzable (${res.status})` }
+        : { ok: false, detail: `asset ${arch} responde ${res.status}` }
+    } catch {
+      results.asset = { ok: false, detail: 'no se pudo comprobar el asset de la release' }
+    }
+  }
+  return results
+}
+
+// Rollback (#154): registra la entrada y escribe el flag que el .path de systemd
+// detecta para lanzar keynest-update.service (que restaura el backup). Devuelve
+// true si el flag se escribió.
+export function requestRollback(prodDb, userId, dataDir) {
+  const cur = currentId()
+  recordUpdate(prodDb, userId, cur, cur, Date.now())
+  try {
+    const flag = join(dataDir, ROLLBACK_FLAG)
+    writeFileSync(flag, new Date().toISOString())
+    return true
+  } catch {
+    return false
+  }
 }
 
 // Registra una entrada en update_history antes de ejecutar el apply.

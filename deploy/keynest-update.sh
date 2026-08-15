@@ -24,6 +24,44 @@ log() { logger -t "$APP-update" "$@"; }
 # de systemd). Borrarlo AL PRINCIPIO permite re-disparar el apply a voluntad.
 rm -f /var/lib/keynest/.update-requested /opt/keynest/data/.update-requested 2>/dev/null || true
 
+# Rollback (#154): si existe .rollback-requested (POST /api/updates/rollback),
+# restaurar el último backup (public.bak-*/server.bak-*) en vez de actualizar.
+# En el layout Capistrano basta con voltear el symlink al release anterior; en
+# el plano se restauran los backups .bak-* más recientes.
+if [ -f /opt/keynest/data/.rollback-requested ]; then
+  echo "STEP:rollback"
+  rm -f /opt/keynest/data/.rollback-requested
+  if [ -L "$OPT_DIR/current" ]; then
+    # Capistrano: el release anterior sigue en releases/; tomar el anterior por semver.
+    PREV=$(ls -1 "$OPT_DIR/releases" 2>/dev/null | grep -E '^v' | sort -V | tail -n2 | head -n1)
+    if [ -n "$PREV" ] && [ -d "$OPT_DIR/releases/$PREV" ]; then
+      ln -sfn "$OPT_DIR/releases/$PREV" "$OPT_DIR/current"
+      printf '%s' "${PREV#v}" > "$MARKER"
+      chmod 0644 "$MARKER"
+      log "rollback a $PREV (Capistrano)"
+      systemctl restart "$APP"
+      exit 0
+    fi
+  fi
+  # Plano: restaurar los backups más recientes de public/server.
+  B_PUB=$(ls -1d "$OPT_DIR"/public.bak-* 2>/dev/null | sort | tail -n1 || true)
+  B_SRV=$(ls -1d "$OPT_DIR"/server.bak-* 2>/dev/null | sort | tail -n1 || true)
+  if [ -n "$B_PUB" ] && [ -n "$B_SRV" ]; then
+    rm -rf "$OPT_DIR/public" "$OPT_DIR/server"
+    cp -a "$B_PUB" "$OPT_DIR/public"
+    cp -a "$B_SRV" "$OPT_DIR/server"
+    chown -R "$APP:$APP" "$OPT_DIR/public" "$OPT_DIR/server" 2>/dev/null || true
+    PREV_VER=$(basename "$B_SRV" | sed -n 's/.*\.bak-\([0-9-]*\).*/v\1/p')
+    printf '%s' "$(cat "$MARKER" 2>/dev/null || true)" > "$MARKER"
+    chmod 0644 "$MARKER"
+    log "rollback restaurado desde $B_PUB / $B_SRV"
+    systemctl restart "$APP"
+    exit 0
+  fi
+  log "rollback solicitado pero sin backups disponibles"
+  exit 6
+fi
+
 echo "STEP:detect"
 # Última release ESTABLE (no prerelease, no main).
 VER=$(curl -fsSL --max-time 20 "https://api.github.com/repos/$REPO/releases/latest" \

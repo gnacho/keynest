@@ -14,6 +14,7 @@ import {
   Phone,
   Plus,
   RefreshCw,
+  RotateCcw,
   Settings2,
   ShieldCheck,
   Trash2,
@@ -216,8 +217,12 @@ export default function Ajustes() {
 
   /* ---- Preferencias ---- */
   const [demoOn, setDemoOn] = useState(true);
-  const [updateInfo, setUpdateInfo] = useState<{ current: string; latest: string | null; available: boolean } | null>(null);
+  const [updateInfo, setUpdateInfo] = useState<{
+    current: string; latest: string | null; available: boolean;
+    readiness?: { disk: { ok: boolean; detail: string }; writable: { ok: boolean; detail: string }; concurrent: { ok: boolean; detail: string }; asset: { ok: boolean; detail: string } };
+  } | null>(null);
   const [applying, setApplying] = useState(false);
+  const [rollingBack, setRollingBack] = useState(false);
   const [openPanel, setOpenPanel] = useState<'backup' | 'users' | 'audit' | null>(null);
   const isAdmin = cachedUser()?.role === 'admin';
   const isDemoUser = Boolean(cachedUser()?.is_demo);
@@ -254,6 +259,20 @@ export default function Ajustes() {
       toast.error(tr('aj.errorActualizar'));
     } finally {
       setApplying(false);
+    }
+  };
+
+  const rollbackUpdate = async () => {
+    if (rollingBack) return;
+    setRollingBack(true);
+    try {
+      await api('/api/updates/rollback', { method: 'POST' });
+      toast.success(tr('aj.rollbackPedido'));
+      setUpdateInfo(null);
+    } catch {
+      toast.error(tr('aj.errorRollback'));
+    } finally {
+      setRollingBack(false);
     }
   };
 
@@ -1000,16 +1019,38 @@ export default function Ajustes() {
                       {updateInfo === null ? (
                         <span className="text-xs" style={{ color: 'var(--text-faint)' }}>…</span>
                       ) : updateInfo.available ? (
-                        <button
-                          type="button"
-                          disabled={applying}
-                          onClick={() => void applyUpdate()}
-                          className="inline-flex h-9 items-center gap-1.5 rounded-xl border px-3 text-xs font-semibold transition-colors disabled:opacity-50"
-                          style={{ borderColor: 'var(--warn-rgb)', color: 'rgb(var(--warn-rgb))', backgroundColor: 'rgb(var(--warn-rgb) / 0.10)' }}
-                        >
-                          <RefreshCw className={cn('h-3.5 w-3.5', applying && 'animate-spin')} />
-                          {applying ? tr('aj.actualizando') : tr('aj.actualizarAhora')}
-                        </button>
+                        <>
+                          <button
+                            type="button"
+                            disabled={applying || Boolean(updateInfo.readiness && Object.values(updateInfo.readiness).some((r) => !r.ok))}
+                            onClick={() => void applyUpdate()}
+                            className="inline-flex h-9 items-center gap-1.5 rounded-xl border px-3 text-xs font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-50"
+                            style={{ borderColor: 'var(--warn-rgb)', color: 'rgb(var(--warn-rgb))', backgroundColor: 'rgb(var(--warn-rgb) / 0.10)' }}
+                          >
+                            <RefreshCw className={cn('h-3.5 w-3.5', applying && 'animate-spin')} />
+                            {applying ? tr('aj.actualizando') : tr('aj.actualizarAhora')}
+                          </button>
+                          {updateInfo.readiness && (
+                            <ul className="mt-1.5 flex flex-col gap-0.5 text-[11px]" style={{ color: 'var(--text-faint)' }}>
+                              {Object.entries(updateInfo.readiness).map(([k, r]) => (
+                                <li key={k} className="flex items-center gap-1.5">
+                                  <span className={cn('h-1.5 w-1.5 rounded-full', r.ok ? 'bg-emerald-500' : 'bg-rose-500')} />
+                                  {r.detail}
+                                </li>
+                              ))}
+                            </ul>
+                          )}
+                          <button
+                            type="button"
+                            disabled={rollingBack}
+                            onClick={() => void rollbackUpdate()}
+                            className="inline-flex h-7 items-center gap-1 rounded-lg border px-2 text-[11px] font-semibold text-rose-500 transition-colors hover:bg-[var(--ro-chip-bg)] disabled:opacity-50"
+                            style={{ borderColor: 'rgb(244 63 94 / 0.5)' }}
+                          >
+                            <RotateCcw className={cn('h-3 w-3', rollingBack && 'animate-spin')} />
+                            {tr('aj.rollback')}
+                          </button>
+                        </>
                       ) : (
                         <span className="inline-flex h-9 items-center gap-1.5 text-xs font-medium text-emerald-500">
                           <Check className="h-3.5 w-3.5" />

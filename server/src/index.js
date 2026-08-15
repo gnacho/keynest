@@ -14,7 +14,7 @@ import { syncAll, syncStatus } from './sync.js'
 import { fetchIcs, icsToReservations, parseIcs } from './ical.js'
 import { seedDemo } from './seed-demo.js'
 import { saveTedeeConfig, tedeeConfig, tedeeLocks, tedeeAccesses } from './tedee.js'
-import { currentId, updateStatus, getUpdateHistory, consumePendingUpdate, requestUpdate } from './update.js'
+import { currentId, updateStatus, getUpdateHistory, consumePendingUpdate, requestUpdate, requestRollback } from './update.js'
 import { importAirbnb, parseAirbnbCsv } from './import-airbnb.js'
 import { syncAirbnb, airbnbStatus } from './airbnb-sync.js'
 import { configurePush, flushNotificationQueue, notifyUsers } from './push.js'
@@ -237,9 +237,9 @@ app.post('/api/users', auth.requireAdmin(prodDb, demoDb), async (c) => {
   return c.json({ ok: true, user }, 201)
 })
 
-/* Actualización de la app (solo admin): estado y aplicar */
+/* Actualización de la app (solo admin): estado, aplicar y rollback */
 app.get('/api/update/status', auth.requireAdmin(prodDb, demoDb), async (c) => {
-  return c.json(await updateStatus(prodDb))
+  return c.json(await updateStatus(prodDb, config.dataDir))
 })
 
 app.get('/api/updates/history', auth.requireAdmin(prodDb, demoDb), (c) => {
@@ -255,6 +255,17 @@ app.post('/api/update/apply', auth.requireAdmin(prodDb, demoDb), async (c) => {
   // async: el front sondea /api/version hasta que el build cambia.
   const ok = requestUpdate(c.get('db'), c.get('user').id, config.dataDir)
   if (!ok) return c.json({ error: 'no se pudo solicitar la actualización', code: 'UPDATE_REQUEST_FAILED' }, 500)
+  return c.json({ requested: true, restarting: true }, 202)
+})
+
+/* Rollback (#154): misma mecánica que el apply — escribe el flag
+   .rollback-requested; el .path lanza keynest-update.service que restaura el
+   último backup (public.bak-X / server.bak-X) y reinicia. Async: el front
+   sondea /api/version hasta que el build cambia (o aparece el marker anterior). */
+app.post('/api/updates/rollback', auth.requireAdmin(prodDb, demoDb), async (c) => {
+  audit(c.get('db'), c.get('user').id, 'update.rollback', 'system', 'server', '')
+  const ok = requestRollback(c.get('db'), c.get('user').id, config.dataDir)
+  if (!ok) return c.json({ error: 'no se pudo solicitar el rollback', code: 'ROLLBACK_REQUEST_FAILED' }, 500)
   return c.json({ requested: true, restarting: true }, 202)
 })
 
