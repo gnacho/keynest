@@ -110,15 +110,17 @@ export default function ImportAirbnbCard() {
               e.target.value = '';
             }}
           />
+          {/* Solo icono (#202); el texto queda accesible por aria-label/title */}
           <button
             type="button"
             disabled={busy}
             onClick={() => fileRef.current?.click()}
-            className="flex h-10 shrink-0 items-center gap-2 rounded-xl border px-4 text-sm font-semibold transition-colors duration-150 hover:bg-[var(--surface-2)] disabled:opacity-50"
+            aria-label={tr('aj.seleccionarCsv')}
+            title={tr('aj.seleccionarCsv')}
+            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border transition-colors duration-150 hover:bg-[var(--surface-2)] disabled:opacity-50"
             style={{ borderColor: 'var(--border)', color: 'var(--text)' }}
           >
             {busy ? <RefreshCw className="h-4 w-4 animate-spin" /> : <FileUp className="h-4 w-4" strokeWidth={1.75} />}
-            {tr('aj.seleccionarCsv')}
           </button>
         </div>
       </div>

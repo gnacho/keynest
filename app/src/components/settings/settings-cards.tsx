@@ -447,8 +447,8 @@ export function SessionCard({ isDemo }: { isDemo: boolean }) {
           )}
         </div>
 
-        {/* Nombre + email + rol */}
-        <div className="min-w-0 flex-1">
+        {/* Nombre + email: ocultos en móvil (la fila solo avatar + acciones, #200) */}
+        <div className="hidden min-w-0 flex-1 sm:block">
           {editingName ? (
             <div className="flex items-center gap-1.5">
               <input
@@ -755,19 +755,12 @@ export function InstallCard() {
   const { t: tr } = useTranslation();
   const { state, install } = useInstallPrompt();
 
-  // 'hidden' = navegador sin soporte → NO renderizar nada (regla del usuario)
-  if (state === 'hidden') return null;
+  // 'hidden' = navegador sin soporte → NO renderizar nada (regla del usuario).
+  // 'installed' = la app ya corre como PWA → la tarjeta no aporta (#203).
+  if (state === 'hidden' || state === 'installed') return null;
 
   return (
     <Card title={tr('aj.instalarApp')}>
-      {state === 'installed' && (
-        <p
-          className="inline-flex w-fit items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-semibold"
-          style={{ borderColor: 'rgb(16 185 129 / 0.3)', backgroundColor: 'rgb(16 185 129 / 0.1)', color: '#10B981' }}
-        >
-          <Check className="h-3.5 w-3.5" strokeWidth={2} /> {tr('aj.appInstalada')}
-        </p>
-      )}
       {state === 'installable' && (
         <button
           type="button"

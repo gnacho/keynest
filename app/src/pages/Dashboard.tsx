@@ -235,6 +235,16 @@ export default function Dashboard() {
           >
             {kind === 'in' ? t('common.entrada') : t('common.salida')} {fmtTime(date)}
           </span>
+          {/* Badge HOY a la izquierda de la fecha cuando la salida coincide con
+              la entrada el mismo día (#199); MAÑANA y el resto siguen a la derecha */}
+          {isToday && isSameDay(r.checkIn, r.checkOut) && (
+            <span
+              className="rounded-full px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white"
+              style={{ backgroundColor: '#F43F5E' }}
+            >
+              {t('dash.hoy')}
+            </span>
+          )}
           {/* Chip fecha: día + mes */}
           <span
             className="flex flex-col items-center justify-center rounded-lg border leading-none"
@@ -248,7 +258,7 @@ export default function Dashboard() {
             </span>
           </span>
           {/* Mini-badge Hoy / Mañana */}
-          {(isToday || isTomorrow) && (
+          {(!isToday || !isSameDay(r.checkIn, r.checkOut)) && (isToday || isTomorrow) && (
             <span
               className="rounded-full px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white"
               style={{ backgroundColor: isToday ? '#F43F5E' : '#F97316' }}

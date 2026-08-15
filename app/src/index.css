@@ -297,6 +297,70 @@
   .animate-ping-soft { animation: ping-soft 1.6s cubic-bezier(0, 0, 0.2, 1) infinite; }
 }
 
+/* Transición móvil entre vistas (#198): el contenido (<main>) se desliza y el
+ * shell (header móvil + bottom nav) permanece estático. Se capturan como grupos
+ * de view-transition PROPIOS (keynest-header/keynest-nav) para no depender de
+ * cómo el navegador capture el grupo root con position:fixed (falla en
+ * dispositivos reales — lección Helios #93). */
+@media (max-width: 767px) {
+  main {
+    view-transition-name: keynest-content;
+  }
+  /* El shell queda estático: anulamos las 4 animaciones UA de cada grupo
+   * (group/image-pair arrancan en opacity 0 en la hoja UA del navegador). */
+  ::view-transition-group(root),
+  ::view-transition-image-pair(root),
+  ::view-transition-old(root),
+  ::view-transition-new(root),
+  ::view-transition-group(keynest-header),
+  ::view-transition-image-pair(keynest-header),
+  ::view-transition-old(keynest-header),
+  ::view-transition-new(keynest-header),
+  ::view-transition-group(keynest-nav),
+  ::view-transition-image-pair(keynest-nav),
+  ::view-transition-old(keynest-nav),
+  ::view-transition-new(keynest-nav) {
+    animation: none;
+  }
+  html[data-nav-dir='forward']::view-transition-old(keynest-content) {
+    animation: kn-vt-out-left 0.3s ease-in-out both;
+  }
+  html[data-nav-dir='forward']::view-transition-new(keynest-content) {
+    animation: kn-vt-in-right 0.3s ease-in-out both;
+  }
+  html[data-nav-dir='back']::view-transition-old(keynest-content) {
+    animation: kn-vt-out-right 0.3s ease-in-out both;
+  }
+  html[data-nav-dir='back']::view-transition-new(keynest-content) {
+    animation: kn-vt-in-left 0.3s ease-in-out both;
+  }
+}
+
+@keyframes kn-vt-out-left {
+  to {
+    transform: translateX(-24%);
+    opacity: 0.7;
+  }
+}
+@keyframes kn-vt-in-right {
+  from {
+    transform: translateX(24%);
+    opacity: 0.7;
+  }
+}
+@keyframes kn-vt-out-right {
+  to {
+    transform: translateX(24%);
+    opacity: 0.7;
+  }
+}
+@keyframes kn-vt-in-left {
+  from {
+    transform: translateX(-24%);
+    opacity: 0.7;
+  }
+}
+
 /* Reducir animaciones: solo preferencia del SO (framer-motion usa
    useReducedMotion(); ya no existe el switch de Apariencia) */
 @media (prefers-reduced-motion: reduce) {
@@ -307,5 +371,9 @@
     animation-iteration-count: 1 !important;
     transition-duration: 150ms !important;
     scroll-behavior: auto !important;
+  }
+  ::view-transition-old(*),
+  ::view-transition-new(*) {
+    animation: none !important;
   }
 }

@@ -1127,9 +1127,13 @@ export default function Ajustes() {
                       </span>
                     )}
                     {tedeeState.state === 'ok' && (
-                      <span className="inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-semibold text-emerald-500" style={{ borderColor: 'rgb(16 185 129 / 0.3)', backgroundColor: 'rgb(16 185 129 / 0.1)' }}>
+                      <span
+                        className="inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-semibold text-emerald-500"
+                        style={{ borderColor: 'rgb(16 185 129 / 0.3)', backgroundColor: 'rgb(16 185 129 / 0.1)' }}
+                        title={tr('aj.tedeeConectada')}
+                      >
                         <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
-                        {tr('aj.tedeeConectada')}
+                        <span className="sr-only">{tr('aj.tedeeConectada')}</span>
                       </span>
                     )}
                     {tedeeState.state === 'error' && (
