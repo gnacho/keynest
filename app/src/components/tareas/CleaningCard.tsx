@@ -603,17 +603,6 @@ export default function CleaningCard({ cleaning: c, variants, highlight = false,
         estimatedHours={estimate}
         onConfirm={(workLog, supplies, totalCost) => {
           data.completeCleaning(c.id, workLog, supplies);
-          const products = supplies.reduce((acc, s) => acc + s.amount, 0);
-          if (products > 0) {
-            data.addExpense({
-              propertyId: c.propertyId,
-              type: 'extras',
-              label: t('tareas.productosLimpieza', { name: property.name }),
-              amount: Math.round(products * 100) / 100,
-              month: c.date.getMonth(),
-              year: c.date.getFullYear(),
-            });
-          }
           onCompleted(totalCost);
         }}
       />

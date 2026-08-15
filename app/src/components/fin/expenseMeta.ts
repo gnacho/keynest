@@ -7,6 +7,7 @@ export const EXPENSE_META: Record<ExpenseType, { label: string; labelKey: string
   internet: { label: 'Internet', labelKey: 'gastoTipo.internet', color: '#8B5CF6' },
   administración: { label: 'Administración', labelKey: 'gastoTipo.administracion', color: '#6366F1' },
   extras: { label: 'Extras', labelKey: 'gastoTipo.extras', color: '#F43F5E' },
+  limpieza: { label: 'Limpieza', labelKey: 'gastoTipo.limpieza', color: '#10B981' },
 };
 
 export const EXPENSE_TYPES = Object.keys(EXPENSE_META) as ExpenseType[];

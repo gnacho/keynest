@@ -9,7 +9,7 @@ import { bodyLimit } from 'hono/body-limit'
 import { Hono } from 'hono'
 import { z } from 'zod'
 import * as auth from './auth.js'
-import { audit, openDb, kvGet, kvSet, encryptSecret, decryptSecret, hydrateCleaning, canDeleteCleaning } from './db.js'
+import { audit, openDb, kvGet, kvSet, encryptSecret, decryptSecret, hydrateCleaning, canDeleteCleaning, cleaningCostOf, syncCleaningExpense, removeCleaningExpense } from './db.js'
 import { syncAll, syncStatus } from './sync.js'
 import { fetchIcs, icsToReservations, parseIcs } from './ical.js'
 import { seedDemo } from './seed-demo.js'
@@ -770,7 +770,7 @@ guarded.delete('/maintenance/:id', (c) => {
    Antes vivían solo en memoria del frontend; ahora persisten en BD (issue #207). */
 const expenseSchema = z.object({
   propertyId: z.string().min(1),
-  type: z.enum(['agua', 'luz', 'internet', 'administración', 'extras']),
+  type: z.enum(['agua', 'luz', 'internet', 'administración', 'extras', 'limpieza']),
   label: z.string().min(1),
   amount: z.coerce.number().positive(),
   month: z.coerce.number().int().min(0).max(11),
@@ -948,6 +948,8 @@ guarded.put('/cleanings/:id', async (c) => {
       existing.id,
     )
   const cleaning = db.prepare('SELECT * FROM cleanings WHERE id = ?').get(existing.id)
+  if (cleaning.status === 'archivada') syncCleaningExpense(db, cleaning)
+  else removeCleaningExpense(db, cleaning.id)
   aud(c, 'update', 'cleaning', existing.id, JSON.stringify(Object.keys(d)))
   return c.json({ ok: true, cleaning })
 })
@@ -960,6 +962,7 @@ guarded.delete('/cleanings/:id', (c) => {
   const existing = db.prepare('SELECT * FROM cleanings WHERE id = ?').get(c.req.param('id'))
   if (!existing) return c.json({ error: 'no encontrada' }, 404)
   if (!canDeleteCleaning(existing)) return c.json({ error: 'no se puede eliminar: la limpieza ya se realizó o tiene datos', code: 'not-deletable' }, 409)
+  removeCleaningExpense(db, existing.id)
   db.prepare('DELETE FROM cleanings WHERE id = ?').run(existing.id)
   aud(c, 'delete', 'cleaning', existing.id, `${existing.property_id} ${existing.date}`)
   return c.json({ ok: true })
@@ -1145,6 +1148,7 @@ app.post('/api/t/:token/cleanings/:id', async (c) => {
     const checks = JSON.parse(cl.checks || '[]').map((k) => ({ ...k, done: true }))
     prodDb.prepare("UPDATE cleanings SET status = 'archivada', work_log = ?, supplies = ?, materials = ?, checks = ? WHERE id = ?")
       .run(JSON.stringify(d.workLog ?? []), JSON.stringify(supplies), materials, JSON.stringify(checks), cl.id)
+    syncCleaningExpense(prodDb, prodDb.prepare('SELECT * FROM cleanings WHERE id = ?').get(cl.id))
   }
   const updated = prodDb.prepare('SELECT * FROM cleanings WHERE id = ?').get(cl.id)
   return c.json({ ok: true, cleaning: updated })
