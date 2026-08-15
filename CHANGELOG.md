@@ -7,6 +7,29 @@ y este proyecto se adhiere a [Versionado Semántico](https://semver.org/lang/es/
 
 ## [Unreleased]
 
+## [1.5.41] - 2026-08-16
+
+### Added
+
+- El diálogo de edición y confirmación de limpieza es más ancho en escritorio y
+  tableta, con dos columnas en pantallas grandes (checklist+instrucciones a la
+  izquierda, asignación+fotos a la derecha; horas | productos en la
+  confirmación). El móvil mantiene la pila vertical. (#211)
+- Las reservas creadas a mano pueden editarse y eliminarse desde su fila
+  expandida, con confirmación de borrado. Las del iCal/CSV siguen siendo solo
+  lectura (su fuente es Airbnb). (#165)
+- La tarjeta de previsión del mes del resumen ahora se titula "Mis inmuebles ·
+  Previsión mes". (#159)
+- El filtro de categoría de Mantenimiento pasa de chips con iconos a un
+  desplegable con etiquetas (icono + texto). (#110)
+- Al arrastrar una tarjeta en el Kanban de Mantenimiento, la copia que se mueve
+  es más grande y con sombra (se lee como "la que se mueve"). (#109)
+- Comprobaciones previas a la actualización (`readiness`): espacio en disco,
+  permisos de escritura, sin actualización en curso y que el asset de la
+  release sea alcanzable. El botón "Actualizar" se deshabilita si algo falla. (#155)
+- Botón "Revertir a la anterior" para deshacer una actualización restaurando el
+  backup previo (layout plano o Capistrano). (#154)
+
 ## [1.5.40] - 2026-08-15
 
 ### Added
