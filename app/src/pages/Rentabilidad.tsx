@@ -7,10 +7,13 @@ import {
   ArrowUpRight,
   BedDouble,
   ChevronLeft,
+  ChevronDown,
   ChevronRight,
   Euro,
+  Pencil,
   PieChart as PieChartIcon,
   Plus,
+  Trash2,
   TrendingDown,
   TrendingUp,
 } from 'lucide-react';
@@ -34,6 +37,7 @@ import Fab from '@/components/Fab';
 import FilterBar from '@/components/FilterBar';
 import MoneyText from '@/components/MoneyText';
 import PropertyAvatar from '@/components/PropertyAvatar';
+import ConfirmDialog from '@/components/ConfirmDialog';
 import FinKpiCard from '@/components/fin/FinKpiCard';
 import { EXPENSE_META, EXPENSE_TYPES } from '@/components/fin/expenseMeta';
 import {
@@ -305,6 +309,10 @@ export default function Rentabilidad() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [lastAddedId, setLastAddedId] = useState<string | null>(null);
   const [activePie, setActivePie] = useState<number>(-1);
+  // Gasto en edición (null = alta nueva); confirmación de borrado; tipo expandido del quesito
+  const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
+  const [deletingExpense, setDeletingExpense] = useState<Expense | null>(null);
+  const [expandedType, setExpandedType] = useState<ExpenseType | null>(null);
 
   // Formulario alta de gasto
   const [fProperty, setFProperty] = useState<string>('');
@@ -470,6 +478,7 @@ export default function Rentabilidad() {
 
   /* ---------------- Acciones ---------------- */
   const openDialog = () => {
+    setEditingExpense(null);
     setFProperty(propertyId ?? '');
     setFType('agua');
     setFAmount('');
@@ -479,27 +488,52 @@ export default function Rentabilidad() {
     setDialogOpen(true);
   };
 
-  const saveExpense = () => {
+  const openEditDialog = (e: Expense) => {
+    setEditingExpense(e);
+    setFProperty(e.propertyId);
+    setFType(e.type);
+    setFAmount(String(e.amount));
+    setFDate(`${e.year}-${String(e.month + 1).padStart(2, '0')}-15`);
+    setFRecurrent(false);
+    setFNote(e.label);
+    setDialogOpen(true);
+  };
+
+  const saveExpense = async () => {
     const amount = Number(fAmount.replace(',', '.'));
     const d = new Date(`${fDate}T12:00:00`);
     if (!fProperty || !Number.isFinite(amount) || amount <= 0 || Number.isNaN(d.getTime())) {
       toast.error(t('rent.revisaCampos'));
       return;
     }
-    const label = fNote.trim() || t(EXPENSE_META[fType].labelKey);
-    data.addExpense({
+    const payload = {
       propertyId: fProperty,
       type: fType,
-      label,
+      label: fNote.trim() || t(EXPENSE_META[fType].labelKey),
       amount: Math.round(amount * 100) / 100,
       month: d.getMonth(),
       year: d.getFullYear(),
-    });
+    };
+    if (editingExpense) {
+      await data.updateExpense(editingExpense.id, payload);
+      setDialogOpen(false);
+      toast.success(t('rent.gastoEditado'));
+      return;
+    }
+    await data.addExpense(payload);
     setDialogOpen(false);
     toast.success(t('rent.gastoAnadido', { amount: fmtMoney(amount) }));
     // El id lo genera el provider; marcamos el último movimiento tras el bump
     setTimeout(() => setLastAddedId('__latest__'), 0);
     setTimeout(() => setLastAddedId(null), 1600);
+  };
+
+  const confirmDeleteExpense = async () => {
+    if (!deletingExpense) return;
+    const id = deletingExpense.id;
+    setDeletingExpense(null);
+    await data.deleteExpense(id);
+    toast.success(t('rent.gastoBorrado'));
   };
 
   const applyPropertyFilter = (slug: string) => {
@@ -795,45 +829,116 @@ export default function Rentabilidad() {
               </div>
             </div>
             <div className="flex flex-col gap-1 lg:col-span-7">
-              {byType.map((x, i) => (
-                <div
-                  key={x.type}
-                  onMouseEnter={() => setActivePie(i)}
-                  onMouseLeave={() => setActivePie(-1)}
-                  className={cn(
-                    'rounded-xl px-3 py-2 transition-colors duration-150',
-                    activePie === i && 'bg-[var(--surface-2)]',
-                  )}
-                >
-                  <div className="flex items-center gap-2.5">
-                    <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ backgroundColor: x.color }} />
-                    <span className="min-w-0 flex-1 truncate text-sm font-medium">
-                      {t(x.labelKey)}
-                      {x.type === 'internet' && (
-                        <span
-                          className="ml-2 inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold"
-                          style={{ backgroundColor: 'var(--vi-chip-bg)', color: 'var(--vi-chip-text)' }}
+              {byType.map((x, i) => {
+                const expanded = expandedType === x.type;
+                const items = expenses
+                  .filter((e) => e.type === x.type && monthOverlapsRange(e.month, e.year, range))
+                  .sort((a, b) => (b.year - a.year) || (b.month - a.month));
+                return (
+                  <div
+                    key={x.type}
+                    onMouseEnter={() => setActivePie(i)}
+                    onMouseLeave={() => setActivePie(-1)}
+                    className={cn(
+                      'rounded-xl px-3 py-2 transition-colors duration-150',
+                      activePie === i && 'bg-[var(--surface-2)]',
+                    )}
+                  >
+                    <button
+                      type="button"
+                      onClick={() => setExpandedType(expanded ? null : x.type)}
+                      className="flex w-full items-center gap-2.5 text-left"
+                      aria-expanded={expanded}
+                    >
+                      <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ backgroundColor: x.color }} />
+                      <span className="min-w-0 flex-1 truncate text-sm font-medium">
+                        {t(x.labelKey)}
+                        {x.type === 'internet' && (
+                          <span
+                            className="ml-2 inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold"
+                            style={{ backgroundColor: 'var(--vi-chip-bg)', color: 'var(--vi-chip-text)' }}
+                          >
+                            {t('rent.recurrenteMes', { amount: fmtMoney(39.99) })}
+                          </span>
+                        )}
+                      </span>
+                      <MoneyText value={x.value} className="text-sm" />
+                      <span className="w-12 text-right text-xs font-medium tnum" style={{ color: 'var(--text-faint)' }}>
+                        {fmtPct((x.value / totalByType) * 100, 0)}
+                      </span>
+                      <ChevronDown
+                        className={cn('h-4 w-4 shrink-0 transition-transform duration-200', expanded && 'rotate-180')}
+                        style={{ color: 'var(--text-faint)' }}
+                      />
+                    </button>
+                    <span className="ml-5 mt-1.5 block h-1 overflow-hidden rounded-full" style={{ backgroundColor: 'var(--surface-2)' }}>
+                      <motion.span
+                        className="block h-full rounded-full"
+                        style={{ backgroundColor: x.color }}
+                        initial={reduce ? { width: `${(x.value / totalByType) * 100}%` } : { width: 0 }}
+                        animate={{ width: `${(x.value / totalByType) * 100}%` }}
+                        transition={{ delay: 0.15 + i * 0.05, duration: 0.6, ease: EASE_OUT_QUART }}
+                      />
+                    </span>
+                    <AnimatePresence initial={false}>
+                      {expanded && (
+                        <motion.div
+                          initial={reduce ? { opacity: 0 } : { height: 0, opacity: 0 }}
+                          animate={reduce ? { opacity: 1 } : { height: 'auto', opacity: 1 }}
+                          exit={reduce ? { opacity: 0 } : { height: 0, opacity: 0 }}
+                          transition={{ duration: 0.2 }}
+                          className="overflow-hidden"
                         >
-                          {t('rent.recurrenteMes', { amount: fmtMoney(39.99) })}
-                        </span>
+                          <div className="mt-1.5 flex flex-col gap-0.5 border-t pt-1.5" style={{ borderColor: 'var(--border)' }}>
+                            {items.length === 0 ? (
+                              <p className="py-2 text-[13px]" style={{ color: 'var(--text-muted)' }}>
+                                {t('rent.sinGastosPeriodo')}
+                              </p>
+                            ) : (
+                              items.map((e) => {
+                                const p = data.getProperty(e.propertyId);
+                                return (
+                                  <div key={e.id} className="flex items-center gap-2 rounded-lg px-1 py-1.5 text-[13px] hover:bg-[var(--surface-2)]">
+                                    <span className="min-w-0 flex-1 truncate">
+                                      <span className="block truncate">{e.label}</span>
+                                      <span className="block truncate text-[11px]" style={{ color: 'var(--text-faint)' }}>
+                                        {p?.name ?? '—'} · {capitalize(fmtMonth(new Date(e.year, e.month, 15), true))} {e.year}
+                                      </span>
+                                    </span>
+                                    <MoneyText value={e.amount} className="shrink-0 text-sm" />
+                                    {!data.isDemo && (
+                                      <span className="flex shrink-0 items-center gap-0.5">
+                                        <button
+                                          type="button"
+                                          onClick={() => openEditDialog(e)}
+                                          aria-label={t('rent.editarGasto')}
+                                          className="flex h-7 w-7 items-center justify-center rounded-lg transition-colors hover:bg-[var(--surface)]"
+                                          style={{ color: 'var(--text-faint)' }}
+                                        >
+                                          <Pencil className="h-3.5 w-3.5" />
+                                        </button>
+                                        <button
+                                          type="button"
+                                          onClick={() => setDeletingExpense(e)}
+                                          aria-label={t('rent.borrarGasto')}
+                                          className="flex h-7 w-7 items-center justify-center rounded-lg transition-colors hover:bg-[var(--surface)]"
+                                          style={{ color: 'var(--text-faint)' }}
+                                        >
+                                          <Trash2 className="h-3.5 w-3.5" />
+                                        </button>
+                                      </span>
+                                    )}
+                                  </div>
+                                );
+                              })
+                            )}
+                          </div>
+                        </motion.div>
                       )}
-                    </span>
-                    <MoneyText value={x.value} className="text-sm" />
-                    <span className="w-12 text-right text-xs font-medium tnum" style={{ color: 'var(--text-faint)' }}>
-                      {fmtPct((x.value / totalByType) * 100, 0)}
-                    </span>
+                    </AnimatePresence>
                   </div>
-                  <span className="ml-5 mt-1.5 block h-1 overflow-hidden rounded-full" style={{ backgroundColor: 'var(--surface-2)' }}>
-                    <motion.span
-                      className="block h-full rounded-full"
-                      style={{ backgroundColor: x.color }}
-                      initial={reduce ? { width: `${(x.value / totalByType) * 100}%` } : { width: 0 }}
-                      animate={{ width: `${(x.value / totalByType) * 100}%` }}
-                      transition={{ delay: 0.15 + i * 0.05, duration: 0.6, ease: EASE_OUT_QUART }}
-                    />
-                  </span>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
         )}
@@ -1044,6 +1149,32 @@ export default function Rentabilidad() {
                   <span className="w-14 shrink-0 text-right text-xs" style={{ color: 'var(--text-faint)' }}>
                     {fmtDateShort(m.date)}
                   </span>
+                  {!data.isDemo && m.kind === 'gasto' && (() => {
+                    const e = expenses.find((x) => `mov-${x.id}` === m.id);
+                    if (!e) return null;
+                    return (
+                      <span className="flex shrink-0 items-center gap-0.5">
+                        <button
+                          type="button"
+                          onClick={() => openEditDialog(e)}
+                          aria-label={t('rent.editarGasto')}
+                          className="flex h-7 w-7 items-center justify-center rounded-lg transition-colors hover:bg-[var(--surface-2)]"
+                          style={{ color: 'var(--text-faint)' }}
+                        >
+                          <Pencil className="h-3.5 w-3.5" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setDeletingExpense(e)}
+                          aria-label={t('rent.borrarGasto')}
+                          className="flex h-7 w-7 items-center justify-center rounded-lg transition-colors hover:bg-[var(--surface-2)]"
+                          style={{ color: 'var(--text-faint)' }}
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </button>
+                      </span>
+                    );
+                  })()}
                 </motion.div>
               );
             })}
@@ -1051,11 +1182,13 @@ export default function Rentabilidad() {
         )}
       </section>
 
-      {/* ============================== Dialog alta de gasto */}
-      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+      {/* ============================== Dialog alta/edición de gasto */}
+      <Dialog open={dialogOpen} onOpenChange={(o) => { setDialogOpen(o); if (!o) setEditingExpense(null); }}>
         <DialogContent className="rounded-2xl border-[var(--border)] bg-[var(--surface)] shadow-overlay sm:max-w-md">
           <DialogHeader>
-            <DialogTitle className="font-display text-lg font-semibold">{t('rent.anadirGasto')}</DialogTitle>
+            <DialogTitle className="font-display text-lg font-semibold">
+              {editingExpense ? t('rent.editarGasto') : t('rent.anadirGasto')}
+            </DialogTitle>
             <DialogDescription style={{ color: 'var(--text-muted)' }}>
               {t('rent.dialogDesc')}
             </DialogDescription>
@@ -1070,7 +1203,7 @@ export default function Rentabilidad() {
                   <SelectValue placeholder={t('rent.seleccionaInmueble')} />
                 </SelectTrigger>
                 <SelectContent className="rounded-xl border-[var(--border)] bg-[var(--surface)]">
-                  {properties.map((p) => (
+                  {allProperties.map((p) => (
                     <SelectItem key={p.id} value={p.id}>
                       {p.name}
                     </SelectItem>
@@ -1157,7 +1290,7 @@ export default function Rentabilidad() {
 
             <button
               type="button"
-              onClick={saveExpense}
+              onClick={() => void saveExpense()}
               className="brand-gradient mt-1 flex h-11 items-center justify-center rounded-xl text-sm font-semibold text-white transition-all duration-150 hover:brightness-110 active:scale-[0.98]"
             >
               {t('rent.guardarGasto')}
@@ -1165,6 +1298,16 @@ export default function Rentabilidad() {
           </div>
         </DialogContent>
       </Dialog>
+
+      <ConfirmDialog
+        open={deletingExpense !== null}
+        onOpenChange={(o) => { if (!o) setDeletingExpense(null); }}
+        title={t('rent.borrarGasto')}
+        description={t('rent.borrarGastoDesc')}
+        tone="danger"
+        confirmLabel={t('rent.borrarGasto')}
+        onConfirm={() => void confirmDeleteExpense()}
+      />
 
       {!data.isDemo && <Fab onClick={openDialog} aria-label={t('rent.anadirGasto')} />}
     </div>

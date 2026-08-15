@@ -77,6 +77,20 @@ const MIGRATIONS = [
   //     proveedores externos). Para tareas simples (cambiar pilas, etc.) que
   //     puede hacer el propio propietario. Mutuamente excluyente con assignee_id.
   `ALTER TABLE maintenance_tasks ADD COLUMN assigned_user_id TEXT`,
+  // 20: gastos recurrentes/ocasionales (agua, luz, internet, admin, extras).
+  //     Antes vivían solo en memoria del frontend (se perdían al recargar).
+  //     Ahora se persisten con mes/año (el desglose es mensual).
+  `CREATE TABLE IF NOT EXISTS expenses (
+    id TEXT PRIMARY KEY,
+    property_id TEXT NOT NULL,
+    type TEXT NOT NULL,
+    label TEXT NOT NULL,
+    amount REAL NOT NULL,
+    month INTEGER NOT NULL,
+    year INTEGER NOT NULL,
+    created_at INTEGER NOT NULL
+  );
+  CREATE INDEX IF NOT EXISTS idx_expenses_property ON expenses(property_id)`,
 ]
 
 export function migrate(db) {

@@ -16,6 +16,7 @@ const DOMAIN = {
   people: 'person',
   users: 'user',
   settings: 'settings',
+  expenses: 'expense',
 }
 
 export function eventName(entity) {

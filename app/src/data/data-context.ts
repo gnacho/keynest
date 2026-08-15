@@ -184,7 +184,12 @@ export interface DataApi {
   /** Edita campos de una tarea existente (título, categoría, etiqueta, urgente, notas, fecha prevista). */
   editMaintenance: (id: string, patch: Partial<{ title: string; category: string; expenseTag: string; urgent: boolean; notes: string; scheduledDate: string | null; checks: CleaningCheck[] }>) => Promise<void>;
   deleteMaintenance: (id: string) => Promise<void>;
-  addExpense: (e: Omit<Expense, 'id'>) => void;
+  /** Crea un gasto persistente (issue #207); devuelve el gasto creado. */
+  addExpense: (e: Omit<Expense, 'id'>) => Promise<Expense>;
+  /** Edita un gasto existente (inmueble, tipo, concepto, importe, mes/año). */
+  updateExpense: (id: string, patch: Partial<Omit<Expense, 'id'>>) => Promise<void>;
+  /** Elimina un gasto persistido. */
+  deleteExpense: (id: string) => Promise<void>;
 }
 
 export const DataContext = createContext<DataApi | null>(null);

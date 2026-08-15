@@ -138,7 +138,7 @@ export default function CleaningCard({ cleaning: c, variants, highlight = false,
           <div className="mt-2 flex justify-end gap-2">
             <button
               type="button"
-          onClick={() => setSheetOpen(true)}
+              onClick={() => setEditOpen(true)}
               className="flex h-8 items-center rounded-xl border px-3 text-xs font-semibold transition-colors hover:bg-[var(--surface-2)]"
               style={{ borderColor: 'var(--border)', color: 'var(--text-muted)' }}
             >

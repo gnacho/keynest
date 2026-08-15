@@ -89,6 +89,8 @@ export function seedDemo(db) {
     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`)
   const insMaint = db.prepare(`INSERT INTO maintenance_tasks (id, property_id, title, category, expense_tag, urgent, notes, status, assignee_id, scheduled_date, cost, created_at)
     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`)
+  const insExpense = db.prepare(`INSERT INTO expenses (id, property_id, type, label, amount, month, year, created_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?)`)
 
   const tx = db.transaction(() => {
     const propIds = []
@@ -138,11 +140,24 @@ export function seedDemo(db) {
       )
     }
 
+    // Gastos recurrentes y ocasionales por inmueble (issue #207). Recurrentes:
+    // internet fijo + admin de finca en TODOS; agua/luz con variación mensual.
+    for (const pi of propIds.keys()) {
+      for (let m = 2; m >= 0; m--) {
+        const ref = new Date(today.getFullYear(), today.getMonth() - m, 1)
+        insExpense.run(crypto.randomUUID(), propIds[pi], 'internet', 'Internet fibra', 39.99, ref.getMonth(), ref.getFullYear(), now)
+        insExpense.run(crypto.randomUUID(), propIds[pi], 'administración', 'Administración de finca', 30, ref.getMonth(), ref.getFullYear(), now)
+        insExpense.run(crypto.randomUUID(), propIds[pi], 'agua', 'Agua', Math.round((24 + (pi * 7 + m * 3) % 26) * 100) / 100, ref.getMonth(), ref.getFullYear(), now)
+        insExpense.run(crypto.randomUUID(), propIds[pi], 'luz', 'Electricidad', Math.round((38 + (pi * 11 + m * 9) % 48) * 100) / 100, ref.getMonth(), ref.getFullYear(), now)
+      }
+    }
+    insExpense.run(crypto.randomUUID(), propIds[0], 'extras', 'Frigorífico del ático (repuesto)', 95, today.getMonth(), today.getFullYear(), now)
+
     // Usuario demo (sin contraseña: entra por /api/auth/demo)
     db.prepare('INSERT INTO users (id, username, password_hash, language, role, created_at) VALUES (?, ?, ?, ?, ?, ?)')
       .run('demo-user', 'demo', '', 'auto', 'demo', now)
   })
   tx()
-  console.log('[demo] seed creado: 5 inmuebles, 13 reservas, 4 personas, 9 limpiezas, 8 tareas')
+  console.log('[demo] seed creado: 5 inmuebles, 13 reservas, 4 personas, 9 limpiezas, 8 tareas, gastos demo')
   return true
 }

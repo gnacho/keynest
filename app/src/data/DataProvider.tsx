@@ -207,6 +207,7 @@ interface BootstrapData {
   cleanings: ApiCleaning[];
   maintenance: ApiMaintenance[];
   people: ApiPerson[];
+  expenses?: ApiExpense[];
   categories: MaintCategory[];
   config?: { checkInTime?: string; checkOutTime?: string; batteryThreshold?: number; autoCleaning?: boolean; lookaheadDays?: number; nDays?: number; dismissedNotifs?: string[] };
   sync: Record<string, { ok: boolean; at: number; count?: number; error?: string }>;
@@ -240,6 +241,23 @@ function mapCleaning(row: ApiCleaning): Cleaning {
   };
 }
 
+interface ApiExpense {
+  id: string; property_id: string; type: Expense['type']; label: string;
+  amount: number; month: number; year: number; created_at: number;
+}
+
+function mapExpense(row: ApiExpense): Expense {
+  return {
+    id: row.id,
+    propertyId: row.property_id,
+    type: row.type,
+    label: row.label,
+    amount: row.amount,
+    month: row.month,
+    year: row.year,
+  };
+}
+
 /**
  * Provider síncrono con patrón version/bump, hidratado del backend real.
  * Solo inmuebles y reservas vienen de la API; el resto de entidades
@@ -255,7 +273,7 @@ export default function DataProvider({ children }: { children: ReactNode }) {
   const properties = useRef<Property[]>([]);
   const reservations = useRef<Reservation[]>([]);
   const syncMap = useRef<BootstrapData['sync']>({});
-  // Entidades aún sin backend (vacías; se migrarán en siguientes iteraciones)
+  // Entidades con backend real; se hidratan en refresh()
   const cleanings = useRef<Cleaning[]>([]);
   const maintenance = useRef<MaintenanceTask[]>([]);
   const expenses = useRef<Expense[]>([]);
@@ -266,7 +284,6 @@ export default function DataProvider({ children }: { children: ReactNode }) {
   const locks = useRef<Lock[]>([]);
   const accesses = useRef<TedeeAccess[]>([]);
   const monthlyFinance = useRef<MonthlyFinance[]>([]);
-  const expenseSeq = useRef(1);
   const userSeq = useRef(1);
 
   const refresh = useCallback(async () => {
@@ -282,6 +299,7 @@ export default function DataProvider({ children }: { children: ReactNode }) {
       reservations.current = data.reservations.map(mapReservation);
       cleanings.current = (data.cleanings ?? []).map(mapCleaning);
       people.current = (data.people ?? []).map(mapPerson);
+      expenses.current = (data.expenses ?? []).map(mapExpense);
       maintenance.current = (data.maintenance ?? []).map(mapMaintenance);
       categories.current = data.categories ?? [];
       settings.current = {
@@ -340,6 +358,7 @@ export default function DataProvider({ children }: { children: ReactNode }) {
     es.addEventListener('property.changed', scheduleRefresh);
     es.addEventListener('reservation.changed', scheduleRefresh);
     es.addEventListener('cleaning.changed', scheduleRefresh);
+    es.addEventListener('expense.changed', scheduleRefresh);
     es.addEventListener('maintenance.changed', scheduleRefresh);
     es.addEventListener('person.changed', scheduleRefresh);
     es.addEventListener('user.changed', scheduleRefresh);
@@ -809,8 +828,28 @@ export default function DataProvider({ children }: { children: ReactNode }) {
         bump();
         return mapped;
       },
-      addExpense: (e) => {
-        expenses.current = [{ ...e, id: `exp-${expenseSeq.current++}` }, ...expenses.current];
+      addExpense: async (input) => {
+        const res = await api<{ expense: ApiExpense }>('/api/expenses', {
+          method: 'POST',
+          body: JSON.stringify(input),
+        });
+        const mapped = mapExpense(res.expense);
+        expenses.current = [mapped, ...expenses.current];
+        bump();
+        return mapped;
+      },
+      updateExpense: async (id, patch) => {
+        const res = await api<{ expense: ApiExpense }>(`/api/expenses/${id}`, {
+          method: 'PUT',
+          body: JSON.stringify(patch),
+        });
+        const mapped = mapExpense(res.expense);
+        expenses.current = expenses.current.map((e) => (e.id === id ? mapped : e));
+        bump();
+      },
+      deleteExpense: async (id) => {
+        await api(`/api/expenses/${id}`, { method: 'DELETE' });
+        expenses.current = expenses.current.filter((e) => e.id !== id);
         bump();
       },
     };
