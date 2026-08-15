@@ -7,6 +7,20 @@ y este proyecto se adhiere a [Versionado Semántico](https://semver.org/lang/es/
 
 ## [Unreleased]
 
+## [1.5.40] - 2026-08-15
+
+### Added
+
+- Nuevo tipo de gasto `limpieza` (label "Limpieza") en el desplegable de gastos,
+  disponible también para alta manual sin limpieza asociada. (#209)
+- Al confirmar una limpieza (admin o personal con token) se crea automáticamente
+  un gasto "Limpieza" vinculado a ella con su coste real (horas × €/h de cada
+  persona + productos). Editar la limpieza archivada recalcula el gasto;
+  eliminarla elimina el gasto. La migración 22 añade la columna
+  `source_cleaning_id` a `expenses`. (#209)
+- Se retira el gasto "Extras" de productos que se creaba manualmente al
+  confirmar: los materiales ya quedan incluidos en el gasto de limpieza. (#209)
+
 ## [1.5.39] - 2026-08-15
 
 ### Added
