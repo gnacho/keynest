@@ -7,6 +7,15 @@ y este proyecto se adhiere a [Versionado Semántico](https://semver.org/lang/es/
 
 ## [Unreleased]
 
+## [1.5.42] - 2026-08-16
+
+### Changed
+
+- Las limpiezas pueden eliminarse en **cualquier estado** (en curso, archivadas
+  o con horas/productos/fotos registrados), con un diálogo de confirmación que
+  avisa de que se descartan esos datos y el gasto de limpieza vinculado. La
+  reserva de origen no se toca. (#210)
+
 ## [1.5.41] - 2026-08-16
 
 ### Added
