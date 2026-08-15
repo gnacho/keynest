@@ -117,7 +117,7 @@ export default function ConfirmCleaningDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[90dvh] w-[calc(100vw-1.5rem)] max-w-md overflow-y-auto overflow-x-hidden rounded-2xl border-[var(--border)] bg-[var(--surface)] p-4 shadow-overlay sm:p-6">
+      <DialogContent className="max-h-[90dvh] w-[calc(100vw-1.5rem)] max-w-md overflow-y-auto overflow-x-hidden rounded-2xl border-[var(--border)] bg-[var(--surface)] p-4 shadow-overlay sm:max-w-xl sm:p-6">
         <DialogHeader>
           <DialogTitle className="font-display text-lg font-semibold">{t('tareas.confirmarTitulo')}</DialogTitle>
           <DialogDescription style={{ color: 'var(--text-muted)' }}>
@@ -126,6 +126,8 @@ export default function ConfirmCleaningDialog({
         </DialogHeader>
 
         <div className="flex flex-col gap-4">
+          {/* Dos columnas en sm+: horas reales | gastos de productos (#211) */}
+          <div className="grid grid-cols-1 items-start gap-4 sm:grid-cols-2">
           {/* Horas reales por persona */}
           <div>
             <p
@@ -235,6 +237,7 @@ export default function ConfirmCleaningDialog({
             <p className="mt-1.5 text-[11px]" style={{ color: 'var(--text-faint)' }}>
               {t('tareas.gastoExtras')}
             </p>
+          </div>
           </div>
 
           {/* Desglose en vivo */}
