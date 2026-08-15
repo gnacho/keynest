@@ -7,6 +7,18 @@ y este proyecto se adhiere a [Versionado Semántico](https://semver.org/lang/es/
 
 ## [Unreleased]
 
+## [1.5.43] - 2026-08-16
+
+### Added
+
+- Ajustes: la zona de administración es colapsable (botón chevron en su cabecera,
+  se recuerda la preferencia), de modo que la página llega a todas las secciones
+  sin largos desplazamientos en escritorio. (#44)
+- Navegación móvil por gesto: deslizar horizontalmente sobre el contenido cambia
+  de menú (izquierda = siguiente, derecha = anterior) reutilizando la transición
+  de vista existente. Los gestos verticales se ignoran para convivir con el
+  pull-to-refresh. (#173)
+
 ## [1.5.42] - 2026-08-16
 
 ### Changed
