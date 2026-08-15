@@ -84,12 +84,8 @@ export default function CleaningCard({ cleaning: c, variants, highlight = false,
   const total = c.checks.length;
   const allDone = total > 0 && done === total;
   const archived = c.status === 'archivada';
-  // Elimable: no realizada (pendiente/asignada) y sin horas, productos ni fotos
-  const canDelete = !archived
-    && (c.status === 'pendiente' || c.status === 'asignada')
-    && (c.workLog ?? []).length === 0
-    && (c.supplies ?? []).length === 0
-    && (c.photos ?? []).length === 0;
+  // Eliminable en cualquier estado (#210): el diálogo avisa si hay datos que se pierden
+  const hasData = (c.workLog ?? []).length > 0 || (c.supplies ?? []).length > 0 || photos.length > 0;
   const retention = photoRetentionUntil(c.date);
 
   useEffect(() => {
@@ -136,6 +132,15 @@ export default function CleaningCard({ cleaning: c, variants, highlight = false,
         </button>
         {expanded && !data.isDemo && (
           <div className="mt-2 flex justify-end gap-2">
+            <button
+              type="button"
+              onClick={() => setDeleteOpen(true)}
+              className="flex h-8 items-center gap-1.5 rounded-xl border px-3 text-xs font-semibold text-rose-500 transition-colors hover:bg-[var(--ro-chip-bg)]"
+              style={{ borderColor: 'rgb(244 63 94 / 0.5)' }}
+            >
+              <Trash2 className="h-3.5 w-3.5" />
+              {t('tareas.eliminar')}
+            </button>
             <button
               type="button"
               onClick={() => setEditOpen(true)}
@@ -242,6 +247,16 @@ export default function CleaningCard({ cleaning: c, variants, highlight = false,
         </AnimatePresence>
 
         <PhotoLightbox photos={photos} index={photoViewer} onIndexChange={setPhotoViewer} />
+
+        <ConfirmDialog
+          open={deleteOpen}
+          onOpenChange={setDeleteOpen}
+          title={t('tareas.eliminarTitulo')}
+          description={hasData ? t('tareas.eliminarDescDatos') : t('tareas.eliminarDesc')}
+          tone="danger"
+          confirmLabel={t('tareas.eliminar')}
+          onConfirm={() => { void data.deleteCleaning(c.id); }}
+        />
 
         <ConfirmCleaningDialog
           open={editOpen}
@@ -566,7 +581,7 @@ export default function CleaningCard({ cleaning: c, variants, highlight = false,
 
         {/* Acciones de estado: confirmar directo (sin paso intermedio "iniciar") */}
         <div className="flex items-center justify-end gap-2">
-          {!data.isDemo && canDelete && (
+          {!data.isDemo && (
             <button
               type="button"
               onClick={() => setDeleteOpen(true)}
@@ -594,7 +609,7 @@ export default function CleaningCard({ cleaning: c, variants, highlight = false,
         open={deleteOpen}
         onOpenChange={setDeleteOpen}
         title={t('tareas.eliminarTitulo')}
-        description={t('tareas.eliminarDesc')}
+        description={hasData ? t('tareas.eliminarDescDatos') : t('tareas.eliminarDesc')}
         tone="danger"
         confirmLabel={t('tareas.eliminar')}
         onConfirm={() => { void data.deleteCleaning(c.id); }}

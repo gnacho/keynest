@@ -557,6 +557,7 @@
     "eliminar": "Eliminar",
     "eliminarTitulo": "Eliminar limpieza",
     "eliminarDesc": "Esta limpieza se eliminará definitivamente. No se puede deshacer.",
+    "eliminarDescDatos": "Se eliminarán la limpieza con sus horas, productos y fotos, y el gasto de limpieza vinculado. No se puede deshacer.",
     "detalles": "Detalles"
   },
   "aj": {

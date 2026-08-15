@@ -2,7 +2,7 @@ import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { openDb, hydrateCleaning, canDeleteCleaning } from '../src/db.js';
+import { openDb, hydrateCleaning } from '../src/db.js';
 
 let dir;
 let db;
@@ -24,11 +24,11 @@ function insertProperty(id, { checklist = [], instructions = '' } = {}) {
   ).run(id, id, id, JSON.stringify(checklist), instructions);
 }
 
-function insertCleaning(id, propertyId, { checks = '[]', instructions = null } = {}) {
+function insertCleaning(id, propertyId, { checks = '[]', instructions = null, status = 'pendiente' } = {}) {
   db.prepare(
     `INSERT INTO cleanings (id, property_id, date, status, assignee_ids, estimated_hours, checks, instructions, photos, created_at)
-     VALUES (?, ?, '2026-08-10', 'pendiente', '[]', 2, ?, ?, '[]', 0)`,
-  ).run(id, propertyId, checks, instructions);
+     VALUES (?, ?, '2026-08-10', ?, '[]', 2, ?, ?, '[]', 0)`,
+  ).run(id, propertyId, status, checks, instructions);
 }
 
 describe('issue #39 — snapshot de checklist + instrucciones por limpieza', () => {
@@ -87,33 +87,8 @@ describe('issue #39 — snapshot de checklist + instrucciones por limpieza', () 
   });
 });
 
-describe('issue #40 — borrado de limpiezas no realizadas (canDeleteCleaning)', () => {
-  const mk = (overrides = {}) => ({
-    status: 'pendiente',
-    work_log: '[]',
-    supplies: '[]',
-    photos: '[]',
-    ...overrides,
-  });
-
-  it('una limpieza pendiente/asignada sin datos es eliminable', () => {
-    expect(canDeleteCleaning(mk({ status: 'pendiente' }))).toBe(true);
-    expect(canDeleteCleaning(mk({ status: 'asignada' }))).toBe(true);
-    expect(canDeleteCleaning(mk({ status: 'asignada', work_log: null, supplies: null, photos: null }))).toBe(true);
-  });
-
-  it('una limpieza en-curso o archivada NO es eliminable', () => {
-    expect(canDeleteCleaning(mk({ status: 'en-curso' }))).toBe(false);
-    expect(canDeleteCleaning(mk({ status: 'archivada' }))).toBe(false);
-  });
-
-  it('una limpieza con fotos/horas/productos NO es eliminable', () => {
-    expect(canDeleteCleaning(mk({ photos: '["/photos/x.webp"]' }))).toBe(false);
-    expect(canDeleteCleaning(mk({ work_log: '[{"personId":"p","hours":1}]' }))).toBe(false);
-    expect(canDeleteCleaning(mk({ supplies: '[{"label":"lejía","amount":2}]' }))).toBe(false);
-  });
-
-  it('el borrado en BD elimina la limpieza sin tocar otras ni la reserva origen', () => {
+describe('issues #40 y #210 — borrado de limpiezas (cualquier estado)', () => {
+  it('el borrado elimina la limpieza sin tocar otras ni la reserva origen', () => {
     insertProperty('p-del', { checklist: ['A'], instructions: 'x' });
     db.prepare(`INSERT INTO reservations (id, property_id, uid, checkin, checkout, summary, created_at)
                 VALUES ('r-origen','p-del','uid-del','2026-08-01','2026-08-05','R',0)`).run();
@@ -121,13 +96,25 @@ describe('issue #40 — borrado de limpiezas no realizadas (canDeleteCleaning)',
     db.prepare('UPDATE cleanings SET reservation_id = ? WHERE id = ?').run('r-origen', 'c-del');
     insertCleaning('c-keep', 'p-del');
 
-    const row = db.prepare('SELECT * FROM cleanings WHERE id = ?').get('c-del');
-    expect(canDeleteCleaning(row)).toBe(true);
     db.prepare('DELETE FROM cleanings WHERE id = ?').run('c-del');
 
     expect(db.prepare('SELECT COUNT(*) n FROM cleanings WHERE id = ?').get('c-del').n).toBe(0);
     expect(db.prepare('SELECT COUNT(*) n FROM cleanings WHERE id = ?').get('c-keep').n).toBe(1);
     // la reserva de origen sigue intacta
     expect(db.prepare('SELECT COUNT(*) n FROM reservations WHERE id = ?').get('r-origen').n).toBe(1);
+  });
+
+  it('una limpieza archivada con horas, productos y fotos también se puede borrar', () => {
+    insertProperty('p-del2', { checklist: ['A'], instructions: 'x' });
+    db.prepare(`INSERT INTO people (id, name, hourly_rate, created_at) VALUES ('pers-del','P',12,0)`).run();
+    insertCleaning('c-arch', 'p-del2', { status: 'archivada', checks: '[]' });
+    db.prepare(`UPDATE cleanings SET work_log = ?, supplies = ?, photos = ? WHERE id = 'c-arch'`).run(
+      JSON.stringify([{ personId: 'pers-del', hours: 2 }]),
+      JSON.stringify([{ label: 'lejía', amount: 3 }]),
+      JSON.stringify(['/photos/x.webp']),
+    );
+
+    db.prepare('DELETE FROM cleanings WHERE id = ?').run('c-arch');
+    expect(db.prepare('SELECT COUNT(*) n FROM cleanings WHERE id = ?').get('c-arch').n).toBe(0);
   });
 });
