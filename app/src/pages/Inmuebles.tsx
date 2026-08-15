@@ -86,17 +86,6 @@ export default function Inmuebles() {
   const [editProp, setEditProp] = useState<string | 'new' | null>(null);
   const [params, setParams] = useSearchParams();
   const pendingEditId = params.get('editar') ?? undefined;
-  useEffect(() => {
-    if (!pendingEditId || pendingEditId === 'todos') return;
-    const p = properties.find((x) => x.id === pendingEditId);
-    if (p) {
-      openEditProp(pendingEditId);
-      const next = new URLSearchParams(params);
-      next.delete('editar');
-      setParams(next, { replace: true });
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pendingEditId, properties.length]);
   const [icalCheck, setIcalCheck] = useState<{ state: 'idle' | 'checking' | 'ok' | 'error'; count?: number; code?: string; status?: number }>({ state: 'idle' });
   const [editingIcal, setEditingIcal] = useState(false);
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
@@ -158,6 +147,20 @@ export default function Inmuebles() {
     setEditingIcal(false);
     setEditProp('new');
   };
+
+  /* Deep-link ?editar=<id>: abre el editor del inmueble. Declarado tras
+     openEditProp para no usarla antes de su declaración (lint). */
+  useEffect(() => {
+    if (!pendingEditId || pendingEditId === 'todos') return;
+    const p = properties.find((x) => x.id === pendingEditId);
+    if (p) {
+      openEditProp(pendingEditId);
+      const next = new URLSearchParams(params);
+      next.delete('editar');
+      setParams(next, { replace: true });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pendingEditId, properties.length]);
 
   const verifyIcal = async (url: string): Promise<boolean> => {
     setIcalCheck({ state: 'checking' });
