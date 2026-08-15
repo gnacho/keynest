@@ -40,13 +40,35 @@ function insertExpense(id, propertyId, over = {}) {
 }
 
 describe('issue #207 — gastos persistidos en BD', () => {
-  it('la migración 20 crea la tabla expenses', () => {
+  it('la migración 21 crea la tabla expenses', () => {
     const tables = db.prepare("SELECT name FROM sqlite_master WHERE type='table'").all().map((r) => r.name);
     expect(tables).toContain('expenses');
     const cols = db.prepare('PRAGMA table_info(expenses)').all().map((c) => c.name);
     expect(cols).toEqual(
       expect.arrayContaining(['id', 'property_id', 'type', 'label', 'amount', 'month', 'year', 'created_at']),
     );
+  });
+
+  it('una BD que ya está en schema_version 20 (hueco nº20) aplica la 21 y crea expenses', () => {
+    // Simula el CT 226: el motor ve current=20 (registrada por otra sesión) y
+    // NO ejecuta la migración 20 (SELECT 1); debe ejecutar la 21 = expenses.
+    const dir2 = mkdtempSync(join(tmpdir(), 'keynest-exp21-'));
+    let db2 = openDb(dir2);
+    // Degrada el estado: quita expenses y baja schema_version a 20 (con hueco 20)
+    db2.exec('DROP TABLE expenses');
+    db2.prepare('DELETE FROM schema_version WHERE version > 20').run();
+    db2.prepare('INSERT OR REPLACE INTO schema_version (version, applied_at) VALUES (20, 0)').run();
+    db2.close();
+    // Reabrir: ahora current=20 → aplica solo la 21
+    db2 = openDb(dir2);
+    const hasExp = db2.prepare("SELECT COUNT(*) n FROM sqlite_master WHERE type='table' AND name='expenses'").get().n;
+    expect(hasExp).toBe(1);
+    const maxV = db2.prepare('SELECT MAX(version) v FROM schema_version').get().v;
+    expect(maxV).toBe(21);
+    const versions = db2.prepare('SELECT version FROM schema_version ORDER BY version').all().map((r) => r.version);
+    expect(versions).toContain(20);
+    db2.close();
+    rmSync(dir2, { recursive: true, force: true });
   });
 
   it('inserta un gasto y lo recupera con sus valores', () => {

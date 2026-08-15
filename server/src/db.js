@@ -77,9 +77,16 @@ const MIGRATIONS = [
   //     proveedores externos). Para tareas simples (cambiar pilas, etc.) que
   //     puede hacer el propio propietario. Mutuamente excluyente con assignee_id.
   `ALTER TABLE maintenance_tasks ADD COLUMN assigned_user_id TEXT`,
-  // 20: gastos recurrentes/ocasionales (agua, luz, internet, admin, extras).
+  // 20: HUECO. En el CT 226 la BD quedó con schema_version=20 registrada el
+  //     10-Ago-2026 por una sesión paralela cuyo cambio NO llegó al repo (la
+  //     tabla/columna que pudo tocar no existe hoy). El motor de migraciones
+  //     no re-ejecuta versiones ya registradas, así que si expenses usara el
+  //     número 20 nunca se aplicaría en ese entorno. No-op explícito para
+  //     mantener la numeración alineada (instalaciones nuevas lo saltan).
+  `SELECT 1`,
+  // 21: gastos recurrentes/ocasionales (agua, luz, internet, admin, extras).
   //     Antes vivían solo en memoria del frontend (se perdían al recargar).
-  //     Ahora se persisten con mes/año (el desglose es mensual).
+  //     Ahora se persisten con mes/año (el desglose es mensual). #207
   `CREATE TABLE IF NOT EXISTS expenses (
     id TEXT PRIMARY KEY,
     property_id TEXT NOT NULL,
