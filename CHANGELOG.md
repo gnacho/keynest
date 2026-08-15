@@ -7,16 +7,37 @@ y este proyecto se adhiere a [Versionado Semántico](https://semver.org/lang/es/
 
 ## [Unreleased]
 
+## [1.5.38] - 2026-08-15
+
+### Added
+
+- Navegación móvil con deslizamiento: al cambiar de vista desde la bottom-nav
+  el contenido se desliza direccionalmente (adelante/atrás según el orden del
+  menú) con la View Transitions API; header y barra inferior permanecen
+  estáticos y se respeta `prefers-reduced-motion`. El re-tap del tab activo
+  conserva el scroll suave arriba sin animación. (#198)
+
+### Changed
+
+- En las tarjetas de movimientos del resumen, cuando un inmueble tiene
+  rotación HOY (salida + entrada el mismo día) el badge HOY pasa a la
+  izquierda, delante del aviso de rotación y de la fecha. (#199)
+- Ajustes más compactos en móvil: se ocultan nombre/email en "Mi perfil" y
+  nombre/rol en el panel de Usuarios (no cabían en la fila). (#200)
+- La tarjeta de Tedee se titula solo "Tedee" y el chip de conexión muestra
+  únicamente el punto de estado. (#201)
+- La tarjeta de importación se titula "Airbnb" y su botón es solo icono. (#202)
+
 ### Fixed
 
+- La tarjeta "Instalar aplicación" ya no aparece cuando la PWA ya está
+  instalada. (#203)
 - La PWA no giraba en tablets: el manifest forzaba orientación vertical
   (`portrait-primary`). Ahora usa `any` para rotar con el dispositivo. (#194)
 - El path del marcador de versión instalada (`release-id`) estaba hardcodeado
   a `/opt/keynest`; ahora es configurable vía `RELEASE_MARKER` (importante en
   despliegues flat/demo donde la ruta no existe y el `build` caía al fallback
   del package.json). (#196)
-
-### Todo
 
 ## [1.5.33] - 2026-08-11
 
