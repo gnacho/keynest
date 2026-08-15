@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { MouseEvent, ReactNode } from 'react';
 import { flushSync } from 'react-dom';
 import { Link, NavLink, useLocation, useNavigate } from 'react-router';
@@ -365,6 +365,52 @@ export default function AppShell({ children }: { children: ReactNode }) {
     }
   };
 
+  /* Swipe móvil entre menús (#173): detecta un deslizamiento claramente
+     horizontal sobre el contenido y navega al menú anterior/siguiente según
+     NAV_ORDER. Convive con PullToRefresh (que es vertical). */
+  const swipeStart = useRef<{ x: number; y: number; t: number } | null>(null);
+  // handleMobileNav es curry: (to) => (event) => void. Para el swipe navegamos
+  // sin evento, así que guardamos una función que llama a la primera parte y le
+  // pasa un evento stub para reutilizar la misma lógica de dirección/transición.
+  const mobileNavRef = useRef<(to: string) => void>(() => {});
+  useEffect(() => {
+    mobileNavRef.current = (to: string) => {
+      const event = { preventDefault: () => {} } as MouseEvent<HTMLAnchorElement>;
+      handleMobileNav(to)(event);
+    };
+  }, [handleMobileNav]);
+  useEffect(() => {
+    if (!isMobile) return;
+    const el = document.getElementById('kn-main');
+    if (!el) return;
+    const onStart = (e: TouchEvent) => {
+      const t = e.touches[0];
+      swipeStart.current = { x: t.clientX, y: t.clientY, t: Date.now() };
+    };
+    const onEnd = (e: TouchEvent) => {
+      const s = swipeStart.current;
+      swipeStart.current = null;
+      if (!s) return;
+      const t = e.changedTouches[0];
+      const dx = t.clientX - s.x;
+      const dy = t.clientY - s.y;
+      // Solo gestos horizontales (|dx| > |dy|*1.5), ≥ 64px y < 1s de duración.
+      if (Math.abs(dx) < 64 || Math.abs(dx) <= Math.abs(dy) * 1.5 || Date.now() - s.t > 1000) return;
+      const idx = navIndex(location.pathname);
+      if (idx === -1) return;
+      const target = dx < 0 ? idx + 1 : idx - 1; // izquierda = siguiente, derecha = anterior
+      if (target < 0 || target >= NAV_ORDER.length) return;
+      mobileNavRef.current(NAV_ORDER[target].to);
+    };
+    el.addEventListener('touchstart', onStart, { passive: true });
+    el.addEventListener('touchend', onEnd, { passive: true });
+    return () => {
+      el.removeEventListener('touchstart', onStart);
+      el.removeEventListener('touchend', onEnd);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isMobile, location.pathname]);
+
   /* ------------------------------------------------ Item solo-icono (raíl/colapsado) */
   const renderIconItem = (item: NavItem) => {
     const active = isActive(item.to);
@@ -581,7 +627,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
             </div>
           </header>
 
-          <main className="mx-auto w-full max-w-[1440px] px-4 pb-24 pt-[72px] md:px-8 md:pb-10 md:pt-7">
+          <main id="kn-main" className="mx-auto w-full max-w-[1440px] px-4 pb-24 pt-[72px] md:px-8 md:pb-10 md:pt-7">
             <Toaster position="top-center" />
             <PullToRefresh>
             {updateAvailable && (
