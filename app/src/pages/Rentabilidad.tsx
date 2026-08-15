@@ -312,11 +312,11 @@ export default function Rentabilidad() {
   // Gasto en edición (null = alta nueva); confirmación de borrado
   const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
   const [deletingExpense, setDeletingExpense] = useState<Expense | null>(null);
-  // Lista "Todos los gastos": filtros + paginación
+  // Lista "Todos los gastos": filtros + paginación. Por defecto: mes actual.
   const [expFilterType, setExpFilterType] = useState<'todos' | ExpenseType>('todos');
   const [expFilterProp, setExpFilterProp] = useState<string>('todos');
-  const [expFilterMonth, setExpFilterMonth] = useState<'todos' | number>('todos');
-  const [expFilterYear, setExpFilterYear] = useState<'todos' | number>('todos');
+  const [expFilterMonth, setExpFilterMonth] = useState<'todos' | number>(new Date().getMonth());
+  const [expFilterYear, setExpFilterYear] = useState<'todos' | number>(new Date().getFullYear());
   const [expSearch, setExpSearch] = useState('');
   const [expPage, setExpPage] = useState(0);
   const PAGE_SIZE = 20;
