@@ -129,7 +129,8 @@ export default function UsersManager() {
                 initials={u.username.split(' ').map((w) => w[0]).slice(0, 2).join('').toUpperCase()}
                 size={32}
               />
-              <div className="min-w-0 flex-1">
+              {/* Nombre + rol: ocultos en móvil (no caben en la fila, #200) */}
+              <div className="hidden min-w-0 flex-1 sm:block">
                 <p className="truncate text-sm font-semibold">
                   {u.username}
                   {u.id === meId && (

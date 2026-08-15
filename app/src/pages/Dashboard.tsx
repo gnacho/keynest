@@ -173,6 +173,9 @@ export default function Dashboard() {
         && x.status !== 'completada'
         && (kind === 'in' ? isSameDay(x.checkOut, date) : isSameDay(x.checkIn, date)),
     );
+    // HOY con rotación (salida y entrada coinciden HOY en el inmueble): el badge
+    // pasa a la izquierda del (!) y de la fecha (#199)
+    const hoyRotacion = isToday && (rotacion || isSameDay(r.checkIn, r.checkOut));
     return (
       <motion.button
         key={r.id}
@@ -215,6 +218,16 @@ export default function Dashboard() {
           )}
         </span>
         <span className="flex items-center gap-1.5">
+          {/* Badge HOY en primer lugar cuando hay rotación hoy (#199): a la
+              izquierda del (!) y de la fecha; el resto sigue a la derecha */}
+          {hoyRotacion && (
+            <span
+              className="shrink-0 rounded-full px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white"
+              style={{ backgroundColor: '#F43F5E' }}
+            >
+              {t('dash.hoy')}
+            </span>
+          )}
           {/* CircleAlert si rotación (izquierda, alineado) */}
           {rotacion && (
             <Tooltip>
@@ -248,7 +261,7 @@ export default function Dashboard() {
             </span>
           </span>
           {/* Mini-badge Hoy / Mañana */}
-          {(isToday || isTomorrow) && (
+          {!hoyRotacion && (isToday || isTomorrow) && (
             <span
               className="rounded-full px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white"
               style={{ backgroundColor: isToday ? '#F43F5E' : '#F97316' }}

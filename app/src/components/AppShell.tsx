@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
-import type { ReactNode } from 'react';
+import type { MouseEvent, ReactNode } from 'react';
+import { flushSync } from 'react-dom';
 import { Link, NavLink, useLocation, useNavigate } from 'react-router';
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 import {
@@ -29,6 +30,7 @@ import AirbnbSessionRibbon from '@/components/AirbnbSessionRibbon';
 import PullToRefresh from '@/components/PullToRefresh';
 import NotificationsPopover from '@/components/NotificationsPopover';
 import { useUpdateAvailable } from '@/hooks/useUpdateAvailable';
+import { useIsMobile } from '@/hooks/use-mobile';
 import { useTheme } from '@/theme/ThemeProvider';
 import type { ThemeMode } from '@/theme/ThemeProvider';
 import { useData } from '@/data/useData';
@@ -91,6 +93,15 @@ const TITLE_KEYS: Record<string, string> = {
 };
 
 const COLLAPSE_KEY = 'keynest-sidebar-collapsed';
+
+/* Orden completo de vistas (dominio + Ajustes al final): define la dirección
+   del deslizamiento móvil (forward/back) igual que el nav de Helios. */
+const NAV_ORDER: { to: string }[] = [...NAV_ITEMS, SETTINGS_ITEM];
+
+function navIndex(path: string): number {
+  const active = (to: string) => (to === '/' ? path === '/' : path.startsWith(to));
+  return NAV_ORDER.findIndex(({ to }) => active(to));
+}
 
 function ThemeToggle() {
   const { mode, setMode, resolved } = useTheme();
@@ -256,6 +267,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
   const location = useLocation();
   const navigate = useNavigate();
   const reduce = useReducedMotion();
+  const isMobile = useIsMobile();
   const { getUrgentMaintenance } = useData();
   const [collapsed, setCollapsed] = useState(() => {
     try {
@@ -321,6 +333,35 @@ export default function AppShell({ children }: { children: ReactNode }) {
   const scrollTopIfActive = (to: string) => () => {
     if (isActive(to) && window.scrollY > 0) {
       window.scrollTo({ top: 0, behavior: reduce ? 'auto' : 'smooth' });
+    }
+  };
+
+  /* Navegación móvil con deslizamiento (#198): el modo declarativo
+   * (BrowserRouter) no soporta la prop viewTransition de react-router (solo
+   * RouterProvider), así que interceptamos el click y envolvemos la navegación
+   * en document.startViewTransition (con flushSync, igual que hace react-router
+   * internamente). La dirección se marca en <html data-nav-dir> antes del
+   * snapshot; el shell (header + bottom nav) queda estático vía CSS. */
+  const handleMobileNav = (to: string) => (event: MouseEvent<HTMLAnchorElement>) => {
+    event.preventDefault();
+    const from = navIndex(location.pathname);
+    const target = navIndex(to);
+    if (target !== -1 && from !== target) {
+      try {
+        document.documentElement.dataset.navDir = from === -1 || target > from ? 'forward' : 'back';
+      } catch {
+        /* sin dataset */
+      }
+      scrollTopIfActive(to)();
+      const doNavigate = () => navigate(to);
+      if (typeof document.startViewTransition === 'function') {
+        document.startViewTransition(() => flushSync(doNavigate));
+      } else {
+        doNavigate();
+      }
+    } else {
+      scrollTopIfActive(to)();
+      navigate(to, { replace: true });
     }
   };
 
@@ -490,7 +531,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
 
         {/* ============================== Header móvil (< md) */}
         <header
-          className="fixed inset-x-0 top-0 z-40 flex h-14 items-center gap-2 border-b px-4 backdrop-blur-md md:hidden"
+          className="[view-transition-name:keynest-header] fixed inset-x-0 top-0 z-40 flex h-14 items-center gap-2 border-b px-4 backdrop-blur-md md:hidden"
           style={{
             backgroundColor: 'color-mix(in srgb, var(--surface) 85%, transparent)',
             borderColor: 'var(--border)',
@@ -508,7 +549,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
                 <ArrowLeft className="h-5 w-5" />
               </button>
             ) : (
-              <Link to="/" aria-label={t('nav.irResumen')} onClick={scrollTopIfActive('/')}>
+              <Link to="/" aria-label={t('nav.irResumen')} onClick={handleMobileNav('/')}>
                 <LogoMark size={26} />
               </Link>
             )}
@@ -589,21 +630,28 @@ export default function AppShell({ children }: { children: ReactNode }) {
                 </button>
               </div>
             )}
-            <AnimatePresence mode="wait" initial={false}>
-              <motion.div
-                key={location.pathname}
-                initial={reduce ? { opacity: 0 } : { opacity: 0, y: 8 }}
-                animate={reduce ? { opacity: 1 } : { opacity: 1, y: 0 }}
-                exit={{ opacity: 0, transition: { duration: 0.12 } }}
-                transition={
-                  reduce
-                    ? { duration: 0.15 }
-                    : { duration: 0.25, ease: EASE_OUT_QUART }
-                }
-              >
-                {children}
-              </motion.div>
-            </AnimatePresence>
+            {/* En móvil usamos view transitions para el deslizamiento entre
+                vistas (#198): el fade/y de framer-motion se desactiva porque su
+                estado inicial (opacity 0) quedaría congelado en el snapshot. */}
+            {isMobile ? (
+              <div>{children}</div>
+            ) : (
+              <AnimatePresence mode="wait" initial={false}>
+                <motion.div
+                  key={location.pathname}
+                  initial={reduce ? { opacity: 0 } : { opacity: 0, y: 8 }}
+                  animate={reduce ? { opacity: 1 } : { opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, transition: { duration: 0.12 } }}
+                  transition={
+                    reduce
+                      ? { duration: 0.15 }
+                      : { duration: 0.25, ease: EASE_OUT_QUART }
+                  }
+                >
+                  {children}
+                </motion.div>
+              </AnimatePresence>
+            )}
             </PullToRefresh>
             <p className="pointer-events-none fixed bottom-[68px] right-2 z-30 hidden text-[9px] font-medium md:bottom-2 md:right-3 md:block" style={{ color: 'var(--text-faint)' }}>
               v{APP_VERSION}
@@ -613,7 +661,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
 
         {/* ============================== Bottom-nav móvil (< md) */}
         <nav
-          className="fixed inset-x-0 bottom-0 z-40 border-t md:hidden"
+          className="[view-transition-name:keynest-nav] fixed inset-x-0 bottom-0 z-40 border-t md:hidden"
           style={{
             backgroundColor: 'color-mix(in srgb, var(--surface) 92%, transparent)',
             borderColor: 'var(--border)',
@@ -629,7 +677,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
                 <Link
                   key={item.to}
                   to={item.to}
-                  onClick={scrollTopIfActive(item.to)}
+                  onClick={handleMobileNav(item.to)}
                   className="relative flex flex-col items-center justify-center gap-0.5"
                 >
                   {active && (
