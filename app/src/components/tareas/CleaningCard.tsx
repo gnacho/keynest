@@ -346,7 +346,7 @@ export default function CleaningCard({ cleaning: c, variants, highlight = false,
 
       {/* Dialog de edición con el cuerpo completo */}
       <Dialog open={sheetOpen} onOpenChange={setSheetOpen}>
-        <DialogContent className="flex max-h-[85dvh] w-[calc(100vw-1.5rem)] flex-col gap-3 overflow-y-auto rounded-2xl border-[var(--border)] bg-[var(--surface)] shadow-overlay sm:max-w-3xl">
+        <DialogContent className="flex max-h-[85dvh] w-[calc(100vw-1.5rem)] flex-col gap-3 overflow-y-auto rounded-2xl border-[var(--border)] bg-[var(--surface)] shadow-overlay sm:!max-w-[min(1024px,94vw)]">
         <DialogHeader className="px-1 pt-1 text-left">
           <DialogTitle className="font-display text-lg font-semibold">{property.name}</DialogTitle>
           <DialogDescription style={{ color: 'var(--text-muted)' }}>

@@ -117,7 +117,7 @@ export default function ConfirmCleaningDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[90dvh] w-[calc(100vw-1.5rem)] max-w-md overflow-y-auto overflow-x-hidden rounded-2xl border-[var(--border)] bg-[var(--surface)] p-4 shadow-overlay sm:max-w-xl sm:p-6">
+      <DialogContent className="max-h-[90dvh] w-[calc(100vw-1.5rem)] overflow-y-auto overflow-x-hidden rounded-2xl border-[var(--border)] bg-[var(--surface)] p-4 shadow-overlay sm:!max-w-[min(768px,94vw)] sm:p-6">
         <DialogHeader>
           <DialogTitle className="font-display text-lg font-semibold">{t('tareas.confirmarTitulo')}</DialogTitle>
           <DialogDescription style={{ color: 'var(--text-muted)' }}>
