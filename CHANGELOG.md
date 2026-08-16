@@ -7,6 +7,16 @@ y este proyecto se adhiere a [Versionado Semántico](https://semver.org/lang/es/
 
 ## [Unreleased]
 
+## [1.5.44] - 2026-08-16
+
+### Fixed
+
+- El diálogo de edición de limpieza ahora **sí** crece en escritorio: la clase
+  base del componente (sm:max-w-lg) ganaba al ancho anterior, dejándolo sin
+  cambio. Ahora se fuerza `max-w-[min(1024px,94vw)]` (≈1024px, antes 672px) con
+  el reflow a dos columnas; el diálogo de confirmación pasa a ≈768px (antes
+  448px). El móvil mantiene el ancho casi completo. (#211)
+
 ## [1.5.43] - 2026-08-16
 
 ### Added
