@@ -7,6 +7,14 @@ y este proyecto se adhiere a [Versionado Semántico](https://semver.org/lang/es/
 
 ## [Unreleased]
 
+## [1.5.46] - 2026-08-16
+
+### Changed
+
+- El checklist del diálogo de edición de limpieza fluye en columnas según el
+  ancho: hasta 3 columnas en el diálogo ancho (≥260px por columna) y una sola
+  en móvil. (#211)
+
 ## [1.5.45] - 2026-08-16
 
 ### Changed
