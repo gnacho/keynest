@@ -277,6 +277,7 @@ export default function CleaningCard({ cleaning: c, variants, highlight = false,
 
   /* ------------------------------------------- Pendiente / asignada / en curso */
   return (
+    <>
     <motion.div
       ref={ref}
       layout="position"
@@ -343,6 +344,7 @@ export default function CleaningCard({ cleaning: c, variants, highlight = false,
           <Settings2 className="h-4 w-4 transition-transform duration-300 group-hover:rotate-90" />
         </button>
       </div>
+      </motion.div>
 
       {/* Dialog de edición con el cuerpo completo */}
       <Dialog open={sheetOpen} onOpenChange={setSheetOpen}>
@@ -622,6 +624,6 @@ export default function CleaningCard({ cleaning: c, variants, highlight = false,
           onCompleted(totalCost);
         }}
       />
-    </motion.div>
+    </>
   );
 }
