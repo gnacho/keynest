@@ -353,9 +353,8 @@ export default function CleaningCard({ cleaning: c, variants, highlight = false,
             {fmtDateShort(c.date)} · {fmtTime(c.date)}
           </DialogDescription>
         </DialogHeader>
-        {/* Dos columnas en sm+: checklist+instrucciones | asignación+fotos (#211) */}
-        <div className="grid grid-cols-1 items-start gap-3 sm:grid-cols-2">
-        <div className="flex min-w-0 flex-col gap-3">
+        {/* Una sola columna: cada tarjeta al 100% del ancho del diálogo (#211) */}
+        <div className="flex flex-col gap-3">
         {/* 1) CHECKLIST DEL INMUEBLE — lo primero que mira la persona de limpieza */}
         <div className="rounded-2xl border p-3" style={{ borderColor: 'var(--border)', backgroundColor: 'var(--surface-2)' }}>
           <p
@@ -477,9 +476,7 @@ export default function CleaningCard({ cleaning: c, variants, highlight = false,
             </p>
           )}
         </div>
-        </div>
 
-        <div className="flex min-w-0 flex-col gap-3">
         {/* 3) Asignación (hasta 2 personas) + previsión de horas */}
         <div>
           <p
@@ -575,7 +572,6 @@ export default function CleaningCard({ cleaning: c, variants, highlight = false,
           <p className="mt-1.5 text-[11px]" style={{ color: 'var(--text-faint)' }}>
             {t('tareas.retencion')}
           </p>
-        </div>
         </div>
         </div>
 
