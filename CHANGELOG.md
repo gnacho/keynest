@@ -7,6 +7,14 @@ y este proyecto se adhiere a [Versionado Semántico](https://semver.org/lang/es/
 
 ## [Unreleased]
 
+## [1.5.47] - 2026-08-16
+
+### Fixed
+
+- El diálogo de edición de limpieza ya no parpadea (desaparece y reaparece) al
+  interactuar con las horas, la asignación o las fotos: los diálogos ahora se
+  montan fuera del árbol animado de la tarjeta. (#211)
+
 ## [1.5.46] - 2026-08-16
 
 ### Changed
