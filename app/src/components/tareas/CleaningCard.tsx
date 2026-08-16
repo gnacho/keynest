@@ -363,7 +363,7 @@ export default function CleaningCard({ cleaning: c, variants, highlight = false,
           >
             {t('tok.checklist', { name: property.name })}
           </p>
-          <div className="grid grid-cols-2 gap-1.5">
+          <div className="grid gap-1.5 [grid-template-columns:repeat(auto-fill,minmax(260px,1fr))]">
             {c.checks.map((k) => {
               const checkInner = (
                 <>
