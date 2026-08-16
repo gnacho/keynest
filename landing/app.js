@@ -69,6 +69,8 @@ const STATE = {
   shot: 0,
 };
 
+const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
 /* ---------- i18n ---------- */
 function applyLang() {
   const lang = STATE.lang;
@@ -218,15 +220,21 @@ function openLightbox() {
   img.src = shotUrl(s, STATE.lang, STATE.theme);
   img.alt = t(s.alt);
   lb.hidden = false;
+  lb.classList.add('open');
   document.body.style.overflow = 'hidden';
   document.getElementById('lbClose').focus();
 }
 
 function closeLightbox() {
   const lb = document.getElementById('lightbox');
-  lb.hidden = true;
+  lb.classList.remove('open');
+  lb.classList.add('closing');
   document.body.style.overflow = '';
   document.getElementById('shotStage').focus();
+  setTimeout(() => {
+    lb.hidden = true;
+    lb.classList.remove('closing');
+  }, reduceMotion ? 0 : 150);
 }
 
 function lbNavStep(delta) {

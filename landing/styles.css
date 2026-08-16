@@ -113,17 +113,19 @@ body {
   display: inline-flex; align-items: center; justify-content: center;
   padding: 13px 26px; border-radius: 12px; font-size: 15px; font-weight: 600;
   background: var(--accent); color: var(--accent-fg); text-decoration: none; border: none; cursor: pointer;
-  transition: opacity var(--dur) var(--ease);
+  transition: opacity var(--dur) var(--ease), transform var(--dur) var(--ease);
 }
 .btn-primary:hover { opacity: 0.9; }
+.btn-primary:active { transform: translateY(0) scale(0.97); }
 .btn-ghost {
   display: inline-flex; align-items: center; justify-content: center;
   padding: 13px 26px; border-radius: 12px; font-size: 15px; font-weight: 600;
   background: var(--surface); color: var(--text); text-decoration: none;
   border: 1px solid var(--border); cursor: pointer;
-  transition: border-color var(--dur) var(--ease), color var(--dur) var(--ease);
+  transition: border-color var(--dur) var(--ease), color var(--dur) var(--ease), transform var(--dur) var(--ease);
 }
 .btn-ghost:hover { border-color: var(--accent); color: var(--accent); }
+.btn-ghost:active { transform: translateY(0) scale(0.97); }
 .btn-primary:focus-visible, .btn-ghost:focus-visible {
   outline: 2px solid var(--accent); outline-offset: 2px;
 }
@@ -171,7 +173,6 @@ body {
 .block h2 { font-size: clamp(28px, 4vw, 40px); margin-bottom: 12px; }
 .block .lead { max-width: 640px; color: var(--text-muted); font-size: 17px; margin-bottom: 44px; }
 
-/* ---------- Principios ---------- */
 /* ---------- Club Cloudless ---------- */
 .club-inner { display: flex; align-items: center; gap: 2.5rem; }
 .club-copy { flex: 1; min-width: 0; }
@@ -212,6 +213,21 @@ body {
   position: fixed; inset: 0; z-index: 200;
   display: flex; align-items: center; justify-content: center;
   background: rgb(4 8 16 / 0.92); backdrop-filter: blur(6px);
+  opacity: 0;
+  transform: scale(0.98);
+  transition: opacity 220ms var(--ease), transform 220ms var(--ease);
+  pointer-events: none;
+}
+.lightbox.open {
+  opacity: 1;
+  transform: none;
+  pointer-events: auto;
+}
+.lightbox.closing {
+  opacity: 0;
+  transform: scale(0.98);
+  transition: opacity 150ms cubic-bezier(0.4, 0, 1, 1), transform 150ms cubic-bezier(0.4, 0, 1, 1);
+  pointer-events: none;
 }
 .lightbox[hidden] { display: none; }
 .lightbox img {
