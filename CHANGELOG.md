@@ -7,6 +7,14 @@ y este proyecto se adhiere a [Versionado Semántico](https://semver.org/lang/es/
 
 ## [Unreleased]
 
+## [1.5.45] - 2026-08-16
+
+### Changed
+
+- El diálogo de edición de limpieza apila sus tarjetas internas (checklist,
+  instrucciones, asignación, fotos) a **ancho completo** en vez de dos
+  columnas, aprovechando el nuevo ancho del diálogo. (#211)
+
 ## [1.5.44] - 2026-08-16
 
 ### Fixed
