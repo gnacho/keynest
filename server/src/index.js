@@ -1485,7 +1485,7 @@ const runAirbnb = () => syncAirbnb(prodDb).catch((e) => console.error('[keynest]
 setTimeout(runAirbnb, 8000)
 setInterval(runAirbnb, 3600 * 1000)
 alerts.scheduleDaily(9, () => alerts.checkReservasHoy(prodDb), 'reservas-hoy')
-alerts.scheduleDaily(9, () => alerts.checkTransacciones(prodDb), 'transacciones')
+alerts.scheduleDaily(9, () => alerts.checkTransacciones(prodDb, notifyUsers), 'transacciones')
 alerts.scheduleDaily(9, () => alerts.checkMantenimientoRecordatorios(prodDb, notifyUsers), 'mantenimiento-recordatorio')
 alerts.scheduleDaily(12, () => alerts.checkLimpiezas(prodDb), 'limpiezas-pendientes')
 

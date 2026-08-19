@@ -64,11 +64,11 @@ function insertSub(userId, endpoint = `https://push.example.com/${crypto.randomU
   return endpoint
 }
 
-function insertProperty(name = 'Carmen') {
+function insertProperty(name = 'Carmen', ownerId = null) {
   const id = crypto.randomUUID()
   db.prepare(
-    "INSERT INTO properties (id, slug, name, created_at) VALUES (?, ?, ?, ?)"
-  ).run(id, name.toLowerCase() + '-' + id.slice(0, 6), name, Date.now())
+    "INSERT INTO properties (id, slug, name, owner_id, created_at) VALUES (?, ?, ?, ?, ?)"
+  ).run(id, name.toLowerCase() + '-' + id.slice(0, 6), name, ownerId, Date.now())
   return id
 }
 
@@ -269,32 +269,70 @@ describe('alertas: transacción abonada (24h post check-in)', () => {
     }).format(Date.now() - 24 * 3600 * 1000)
   }
 
-  it('avisa de reservas cuyo check-in fue ayer con importe, y no se repite', () => {
-    const p = insertProperty('Ruzafa')
+  function capturaUsers() {
+    const llamadas = []
+    return { llamadas, notifyUsersFn: (db, userIds, tipo, datos, opciones) => llamadas.push({ userIds, tipo, datos, opciones }) }
+  }
+
+  function insertReservaConImporte(propertyId, { amount, guestName = null, uid = crypto.randomUUID() } = {}) {
     const ayer = ayerLocal()
-    const mañana = new Intl.DateTimeFormat('en-CA', {
+    const manana = new Intl.DateTimeFormat('en-CA', {
       timeZone: 'Europe/Madrid', year: 'numeric', month: '2-digit', day: '2-digit',
     }).format(Date.now() + 24 * 3600 * 1000)
     const id = crypto.randomUUID()
     db.prepare(
       `INSERT INTO reservations (id, property_id, uid, checkin, checkout, summary, confirmation_code, amount, guest_name, created_at)
-       VALUES (?, ?, ?, ?, ?, 'A', 'TX1', 450, 'María', ?)`
-    ).run(id, p, 'tx-uid-1', ayer, mañana, Date.now())
-    const { llamadas, notifyFn } = captura()
-    const n1 = checkTransacciones(db, notifyFn)
+       VALUES (?, ?, ?, ?, ?, 'A', 'TX1', ?, ?, ?)`
+    ).run(id, propertyId, uid, ayer, manana, amount, guestName, Date.now())
+    return id
+  }
+
+  it('avisa SOLO al dueño del inmueble, y no se repite', () => {
+    const dueno = insertUser('nacho')
+    const otro = insertUser('qiuyuan')
+    const p = insertProperty('Ruzafa', dueno)
+    const id = insertReservaConImporte(p, { amount: 450, guestName: 'María' })
+    const { llamadas, notifyUsersFn } = capturaUsers()
+    const n1 = checkTransacciones(db, notifyUsersFn)
     expect(n1).toBe(1)
+    expect(llamadas[0].userIds).toEqual([dueno])
     expect(llamadas[0].tipo).toBe('transaccion')
     expect(llamadas[0].datos).toMatchObject({ propiedad: 'Ruzafa', importe: 450, huesped: 'María' })
     expect(llamadas[0].opciones.url).toBe(`/reservas?reserva=${id}`)
 
     llamadas.length = 0
-    const n2 = checkTransacciones(db, notifyFn)
+    const n2 = checkTransacciones(db, notifyUsersFn)
     expect(n2).toBe(0) // dedupe: no se vuelve a avisar
     expect(llamadas).toHaveLength(0)
   })
 
+  it('no avisa a dueños de OTROS inmuebles (solo el suyo)', () => {
+    const dueno = insertUser('nacho')
+    const otro = insertUser('qiuyuan')
+    const pDueno = insertProperty('Ruzafa', dueno)
+    const pOtro = insertProperty('Entrepinos', otro)
+    insertReservaConImporte(pDueno, { amount: 450 })
+    insertReservaConImporte(pOtro, { amount: 900, uid: 'tx-uid-otro' })
+    const { llamadas, notifyUsersFn } = capturaUsers()
+    const n = checkTransacciones(db, notifyUsersFn)
+    expect(n).toBe(2)
+    const porDueno = Object.fromEntries(llamadas.map((l) => [l.userIds[0], l.datos.importe]))
+    expect(porDueno).toEqual({ [dueno]: 450, [otro]: 900 })
+  })
+
+  it('inmueble SIN dueño asignado no avisa a nadie', () => {
+    insertUser('nacho')
+    const p = insertProperty('Ruzafa') // owner_id = null
+    insertReservaConImporte(p, { amount: 450 })
+    const { llamadas, notifyUsersFn } = capturaUsers()
+    const n = checkTransacciones(db, notifyUsersFn)
+    expect(n).toBe(0)
+    expect(llamadas).toHaveLength(0)
+  })
+
   it('no avisa sin importe (amount=0) ni de otras fechas', () => {
-    const p = insertProperty('Ruzafa')
+    const dueno = insertUser('nacho')
+    const p = insertProperty('Ruzafa', dueno)
     const ayer = ayerLocal()
     const hoy = hoyLocal()
     db.prepare(
@@ -305,8 +343,8 @@ describe('alertas: transacción abonada (24h post check-in)', () => {
       `INSERT INTO reservations (id, property_id, uid, checkin, checkout, summary, amount, created_at)
        VALUES (?, ?, ?, ?, ?, 'DeHoy', 900, ?)`
     ).run(crypto.randomUUID(), p, 'tx-uid-3', hoy, hoy, Date.now())
-    const { llamadas, notifyFn } = captura()
-    const n = checkTransacciones(db, notifyFn)
+    const { llamadas, notifyUsersFn } = capturaUsers()
+    const n = checkTransacciones(db, notifyUsersFn)
     expect(n).toBe(0)
     expect(llamadas).toHaveLength(0)
   })
