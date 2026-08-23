@@ -7,6 +7,16 @@ y este proyecto se adhiere a [Versionado Semántico](https://semver.org/lang/es/
 
 ## [Unreleased]
 
+## [0.1.2] - 2026-08-23
+
+### Changed
+
+- El tag HOY/MAÑANA del resumen pasa a una ranura fija a la izquierda de la
+  chapa de fecha (y del chip Entrada/Salida): todas las filas de entradas,
+  salidas y mismo día quedan con las columnas alineadas. (#225)
+- El aviso "Aviso de pago (mis inmuebles)" tras un check-in llega solo a los
+  dueños del inmueble, no a todos los usuarios. (#223)
+
 ## [1.5.47] - 2026-08-16
 
 ### Fixed
