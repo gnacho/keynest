@@ -173,9 +173,6 @@ export default function Dashboard() {
         && x.status !== 'completada'
         && (kind === 'in' ? isSameDay(x.checkOut, date) : isSameDay(x.checkIn, date)),
     );
-    // HOY con rotación (salida y entrada coinciden HOY en el inmueble): el badge
-    // pasa a la izquierda del (!) y de la fecha (#199)
-    const hoyRotacion = isToday && (rotacion || isSameDay(r.checkIn, r.checkOut));
     return (
       <motion.button
         key={r.id}
@@ -218,16 +215,19 @@ export default function Dashboard() {
           )}
         </span>
         <span className="flex items-center gap-1.5">
-          {/* Badge HOY en primer lugar cuando hay rotación hoy (#199): a la
-              izquierda del (!) y de la fecha; el resto sigue a la derecha */}
-          {hoyRotacion && (
-            <span
-              className="shrink-0 rounded-full px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white"
-              style={{ backgroundColor: '#F43F5E' }}
-            >
-              {t('dash.hoy')}
-            </span>
-          )}
+          {/* Ranura fija del tag HOY/MAÑANA (#225): mismo ancho en todas las
+              filas para que las columnas queden alineadas; vacía si el día no
+              es hoy/mañana */}
+          <span className="flex w-[4.5rem] shrink-0 items-center justify-center">
+            {(isToday || isTomorrow) && (
+              <span
+                className="whitespace-nowrap rounded-full px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white"
+                style={{ backgroundColor: isToday ? '#F43F5E' : '#F97316' }}
+              >
+                {isToday ? t('dash.hoy') : t('common.manana')}
+              </span>
+            )}
+          </span>
           {/* CircleAlert si rotación (izquierda, alineado) */}
           {rotacion && (
             <Tooltip>
@@ -260,15 +260,6 @@ export default function Dashboard() {
               {fmtMonth(date, true)}
             </span>
           </span>
-          {/* Mini-badge Hoy / Mañana */}
-          {!hoyRotacion && (isToday || isTomorrow) && (
-            <span
-              className="rounded-full px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white"
-              style={{ backgroundColor: isToday ? '#F43F5E' : '#F97316' }}
-            >
-              {isToday ? t('dash.hoy') : t('common.manana')}
-            </span>
-          )}
         </span>
       </motion.button>
     );
