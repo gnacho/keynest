@@ -18,6 +18,8 @@
 // - transaccion: job diario: reservas cuyo check-in fue AYER (24h después,
 //   cuando Airbnb suele abonar) con importe registrado (amount > 0, del CSV).
 //   Informa importe + inmueble + huésped. Dedupe por kv: un aviso por reserva.
+//   SOLO a los dueños del inmueble (properties.owner_id = "Mis inmuebles",
+//   issue #223); sin dueño asignado no se avisa a nadie.
 //
 // notifyFn inyectable para tests (defecto: notifyAll de push.js).
 import { kvGet, kvSet } from './db.js'
@@ -119,14 +121,17 @@ export function notifyReservasNuevas(db, propiedad, items, notifyFn = notifyAll)
 // Airbnb suele abonar el pago ~24h tras el check-in; solo se avisa si la
 // reserva tiene importe registrado (amount > 0, del CSV). Dedupe por kv:
 // un aviso por reserva (nunca más, aunque el job se repita).
-export function checkTransacciones(db, notifyFn = notifyAll) {
+// Solo al dueño del inmueble (properties.owner_id, "Mis inmuebles" #223); si
+// la propiedad no tiene dueño asignado, nadie recibe el aviso.
+export function checkTransacciones(db, notifyUsersFn) {
   const ayer = new Intl.DateTimeFormat('en-CA', {
     timeZone: 'Europe/Madrid',
     year: 'numeric', month: '2-digit', day: '2-digit',
   }).format(Date.now() - 24 * 3600 * 1000)
   const filas = db
     .prepare(
-      `SELECT r.id, r.checkin, r.checkout, r.summary, r.amount, r.guest_name, p.name AS propiedad
+      `SELECT r.id, r.checkin, r.checkout, r.summary, r.amount, r.guest_name, r.property_id,
+              p.name AS propiedad, p.owner_id
        FROM reservations r JOIN properties p ON p.id = r.property_id
        WHERE r.checkin = ? AND r.amount > 0`
     )
@@ -135,8 +140,10 @@ export function checkTransacciones(db, notifyFn = notifyAll) {
   for (const f of filas) {
     const key = `push_tx_${f.id}`
     if (kvGet(db, key)) continue // ya avisada
-    notifyFn(
+    if (!f.owner_id) continue // sin dueño asignado: no pertenece a ningún usuario
+    notifyUsersFn(
       db,
+      [f.owner_id],
       'transaccion',
       { propiedad: f.propiedad, resumen: f.summary, importe: f.amount, huesped: f.guest_name || null },
       { severity: 'normal', url: `/reservas?reserva=${f.id}` }
