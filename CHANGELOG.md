@@ -7,6 +7,15 @@ y este proyecto se adhiere a [Versionado Semántico](https://semver.org/lang/es/
 
 ## [Unreleased]
 
+## [0.1.4] - 2026-08-24
+
+### Added
+
+- Tracker GoatCounter opcional en la demo pública: el build con `VITE_GC_COUNT`
+  inyecta el snippet con prefijo `/demo` y el CSP acepta el origen del tracker
+  solo cuando se define `GC_ORIGIN`. Los builds normales no llevan tracker:
+  una instalación self-hosted nunca llama a casa. (#224)
+
 ## [0.1.2] - 2026-08-23
 
 ### Changed
