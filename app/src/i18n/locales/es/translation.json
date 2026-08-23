@@ -975,6 +975,15 @@
   },
   "airbnb": {
     "sesionCaida": "La sesión de Airbnb ha caducado; el scraper no puede actualizar los datos.",
-    "descartar": "Descartar"
+    "descartar": "Descartar",
+    "renovar": "Renovar",
+    "renovarTitulo": "Renovar sesión de Airbnb",
+    "renovarIntro": "En el equipo local, ejecuta el capturador de Airbnb con este código y haz el login como siempre (correo + código de Airbnb). En cuanto la sesión se guarde, la sube aquí y se restaura sola.",
+    "renovarCodigo": "Código de emparejamiento",
+    "renovarExpira": "Expira en {{s}} s",
+    "renovarEsperando": "Esperando la sesión nueva...",
+    "renovarHecho": "Sesión de Airbnb restaurada",
+    "renovarError": "No se pudo generar el código de emparejamiento",
+    "renovarCerrar": "Cerrar"
   }
 }

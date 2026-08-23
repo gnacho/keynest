@@ -975,6 +975,15 @@
   },
   "airbnb": {
     "sesionCaida": "The Airbnb session has expired; the scraper cannot update the data.",
-    "descartar": "Dismiss"
+    "descartar": "Dismiss",
+    "renovar": "Renew",
+    "renovarTitulo": "Renew Airbnb session",
+    "renovarIntro": "On the host machine, run the local Airbnb capturer with this code and log in as usual (email + Airbnb code). As soon as the session is saved it is uploaded here and restored automatically.",
+    "renovarCodigo": "Pairing code",
+    "renovarExpira": "Expires in {{s}} s",
+    "renovarEsperando": "Waiting for the new session...",
+    "renovarHecho": "Airbnb session restored",
+    "renovarError": "Could not generate the pairing code",
+    "renovarCerrar": "Close"
   }
 }

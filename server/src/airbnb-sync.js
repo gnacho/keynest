@@ -19,7 +19,11 @@ import { kvGet, kvSet } from './db.js'
 import { notifyAll } from './push.js'
 
 const DEF_DIR = '/opt/airbnb-scraper/data'
+const DEF_SESION = '/opt/airbnb-scraper/.auth/airbnb_session.json'
 const CLAVE_ESTADO = 'airbnb_sesion'
+const CLAVE_PAIRING = 'airbnb_pairing'
+const PAIRING_TTL_MS = 10 * 60 * 1000
+const PAIRING_ALPHABET = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789'
 
 function leerJSON(ruta) {
   try {
@@ -31,6 +35,52 @@ function leerJSON(ruta) {
 
 export function airbnbDataDir() {
   return process.env.AIRBNB_DATA_DIR || DEF_DIR
+}
+
+export function airbnbSessionPath() {
+  return process.env.AIRBNB_SESSION_PATH || DEF_SESION
+}
+
+/** Código de emparejamiento vigente para subir una sesión nueva, o null. */
+export function pairingVigente(db, ahora = Date.now()) {
+  try {
+    const p = JSON.parse(kvGet(db, CLAVE_PAIRING) || 'null')
+    if (!p || !p.code || p.expira <= ahora) return null
+    return p
+  } catch {
+    return null
+  }
+}
+
+/** Genera un código de un solo uso (6 chars, caducidad 10 min) para que el
+ *  capturador local pueda subir la sesión nueva a la webapp. */
+export function crearPairing(db, ahora = Date.now()) {
+  let code = ''
+  for (let i = 0; i < 6; i++) code += PAIRING_ALPHABET[Math.floor(Math.random() * PAIRING_ALPHABET.length)]
+  const expira = ahora + PAIRING_TTL_MS
+  kvSet(db, CLAVE_PAIRING, JSON.stringify({ code, expira }))
+  return { code, expira }
+}
+
+/** Consume el código si es el vigente (single-use). Devuelve false si no. */
+export function consumirPairing(db, code, ahora = Date.now()) {
+  const vigente = pairingVigente(db, ahora)
+  if (!vigente || vigente.code !== code) return false
+  kvSet(db, CLAVE_PAIRING, '')
+  return true
+}
+
+/** Escribe el storage_state del capturador como sesión del scraper (mode 600,
+ *  escritura atómica tmp+rename). Los datos viajan en memoria, nunca en texto
+ *  de salida del server. */
+export function guardarSesion(session) {
+  const ruta = airbnbSessionPath()
+  fs.mkdirSync(path.dirname(ruta), { recursive: true })
+  const tmp = `${ruta}.tmp-${process.pid}-${Date.now()}`
+  fs.writeFileSync(tmp, JSON.stringify(session), { mode: 0o600 })
+  fs.renameSync(tmp, ruta)
+  fs.chmodSync(ruta, 0o600)
+  return ruta
 }
 
 /**

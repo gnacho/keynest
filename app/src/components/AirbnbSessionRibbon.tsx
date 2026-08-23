@@ -1,7 +1,9 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { TriangleAlert, X } from 'lucide-react';
+import { RefreshCw, TriangleAlert, X } from 'lucide-react';
 import { api } from '@/lib/api';
+import { cachedUser } from '@/lib/auth';
+import AirbnbRenewDialog from '@/components/AirbnbRenewDialog';
 
 const DISMISS_KEY = 'keynest-airbnb-sesion-dismiss';
 const REAPPEAR_MS = 24 * 60 * 60 * 1000;
@@ -17,6 +19,8 @@ export default function AirbnbSessionRibbon() {
   const { t } = useTranslation();
   const [muerta, setMuerta] = useState(false);
   const [detalle, setDetalle] = useState('');
+  const [renewOpen, setRenewOpen] = useState(false);
+  const isAdmin = cachedUser()?.role === 'admin';
 
   useEffect(() => {
     let stale = false;
@@ -57,6 +61,17 @@ export default function AirbnbSessionRibbon() {
     >
       <TriangleAlert className="h-4 w-4 shrink-0" />
       <span className="min-w-0 flex-1">{t('airbnb.sesionCaida')}{detalle ? ` · ${detalle}` : ''}</span>
+      {isAdmin && (
+        <button
+          type="button"
+          onClick={() => setRenewOpen(true)}
+          className="flex h-7 shrink-0 items-center gap-1.5 rounded-lg border px-2.5 text-xs transition-colors hover:bg-[var(--surface-2)]"
+          style={{ borderColor: 'rgb(244 63 94 / 0.3)' }}
+        >
+          <RefreshCw className="h-3.5 w-3.5" />
+          {t('airbnb.renovar')}
+        </button>
+      )}
       <button
         type="button"
         onClick={dismiss}
@@ -66,6 +81,7 @@ export default function AirbnbSessionRibbon() {
       >
         <X className="h-3.5 w-3.5" />
       </button>
+      <AirbnbRenewDialog open={renewOpen} onOpenChange={setRenewOpen} />
     </div>
   );
 }
