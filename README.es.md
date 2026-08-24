@@ -31,6 +31,10 @@ personal, tareas de mantenimiento, registro de accesos de las cerraduras y
 rentabilidad por inmueble. Un único servicio Node + SQLite, autoalojado en
 una caja Linux pequeña.
 
+> **Prueba la demo en vivo**
+>
+> Mírala en funcionamiento sin instalar nada. Entra en **[demo.keynest.cloudless.club](https://demo.keynest.cloudless.club)** — inmuebles, reservas y limpiezas de ejemplo, sin registro. En modo de solo lectura, para que explores sin riesgo.
+
 ## ¿Por qué existe?
 
 Keynest es una historia de familia. Mi primo se casó, se mudó con su mujer

@@ -30,6 +30,10 @@ check-outs with per-property checklists and token links for staff,
 maintenance tasks, smart-lock access logs and per-property profitability.
 One Node + SQLite service, self-hosted on a small Linux box.
 
+> **Try the live demo**
+>
+> See it running without installing anything. Head to **[demo.keynest.cloudless.club](https://demo.keynest.cloudless.club)** — sample properties, reservations and cleanings, no sign-up required. In read-only mode, so you can explore freely.
+
 ## Why does this exist?
 
 Keynest is a family story. My cousin got married, moved in with his wife,
