@@ -7,6 +7,26 @@ y este proyecto se adhiere a [Versionado Semántico](https://semver.org/lang/es/
 
 ## [Unreleased]
 
+## [0.1.6] - 2026-08-28
+
+### Added
+
+- Asistente de actualización con changelog y progreso paso a paso (#232):
+  al pulsar "Actualizar ahora" se abre un diálogo con el par de versiones,
+  las novedades de la release, los pasos en curso (comprobando, descargando,
+  verificando, instalando, reiniciando) con barra de porcentaje y recarga
+  automática al volver. Una sesión caducada se explica en el diálogo en vez
+  de redirigir en silencio al login.
+- Código de emparejamiento de un solo uso para renovar la sesión de AirBnB
+  del scraper desde la propia web (#227): sin tocar el servidor, con
+  caducidad y uso único reforzados en el server.
+
+### Fixed
+
+- Fuentes self-hosted (#230): Inter y Space Grotesk se sirven desde la propia
+  instalación (woff2 local); la CSP deja de bloquearlas y no hay peticiones
+  a fonts.googleapis.com.
+
 ## [0.1.4] - 2026-08-24
 
 ### Added
