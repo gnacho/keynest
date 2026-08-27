@@ -939,6 +939,9 @@
     "free": "Libre"
   },
   "update": {
+    "banner": "Se ha desplegado una versión nueva - recarga para verla",
+    "reload": "Recargar",
+    "toastUpdated": "Keynest se ha actualizado a v{v}",
     "dialog": {
       "title": "Actualizar Keynest",
       "desc": "Se descarga la última versión estable y el servicio se reinicia. Tarda unos segundos y la app se recarga sola.",

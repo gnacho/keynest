@@ -939,6 +939,9 @@
     "free": "Free"
   },
   "update": {
+    "banner": "A new version has been deployed - reload to see it",
+    "reload": "Reload",
+    "toastUpdated": "Keynest has been updated to v{v}",
     "dialog": {
       "title": "Update Keynest",
       "desc": "The latest stable version is downloaded and the service restarts. It takes a few seconds and the app reloads on its own.",
