@@ -423,7 +423,7 @@
   },
   "rent": {
     "titulo": "Rentabilidad",
-    "todosInmuebles": "todos los inmuebles",
+    "todosInmuebles": "Todos los inmuebles",
     "general": "General",
     "sincronizar": "Sincronizar Airbnb",
     "syncOk": "Reservas sincronizadas con Airbnb",
@@ -468,7 +468,6 @@
     "gastoAnadido": "Gasto añadido · {{amount}}",
     "todosGastos": "Todos los gastos",
     "todosTipos": "Todos los tipos",
-    "todosInmuebles": "Todos los inmuebles",
     "todosMeses": "Todos los meses",
     "todosAnios": "Todos los años",
     "buscarGasto": "Buscar gasto…",
@@ -940,9 +939,31 @@
     "free": "Libre"
   },
   "update": {
-    "banner": "Se ha desplegado una versión nueva — recarga para verla",
-    "reload": "Recargar",
-    "toastUpdated": "Keynest se ha actualizado a v{v}"
+    "dialog": {
+      "title": "Actualizar Keynest",
+      "desc": "Se descarga la última versión estable y el servicio se reinicia. Tarda unos segundos y la app se recarga sola.",
+      "changelogTitle": "Novedades",
+      "start": "Actualizar",
+      "cancel": "Cancelar",
+      "close": "Cerrar",
+      "retry": "Reintentar",
+      "reload": "Recargar",
+      "progressLabel": "Progreso de la actualización",
+      "restarting": "Reiniciando el servicio…",
+      "reloadSoon": "La app se recargará sola en unos segundos.",
+      "failed": "La actualización no se completó.",
+      "errorAuth": "Tu sesión ha caducado. Vuelve a iniciar sesión y repite la actualización.",
+      "errorTimeout": "La actualización sigue en curso. Recarga la página en unos minutos.",
+      "errorStep": "El script de actualización falló en un paso. Revisa el journal de keynest-update.service.",
+      "errorGeneric": "No se pudo iniciar la actualización. Inténtalo de nuevo."
+    },
+    "step": {
+      "detect": "Comprobando versión",
+      "download": "Descargando",
+      "verify": "Verificando firma",
+      "install": "Instalando",
+      "restart": "Reiniciando"
+    }
   },
   "errorBoundary": {
     "title": "Algo no ha ido bien",

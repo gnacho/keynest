@@ -16,7 +16,22 @@ REPO=gnacho/keynest
 OPT_DIR=/opt/keynest
 MARKER=/opt/keynest/.release-id
 TMP_DIR=$(mktemp -d)
-trap 'rm -rf "$TMP_DIR"' EXIT INT TERM
+
+# Progreso (#232): JSON {step,pct,ts} que el server expone en
+# /api/update/progress mientras el apply corre. Se escribe en los data dirs
+# posibles (plano/capistrano); el server lee el suyo. Stale a los 15 min.
+PROG_FILES=""
+[ -d /opt/keynest/data ] && PROG_FILES="/opt/keynest/data/update-progress.json"
+[ -d /var/lib/keynest ] && PROG_FILES="$PROG_FILES /var/lib/keynest/update-progress.json"
+prog() { # $1=step $2=pct
+  for f in $PROG_FILES; do
+    printf '{"step":"%s","pct":%s,"ts":%s}' "$1" "$2" "$(date +%s000)" > "$f" 2>/dev/null || true
+    chmod 0644 "$f" 2>/dev/null || true
+  done
+}
+PROG_OK=0
+trap 'rm -rf "$TMP_DIR"' INT TERM
+trap 'rm -rf "$TMP_DIR"; [ "$PROG_OK" = 1 ] || prog error 0' EXIT
 
 log() { logger -t "$APP-update" "$@"; }
 
@@ -63,6 +78,7 @@ if [ -f /opt/keynest/data/.rollback-requested ]; then
 fi
 
 echo "STEP:detect"
+prog detect 5
 # Última release ESTABLE (no prerelease, no main).
 VER=$(curl -fsSL --max-time 20 "https://api.github.com/repos/$REPO/releases/latest" \
   | sed -n 's/.*"tag_name": *"\(v\?[0-9][^"]*\)".*/\1/p' | head -n1)
@@ -71,10 +87,11 @@ VER_NO_V=$(printf '%s' "$VER" | sed 's/^v//')
 
 # ¿Ya instalado? Marker semver (fuente de verdad para /api/update/status).
 if [ -f "$MARKER" ] && [ "$(cat "$MARKER" 2>/dev/null || true)" = "$VER_NO_V" ]; then
-  log "al día ($VER_NO_V)"; exit 0
+  log "al día ($VER_NO_V)"; PROG_OK=1; exit 0
 fi
 
 echo "STEP:download"
+prog download 25
 ARCH=$(uname -m | sed 's/x86_64/amd64/;s/aarch64/arm64/')
 TARBALL="${APP}_${VER_NO_V}_linux_${ARCH}.tar.gz"
 BASE="https://github.com/$REPO/releases/download/$VER"
@@ -86,6 +103,7 @@ TS=$(date +%s)
 curl -fL --max-time 30 "$BASE/checksums.txt?nc=$TS" -o "$TMP_DIR/checksums.txt"
 
 echo "STEP:verify"
+prog verify 45
 expected=$(awk -v f="$TARBALL" '$2=="'"$TARBALL"'" || index($0, "  '"$TARBALL"'") {print $1; exit}' "$TMP_DIR/checksums.txt" 2>/dev/null || true)
 [ -n "$expected" ] || { log "checksums.txt sin entrada para $TARBALL (¿release sin checksums?)"; exit 5; }
 got=$(sha256sum "$TMP_DIR/app.tar.gz" | awk '{print $1}')
@@ -93,10 +111,12 @@ got=$(sha256sum "$TMP_DIR/app.tar.gz" | awk '{print $1}')
 log "sha256 verificado: $TARBALL"
 
 echo "STEP:extract"
+prog extract 60
 mkdir -p "$TMP_DIR/pkg"
 tar -xzf "$TMP_DIR/app.tar.gz" -C "$TMP_DIR/pkg"
 
 echo "STEP:deploy"
+prog deploy 80
 TS=$(date +%Y%m%d-%H%M%S)
 # Dos layouts posibles:
 #  - Capistrano (install.sh): /opt/keynest/current → releases/vX, datos en /var/lib/keynest.
@@ -135,11 +155,14 @@ fi
 # Datos NUNCA se tocan: SQLite y uploads viven en $DATA_DIR (fuera de server/).
 
 echo "STEP:restart"
+prog restart 95
 printf '%s' "$VER_NO_V" > "$MARKER"
 chmod 0644 "$MARKER"
 if [ "${SKIP_RESTART:-0}" != "1" ]; then
   systemctl restart "$APP"
 fi
+prog done 100
+PROG_OK=1
 log "actualizado a $VER_NO_V"
 
 # Rollback manual:

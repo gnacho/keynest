@@ -1,9 +1,8 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { RefreshCw } from 'lucide-react';
-import { toast } from 'sonner';
 import { api } from '@/lib/api';
-import { applyRelease } from '@/lib/apply-update';
+import UpdateDialog from './UpdateDialog';
 
 const CHECK_KEY = 'keynest-last-update-check';
 const CHECK_INTERVAL = 7 * 24 * 60 * 60 * 1000; // 1 vez por semana (regla app-auto-update)
@@ -23,7 +22,7 @@ interface UpdateStatus {
 export default function UpdateRibbon() {
   const { t } = useTranslation();
   const [info, setInfo] = useState<UpdateStatus | null>(null);
-  const [applying, setApplying] = useState(false);
+  const [dialogOpen, setDialogOpen] = useState(false);
 
   useEffect(() => {
     let stale = false;
@@ -46,19 +45,6 @@ export default function UpdateRibbon() {
 
   if (!info?.available) return null;
 
-  const apply = async () => {
-    if (applying) return;
-    setApplying(true);
-    try {
-      const done = await applyRelease();
-      toast.success(done ? t('aj.actualizadoOk') : t('aj.actualizandoTarda'));
-      setInfo((s) => (s ? { ...s, available: false } : s));
-    } catch {
-      toast.error(t('aj.errorActualizar'));
-    } finally {
-      setApplying(false);
-    }
-  };
 
   return (
     <div
@@ -74,14 +60,14 @@ export default function UpdateRibbon() {
       <span>{t('aj.nuevaVersion')}{info.latest ? ` — v${info.latest}` : ''}</span>
       <button
         type="button"
-        onClick={() => void apply()}
-        disabled={applying}
-        className="ml-auto flex h-8 shrink-0 items-center rounded-lg border px-3 text-xs font-medium transition-colors disabled:opacity-50"
+        onClick={() => setDialogOpen(true)}
+        className="ml-auto flex h-8 shrink-0 items-center rounded-lg border px-3 text-xs font-medium transition-colors"
         style={{ borderColor: 'rgb(245 158 11 / 0.4)', color: '#F59E0B' }}
       >
-        <RefreshCw className={applying ? 'mr-1.5 h-3.5 w-3.5 animate-spin' : 'mr-1.5 h-3.5 w-3.5'} />
-        {applying ? t('aj.actualizando') : t('aj.actualizarAhora')}
+        <RefreshCw className="mr-1.5 h-3.5 w-3.5" />
+        {t('aj.actualizarAhora')}
       </button>
+      <UpdateDialog open={dialogOpen} onClose={() => setDialogOpen(false)} />
     </div>
   );
 }

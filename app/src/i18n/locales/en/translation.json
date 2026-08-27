@@ -80,7 +80,8 @@
     "salidas": "Check-outs",
     "limpiezas": "Cleanings",
     "proximosDias": "Next {{days}} days",
-    "tusInmueblesEsteMes": "Your properties this month",    "sinMovimientos": "No activity today",
+    "tusInmueblesEsteMes": "Your properties this month",
+    "sinMovimientos": "No activity today",
     "sinEntradasTxt": "No check-ins scheduled for the next day.",
     "sinEntradasTxt_other": "No check-ins scheduled for the next {{count}} days.",
     "sinSalidasTxt": "No check-outs scheduled for the next day.",
@@ -422,7 +423,7 @@
   },
   "rent": {
     "titulo": "Profitability",
-    "todosInmuebles": "all properties",
+    "todosInmuebles": "All properties",
     "general": "All",
     "sincronizar": "Sync Airbnb",
     "syncOk": "Reservations synced with Airbnb",
@@ -467,7 +468,6 @@
     "gastoAnadido": "Expense added · {{amount}}",
     "todosGastos": "All expenses",
     "todosTipos": "All types",
-    "todosInmuebles": "All properties",
     "todosMeses": "All months",
     "todosAnios": "All years",
     "buscarGasto": "Search expense…",
@@ -939,9 +939,31 @@
     "free": "Free"
   },
   "update": {
-    "banner": "A new version has been deployed — reload to see it",
-    "reload": "Reload",
-    "toastUpdated": "Keynest has been updated to v{v}"
+    "dialog": {
+      "title": "Update Keynest",
+      "desc": "The latest stable version is downloaded and the service restarts. It takes a few seconds and the app reloads on its own.",
+      "changelogTitle": "What's new",
+      "start": "Update",
+      "cancel": "Cancel",
+      "close": "Close",
+      "retry": "Retry",
+      "reload": "Reload",
+      "progressLabel": "Update progress",
+      "restarting": "Restarting the service…",
+      "reloadSoon": "The app will reload by itself in a few seconds.",
+      "failed": "The update did not complete.",
+      "errorAuth": "Your session has expired. Log in again and retry the update.",
+      "errorTimeout": "The update is still running. Reload the page in a few minutes.",
+      "errorStep": "The update script failed at one step. Check the keynest-update.service journal.",
+      "errorGeneric": "The update could not be started. Try again."
+    },
+    "step": {
+      "detect": "Checking version",
+      "download": "Downloading",
+      "verify": "Verifying signature",
+      "install": "Installing",
+      "restart": "Restarting"
+    }
   },
   "errorBoundary": {
     "title": "Something went wrong",

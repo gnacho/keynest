@@ -14,7 +14,7 @@ import { syncAll, syncStatus } from './sync.js'
 import { fetchIcs, icsToReservations, parseIcs } from './ical.js'
 import { seedDemo } from './seed-demo.js'
 import { saveTedeeConfig, tedeeConfig, tedeeLocks, tedeeAccesses } from './tedee.js'
-import { currentId, updateStatus, getUpdateHistory, consumePendingUpdate, requestUpdate, requestRollback } from './update.js'
+import { currentId, updateStatus, updateProgress, getUpdateHistory, consumePendingUpdate, requestUpdate, requestRollback } from './update.js'
 import { importAirbnb, parseAirbnbCsv } from './import-airbnb.js'
 import { syncAirbnb, airbnbStatus } from './airbnb-sync.js'
 import { configurePush, flushNotificationQueue, notifyUsers } from './push.js'
@@ -243,6 +243,12 @@ app.post('/api/users', auth.requireAdmin(prodDb, demoDb), async (c) => {
 /* Actualización de la app (solo admin): estado, aplicar y rollback */
 app.get('/api/update/status', auth.requireAdmin(prodDb, demoDb), async (c) => {
   return c.json(await updateStatus(prodDb, config.dataDir))
+})
+
+// Progreso del apply en curso (#232): lee update-progress.json del data dir
+// (lo escribe keynest-update.sh en cada STEP). null si no hay nada fresco.
+app.get('/api/update/progress', auth.requireAdmin(prodDb, demoDb), (c) => {
+  return c.json({ progress: updateProgress(config.dataDir) })
 })
 
 app.get('/api/updates/history', auth.requireAdmin(prodDb, demoDb), (c) => {
