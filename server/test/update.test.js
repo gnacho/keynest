@@ -1,7 +1,9 @@
-import { test, expect } from 'vitest'
-import { mkdtempSync, writeFileSync, existsSync } from 'node:fs'
+import { test, expect, describe, it } from 'vitest'
+import { mkdtempSync, writeFileSync, existsSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
+import { openDb } from '../src/db.js'
+import { updateProgress, updateStatus } from '../src/update.js'
 
 test('currentId reads the release marker from RELEASE_MARKER env override', async () => {
   const dir = mkdtempSync(join(tmpdir(), 'keynest-marker-'))
@@ -77,4 +79,46 @@ test('readinessChecks flags a pending update flag as concurrent', async () => {
   } finally {
     delete process.env.RELEASE_MARKER
   }
+})
+
+describe('updateProgress (#232)', () => {
+  it('devuelve step/pct si el fichero es fresco', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'keynest-progress-'))
+    writeFileSync(
+      join(dir, 'update-progress.json'),
+      JSON.stringify({ step: 'download', pct: 25, ts: Date.now() })
+    )
+    expect(updateProgress(dir)).toMatchObject({ step: 'download', pct: 25 })
+    rmSync(dir, { recursive: true, force: true })
+  })
+
+  it('un fichero stale (corrida muerta) no se reporta', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'keynest-progress-stale-'))
+    writeFileSync(
+      join(dir, 'update-progress.json'),
+      JSON.stringify({ step: 'download', pct: 25, ts: Date.now() - 20 * 60 * 1000 })
+    )
+    expect(updateProgress(dir)).toBeNull()
+    rmSync(dir, { recursive: true, force: true })
+  })
+
+  it('sin fichero devuelve null', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'keynest-progress-empty-'))
+    expect(updateProgress(dir)).toBeNull()
+    rmSync(dir, { recursive: true, force: true })
+  })
+})
+
+describe('updateStatus notes (#232)', () => {
+  it('devuelve las notas del release desde la caché kv', async () => {
+    const dir = mkdtempSync(join(tmpdir(), 'keynest-notes-'))
+    const db = openDb(dir, 'test.db')
+    db.prepare('INSERT INTO kv (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value')
+      .run('gh_latest_release', JSON.stringify({ at: Date.now(), id: '9.9.9', body: '- Nota de prueba' }))
+    const st = await updateStatus(db, dir)
+    expect(st.latest).toBe('9.9.9')
+    expect(st.notes).toBe('- Nota de prueba')
+    db.close()
+    rmSync(dir, { recursive: true, force: true })
+  })
 })
