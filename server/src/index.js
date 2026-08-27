@@ -16,7 +16,7 @@ import { seedDemo } from './seed-demo.js'
 import { saveTedeeConfig, tedeeConfig, tedeeLocks, tedeeAccesses } from './tedee.js'
 import { currentId, updateStatus, updateProgress, getUpdateHistory, consumePendingUpdate, requestUpdate, requestRollback } from './update.js'
 import { importAirbnb, parseAirbnbCsv } from './import-airbnb.js'
-import { syncAirbnb, airbnbStatus } from './airbnb-sync.js'
+import { syncAirbnb, airbnbStatus, crearPairing, pairingVigente, consumirPairing, guardarSesion } from './airbnb-sync.js'
 import { configurePush, flushNotificationQueue, notifyUsers } from './push.js'
 import { registerPushRoutes } from './routes-push.js'
 import * as alerts from './alerts.js'
@@ -366,6 +366,40 @@ app.post('/api/import/airbnb', auth.requireAdmin(prodDb, demoDb), async (c) => {
 
 /* Estado de la sesión del scraper Airbnb (ribbon UI) */
 app.get('/api/airbnb/status', auth.requireAuth(prodDb, demoDb), (c) => c.json(airbnbStatus(prodDb)))
+
+/* Pairing: genera un código de un solo uso para subir una sesión nueva desde
+   el capturador local (solo admin). En la demo lo corta el guard readonly. */
+app.post('/api/airbnb/pairing', auth.requireAdmin(prodDb, demoDb), (c) => c.json(crearPairing(prodDb)))
+
+/* Subida de sesión desde el capturador local (sin sesión de la webapp):
+   la credencial es el propio código de emparejamiento, de un solo uso y con
+   caducidad. Valida, escribe la sesión del scraper y retorna ok. */
+const airbnbSessionSchema = z.object({
+  code: z.string().min(1).max(64),
+  session: z.object({
+    cookies: z.array(z.any()).min(1),
+    origins: z.array(z.any()),
+  }),
+})
+app.post('/api/airbnb/session', async (c) => {
+  const body = await c.req.json().catch(() => null)
+  const parsed = airbnbSessionSchema.safeParse(body)
+  if (!parsed.success) return c.json({ error: 'formato inválido', code: 'format' }, 400)
+  const vigente = pairingVigente(prodDb)
+  if (!vigente || vigente.code !== parsed.data.code) {
+    return c.json({ error: 'código inválido o caducado', code: 'pairing' }, 401)
+  }
+  let ruta
+  try {
+    ruta = guardarSesion(parsed.data.session)
+  } catch (e) {
+    console.error('[airbnb] no se pudo guardar la sesión subida:', e.message)
+    return c.json({ error: 'no se pudo escribir la sesión en disco', code: 'write' }, 500)
+  }
+  consumirPairing(prodDb, parsed.data.code)
+  console.log(`[airbnb] sesión subida desde el capturador (${parsed.data.session.cookies.length} cookies)`)
+  return c.json({ ok: true, ruta })
+})
 
 /* Config Tedee (solo admin): bridge local + token */
 app.get('/api/config/tedee', auth.requireAdmin(prodDb, demoDb), (c) => {

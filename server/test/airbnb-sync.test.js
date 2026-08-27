@@ -1,11 +1,11 @@
 // airbnb-sync.test.js — cruce del scraper de Airbnb: guests+amount por
 // confirmation_code + aviso push de sesión muerta/recuperada (forzar: true).
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs'
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { openDb } from '../src/db.js'
-import { aplicarCruce, syncAirbnb } from '../src/airbnb-sync.js'
+import { aplicarCruce, syncAirbnb, crearPairing, pairingVigente, consumirPairing, guardarSesion } from '../src/airbnb-sync.js'
 
 // notifyAll de push.js se mockea para capturar los avisos de sesión.
 vi.mock('../src/push.js', async (importOriginal) => {
@@ -22,10 +22,12 @@ beforeEach(() => {
   dataDir = join(dir, 'data')
   mkdirSync(dataDir, { recursive: true })
   process.env.AIRBNB_DATA_DIR = dataDir
+  process.env.AIRBNB_SESSION_PATH = join(dir, '.auth/airbnb_session.json')
   db = openDb(dir, 'test.db')
 })
 afterEach(() => {
   delete process.env.AIRBNB_DATA_DIR
+  delete process.env.AIRBNB_SESSION_PATH
   db.close()
   rmSync(dir, { recursive: true, force: true })
   vi.clearAllMocks()
@@ -87,5 +89,39 @@ describe('syncAirbnb', () => {
       expect.anything(),
       expect.objectContaining({ severity: 'normal' }),
     )
+  })
+})
+
+describe('pairing + guardarSesion', () => {
+  it('crea un código de 6 caracteres vigente en kv con caducidad', () => {
+    const p = crearPairing(db)
+    expect(p.code).toMatch(/^[A-Z2-9]{6}$/)
+    expect(p.expira).toBeGreaterThan(Date.now())
+    const vigente = pairingVigente(db)
+    expect(vigente.code).toBe(p.code)
+  })
+
+  it('pairingVigente devuelve null si está caducado', () => {
+    crearPairing(db, Date.now() - 11 * 60 * 1000)
+    expect(pairingVigente(db)).toBeNull()
+  })
+
+  it('consumirPairing: wrong code o expirado = false; correcto = true y single-use', () => {
+    const p = crearPairing(db)
+    expect(consumirPairing(db, 'XXXXXX')).toBe(false)
+    expect(consumirPairing(db, p.code)).toBe(true)
+    expect(pairingVigente(db)).toBeNull()
+    expect(consumirPairing(db, p.code)).toBe(false)
+  })
+
+  it('guardarSesion escribe el storage_state en mode 600 en AIRBNB_SESSION_PATH', () => {
+    const sesion = { cookies: [{ name: 'ucs', value: 'x' }, { name: 'datadome', value: 'y' }], origins: [] }
+    const ruta = guardarSesion(sesion)
+    expect(ruta).toBe(process.env.AIRBNB_SESSION_PATH)
+    const escrito = JSON.parse(readFileSync(ruta, 'utf-8'))
+    expect(escrito.cookies).toHaveLength(2)
+    expect(escrito.cookies[1]).toEqual({ name: 'datadome', value: 'y' })
+    const st = statSync(ruta)
+    expect(st.mode & 0o777).toBe(0o600)
   })
 })
