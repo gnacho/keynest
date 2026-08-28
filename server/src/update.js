@@ -70,7 +70,9 @@ export async function updateStatus(prodDb, dataDir) {
   const latest = await latestInfo(prodDb).catch(() => null)
   const available = Boolean(latest && current && compareSemver(latest.id, current) > 0)
   const readiness = await readinessChecks(prodDb, dataDir, latest?.id ?? null)
-  return { current, latest: latest?.id ?? null, available, notes: latest?.body ?? '', readiness }
+  // checkFailed (#231): el fetch a GitHub falló (p. ej. 403 rate-limit 60/h por
+  // IP). Sin esto, "sin novedades" y "no se pudo comprobar" son indistinguibles.
+  return { current, latest: latest?.id ?? null, available, notes: latest?.body ?? '', checkFailed: latest === null, readiness }
 }
 
 // Progreso del apply (#232): keynest-update.sh escribe update-progress.json
