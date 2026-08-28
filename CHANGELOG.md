@@ -7,6 +7,16 @@ y este proyecto se adhiere a [Versionado Semántico](https://semver.org/lang/es/
 
 ## [Unreleased]
 
+## [0.1.8] - 2026-08-28
+
+### Changed
+
+- Un check de actualizaciones fallido deja de ser invisible (#231): si el
+  server no puede consultar GitHub (p. ej. el límite de peticiones por IP),
+  el ribbon muestra un aviso discreto con botón de reintentar, en vez de
+  degradar en silencio a "sin novedades". El estado del server distingue
+  "al día" de "no se pudo comprobar".
+
 ## [0.1.6] - 2026-08-28
 
 ### Added
