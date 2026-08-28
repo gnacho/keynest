@@ -966,7 +966,9 @@
       "verify": "Verifying signature",
       "install": "Installing",
       "restart": "Restarting"
-    }
+    },
+    "checkFailed": "Could not check for updates (GitHub request limit).",
+    "retry": "Retry"
   },
   "errorBoundary": {
     "title": "Something went wrong",

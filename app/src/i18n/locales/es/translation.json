@@ -966,7 +966,9 @@
       "verify": "Verificando firma",
       "install": "Instalando",
       "restart": "Reiniciando"
-    }
+    },
+    "checkFailed": "No se pudo comprobar si hay actualizaciones (límite de peticiones de GitHub).",
+    "retry": "Reintentar"
   },
   "errorBoundary": {
     "title": "Algo no ha ido bien",

@@ -1,4 +1,4 @@
-import { test, expect, describe, it } from 'vitest'
+import { test, expect, describe, it, vi } from 'vitest'
 import { mkdtempSync, writeFileSync, existsSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
@@ -121,4 +121,22 @@ describe('updateStatus notes (#232)', () => {
     db.close()
     rmSync(dir, { recursive: true, force: true })
   })
+})
+
+test('updateStatus marca checkFailed cuando GitHub no responde (#231)', async () => {
+  const dir = mkdtempSync(join(tmpdir(), 'keynest-checkfailed-'))
+  const db = openDb(dir, 'test.db')
+  const realFetch = global.fetch
+  vi.stubGlobal('fetch', vi.fn(() => Promise.resolve({ ok: false, status: 403 })))
+  try {
+    const st = await updateStatus(db, dir)
+    expect(st.latest).toBeNull()
+    expect(st.checkFailed).toBe(true)
+    expect(st.available).toBe(false)
+  } finally {
+    vi.unstubAllGlobals()
+    global.fetch = realFetch
+    db.close()
+    rmSync(dir, { recursive: true, force: true })
+  }
 })

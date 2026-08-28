@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { RefreshCw } from 'lucide-react';
+import { AlertTriangle, RefreshCw, X } from 'lucide-react';
 import { api } from '@/lib/api';
 import UpdateDialog from './UpdateDialog';
 
@@ -22,7 +22,20 @@ interface UpdateStatus {
 export default function UpdateRibbon() {
   const { t } = useTranslation();
   const [info, setInfo] = useState<UpdateStatus | null>(null);
+  const [failed, setFailed] = useState(false);
+  const [dismissed, setDismissed] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
+
+  const check = async () => {
+    try {
+      const s = await api<UpdateStatus & { checkFailed?: boolean }>('/api/update/status');
+      setInfo(s);
+      setFailed(Boolean(s?.checkFailed));
+    } catch {
+      // Sin poder comprobar (red, server): visible en vez de silencio (#231).
+      setFailed(true);
+    }
+  };
 
   useEffect(() => {
     let stale = false;
@@ -31,17 +44,48 @@ export default function UpdateRibbon() {
         const last = Number(window.localStorage.getItem(CHECK_KEY) || 0);
         if (Date.now() - last < CHECK_INTERVAL) return; // ya se comprobó esta semana
         window.localStorage.setItem(CHECK_KEY, String(Date.now()));
-        const s = await api<UpdateStatus>('/api/update/status');
-        if (!stale) setInfo(s);
+        if (!stale) await check();
       } catch {
-        /* sin info de update: no molestar */
+        /* sin storage */
       }
     };
     void run();
     return () => {
       stale = true;
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  if (dismissed) return null;
+
+  // Aviso tranquilo de check fallido (#231): el server no pudo consultar GitHub
+  // (p. ej. 403 rate-limit 60/h por IP). Reintentar a mano; semanal por defecto.
+  if (!info?.available && failed) {
+    return (
+      <div
+        role="alert"
+        className="mb-4 flex items-center gap-2.5 rounded-xl border border-slate-300/60 bg-slate-100/80 px-3.5 py-2 text-[12px] font-medium text-slate-500 dark:border-slate-700 dark:bg-slate-800/60 dark:text-slate-400"
+      >
+        <AlertTriangle className="h-3.5 w-3.5 shrink-0" aria-hidden />
+        <span>{t('update.checkFailed')}</span>
+        <button
+          type="button"
+          onClick={() => void check()}
+          className="ml-auto shrink-0 rounded-lg border border-slate-300 px-2.5 py-1 text-[11px] font-medium transition-colors hover:bg-slate-200/60 dark:border-slate-600 dark:hover:bg-slate-700/60"
+        >
+          {t('update.retry')}
+        </button>
+        <button
+          type="button"
+          onClick={() => setDismissed(true)}
+          aria-label={t('update.dialog.close')}
+          className="shrink-0 rounded-lg p-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"
+        >
+          <X className="h-3.5 w-3.5" aria-hidden />
+        </button>
+      </div>
+    );
+  }
 
   if (!info?.available) return null;
 
@@ -57,7 +101,7 @@ export default function UpdateRibbon() {
       }}
     >
       <RefreshCw className="h-4 w-4 shrink-0" />
-      <span>{t('aj.nuevaVersion')}{info.latest ? ` — v${info.latest}` : ''}</span>
+      <span>{t('aj.nuevaVersion')}{info.latest ? ` - v${info.latest}` : ''}</span>
       <button
         type="button"
         onClick={() => setDialogOpen(true)}
