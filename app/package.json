@@ -1,7 +1,7 @@
 {
   "name": "keynest",
   "private": true,
-  "version": "1.5.37",
+  "version": "1.5.39",
   "type": "module",
   "scripts": {
     "dev": "vite",

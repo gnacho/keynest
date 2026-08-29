@@ -7,6 +7,12 @@ y este proyecto se adhiere a [Versionado Semántico](https://semver.org/lang/es/
 
 ## [Unreleased]
 
+## [1.5.39] - 2026-08-29
+
+### Fixed
+
+- Adds Umami analytics tracker to the landing page (#239).
+
 ## [0.1.8] - 2026-08-28
 
 ### Changed
