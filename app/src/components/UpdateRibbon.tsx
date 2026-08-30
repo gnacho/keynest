@@ -2,10 +2,8 @@ import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { AlertTriangle, RefreshCw, X } from 'lucide-react';
 import { api } from '@/lib/api';
+import { CHECK_INTERVAL, CHECK_KEY, onRibbonSignal } from '@/lib/update-check';
 import UpdateDialog from './UpdateDialog';
-
-const CHECK_KEY = 'keynest-last-update-check';
-const CHECK_INTERVAL = 7 * 24 * 60 * 60 * 1000; // 1 vez por semana (regla app-auto-update)
 
 interface UpdateStatus {
   current: string;
@@ -50,8 +48,12 @@ export default function UpdateRibbon() {
       }
     };
     void run();
+    const off = onRibbonSignal(() => {
+      if (!stale) void check();
+    });
     return () => {
       stale = true;
+      off();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
