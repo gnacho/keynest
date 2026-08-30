@@ -61,6 +61,7 @@ import type { MaintCategory } from '@/data/types';
 import type { ExpenseType, Person, PersonRole } from '@/data/types';
 import { fmtDateShort, fmtMoney } from '@/lib/format';
 import { cn } from '@/lib/utils';
+import { notifyRibbon } from '@/lib/update-check';
 
 const EASE_OUT_QUART: [number, number, number, number] = [0.25, 1, 0.5, 1];
 
@@ -242,11 +243,9 @@ export default function Ajustes() {
 
   const checkUpdate = async () => {
     try {
-      // Throttle semanal (regla app-auto-update): misma clave que el UpdateRibbon.
-      const last = Number(window.localStorage.getItem('keynest-last-update-check') || 0);
-      if (Date.now() - last < 7 * 24 * 60 * 60 * 1000) return;
-      window.localStorage.setItem('keynest-last-update-check', String(Date.now()));
-      setUpdateInfo(await api('/api/update/status'));
+      const data = await api<{ current: string; latest: string | null; available: boolean }>('/api/update/status');
+      setUpdateInfo(data);
+      if (data?.available && data.latest) notifyRibbon(data.latest);
     } catch { /* noop */ }
   };
 
