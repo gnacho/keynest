@@ -32,20 +32,29 @@ const DEFAULT_CATEGORIES = [
   { key: 'persianas', label: 'Persianas', icon: 'blinds' },
 ]
 
-const envSchema = z.object({
-  PORT: z.coerce.number().int().min(1).max(65535).default(8081),
-  DATA_DIR: z.string().default('./data'),
-  STATIC_DIR: z.string().default('../public'),
-  AUTH_USER: z.string().min(1),
-  AUTH_PASS: z.string().min(6),
-  SYNC_INTERVAL_MS: z.coerce.number().int().min(60000).default(15 * 60 * 1000),
-  VAPID_PUBLIC_KEY: z.string().optional(),
-  VAPID_PRIVATE_KEY: z.string().optional(),
-  VAPID_SUBJECT: z.string().optional(),
-  ENC_KEY: z.string().optional(),
-  SESSION_SECRET: z.string().optional(),
-  TRUST_PROXY: z.enum(['true', 'false']).default('false'),
-})
+const envSchema = z
+  .object({
+    PORT: z.coerce.number().int().min(1).max(65535).default(8081),
+    DATA_DIR: z.string().default('./data'),
+    STATIC_DIR: z.string().default('../public'),
+    AUTH_USER: z.string().min(1),
+    AUTH_PASS: z.string().min(6),
+    SYNC_INTERVAL_MS: z.coerce.number().int().min(60000).default(15 * 60 * 1000),
+    VAPID_PUBLIC_KEY: z.string().optional(),
+    VAPID_PRIVATE_KEY: z.string().optional(),
+    VAPID_SUBJECT: z.string().optional(),
+    ENC_KEY: z.string().optional(),
+    SESSION_SECRET: z.string().optional(),
+    TRUST_PROXY: z.enum(['true', 'false']).default('false'),
+  })
+  .superRefine((env, ctx) => {
+    const MARKERS = ['cambia', 'changeme', 'change-me', 'example', 'placeholder', 'your-secret', 'replace_me', 'xxx']
+    for (const [key, val] of [['AUTH_PASS', env.AUTH_PASS], ['SESSION_SECRET', env.SESSION_SECRET], ['ENC_KEY', env.ENC_KEY]]) {
+      if (val && MARKERS.some((m) => val.toLowerCase().includes(m))) {
+        ctx.addIssue({ code: 'custom', path: [key], message: `${key} contiene un valor de ejemplo del .env.example; genera un secreto real` })
+      }
+    }
+  })
 const env = envSchema.parse(process.env) // fail-fast si falta algo crítico
 const config = {
   port: env.PORT,

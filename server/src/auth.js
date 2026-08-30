@@ -157,9 +157,14 @@ export function handleDemoLogin(prodDb, c) {
   return { id: 'demo-user', username: 'demo', email: null, phone: null, language: 'auto', role: 'demo', is_demo: true }
 }
 
+const DUMMY_HASH = '$2b$10$abcdefghijklmnopqrstuuABCDEFGHIJKLMNOPQRSTUVWXYZ012'
+
 export async function handleLogin(db, c, { username, password, remember }) {
   const user = db.prepare('SELECT * FROM users WHERE username = ?').get(username || '')
-  if (!user) return null
+  if (!user) {
+    await bcrypt.compare(password || '', DUMMY_HASH)
+    return null
+  }
   const valid = await bcrypt.compare(password || '', user.password_hash)
   if (!valid) return null
   const id = createSession(db, user.id, c.req.header('user-agent'))
