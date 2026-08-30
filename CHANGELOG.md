@@ -7,6 +7,13 @@ y este proyecto se adhiere a [Versionado Semántico](https://semver.org/lang/es/
 
 ## [Unreleased]
 
+## [1.5.49] - 2026-08-30
+
+### Security
+
+- **Login timing-safe**: bcrypt contra hash dummy para usuarios inexistentes (anti-enumeracion, #241)
+- **Deteccion de placeholders**: rechazo de valores del .env.example en AUTH_PASS, SESSION_SECRET, ENC_KEY al arrancar (#241)
+
 ## [1.5.39] - 2026-08-29
 
 ### Fixed

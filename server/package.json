@@ -1,6 +1,6 @@
 {
   "name": "keynest-server",
-  "version": "1.5.39",
+  "version": "1.5.49",
   "private": true,
   "type": "module",
   "scripts": {
