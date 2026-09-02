@@ -7,6 +7,15 @@ y este proyecto se adhiere a [Versionado Semántico](https://semver.org/lang/es/
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-09-02
+
+### Changed
+
+- En /limpieza el aviso de limpiezas sin asignar solo salta cuando la fecha
+  de la limpieza está a 3 días o menos (hoy incluido). Fuera de esa ventana
+  la tarjeta "Sin asignar" se muestra en tono neutro sin pulso, evitando
+  la falsa urgencia de una limpieza recién creada. (#245)
+
 ## [1.5.49] - 2026-08-30
 
 ### Security
