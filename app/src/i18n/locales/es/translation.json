@@ -291,6 +291,7 @@
     "sinAsignar": "Sin asignar",
     "asignaCuantoAntes": "asigna cuanto antes",
     "todoAsignado": "todo asignado",
+    "sinUrgencia": "sin urgencia",
     "horasMes": "Horas este mes",
     "archivadas_one": "{{count}} archivada",
     "archivadas_other": "{{count}} archivadas",

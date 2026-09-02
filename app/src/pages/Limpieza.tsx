@@ -28,7 +28,7 @@ import { useTranslation } from 'react-i18next';
 import { useData } from '@/data/useData';
 import type { CleaningStatus } from '@/data/types';
 import { myPropertyIds } from '@/lib/auth';
-import { fmtDateShort, fmtMoney, isSameDay } from '@/lib/format';
+import { addDays, fmtDateShort, fmtMoney, isSameDay, startOfDay } from '@/lib/format';
 import { cn } from '@/lib/utils';
 
 const EASE_OUT_QUART: [number, number, number, number] = [0.25, 1, 0.5, 1];
@@ -69,8 +69,19 @@ export default function Limpieza() {
   /* ---- KPIs computados ---- */
   const pendientesHoy = all.filter((c) => isSameDay(c.date, now) && c.status !== 'archivada').length;
   const sinAsignar = all.filter((c) => c.status !== 'archivada' && c.assigneeIds.length === 0).length;
+  const sinAsignarUrgentes = all.filter(
+    (c) =>
+      c.status !== 'archivada' &&
+      c.assigneeIds.length === 0 &&
+      startOfDay(c.date) <= addDays(startOfDay(now), 3),
+  ).length;
   const kpiCount = 2 + (pendientesHoy > 0 ? 1 : 0) + (sinAsignar > 0 ? 1 : 0);
-  const alertas = all.filter((c) => c.status === 'pendiente' && c.assigneeIds.length === 0);
+  const alertas = all.filter(
+    (c) =>
+      c.status !== 'archivada' &&
+      c.assigneeIds.length === 0 &&
+      startOfDay(c.date) <= addDays(startOfDay(now), 3),
+  );
   const monthDone = all.filter(
     (c) =>
       c.status === 'archivada' &&
@@ -124,7 +135,7 @@ export default function Limpieza() {
         )}
       </div>
 
-      {/* ============================== Alertas: limpiezas creadas sin asignar */}
+      {/* ============================== Alertas: limpiezas sin asignar próximas */}
       {alertas.length > 0 && (
         <div
           role="status"
@@ -178,13 +189,13 @@ export default function Limpieza() {
           )}
           {sinAsignar > 0 && (
             <motion.div variants={itemV}>
-              <div className={!reduce ? 'animate-ring-pulse rounded-2xl' : undefined}>
+              <div className={sinAsignarUrgentes > 0 && !reduce ? 'animate-ring-pulse rounded-2xl' : undefined}>
                 <KpiCard
                   icon={UserRoundX}
-                  tone="orange"
+                  tone={sinAsignarUrgentes > 0 ? 'orange' : 'slate'}
                   label={t('limp.sinAsignar')}
                   value={sinAsignar}
-                  sub={t('limp.asignaCuantoAntes')}
+                  sub={sinAsignarUrgentes > 0 ? t('limp.asignaCuantoAntes') : t('limp.sinUrgencia')}
                   className="h-full"
                 />
               </div>
