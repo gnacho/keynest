@@ -5,7 +5,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { openDb } from '../src/db.js'
-import { aplicarCruce, syncAirbnb, crearPairing, pairingVigente, consumirPairing, guardarSesion } from '../src/airbnb-sync.js'
+import { aplicarCruce, syncAirbnb, crearPairing, pairingVigente, consumirPairing, guardarSesion, marcarSesionRestaurada } from '../src/airbnb-sync.js'
 
 // notifyAll de push.js se mockea para capturar los avisos de sesión.
 vi.mock('../src/push.js', async (importOriginal) => {
@@ -89,6 +89,37 @@ describe('syncAirbnb', () => {
       expect.anything(),
       expect.objectContaining({ severity: 'normal' }),
     )
+  })
+})
+
+describe('marcarSesionRestaurada', () => {
+  it('marca el kv como viva y avisa recuperación si venía muerta', () => {
+    db.prepare(`INSERT INTO kv (key, value) VALUES ('airbnb_sesion', ?)`).run(JSON.stringify({ viva: false }))
+    const flanco = marcarSesionRestaurada(db)
+    expect(flanco).toBe(true)
+    const estado = JSON.parse(db.prepare(`SELECT value FROM kv WHERE key = 'airbnb_sesion'`).get().value)
+    expect(estado.viva).toBe(true)
+    expect(notifyAll).toHaveBeenCalledWith(
+      expect.anything(),
+      'airbnb_sesion_ok',
+      expect.anything(),
+      expect.objectContaining({ severity: 'normal' }),
+    )
+  })
+
+  it('no avisa recuperación si el estado anterior ya estaba vivo', () => {
+    db.prepare(`INSERT INTO kv (key, value) VALUES ('airbnb_sesion', ?)`).run(JSON.stringify({ viva: true }))
+    const flanco = marcarSesionRestaurada(db)
+    expect(flanco).toBe(false)
+    expect(notifyAll).not.toHaveBeenCalled()
+    const estado = JSON.parse(db.prepare(`SELECT value FROM kv WHERE key = 'airbnb_sesion'`).get().value)
+    expect(estado.viva).toBe(true)
+  })
+
+  it('no avisa si no hay estado previo (primer arranque)', () => {
+    const flanco = marcarSesionRestaurada(db)
+    expect(flanco).toBe(false)
+    expect(notifyAll).not.toHaveBeenCalled()
   })
 })
 

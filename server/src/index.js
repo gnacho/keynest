@@ -16,7 +16,7 @@ import { seedDemo } from './seed-demo.js'
 import { saveTedeeConfig, tedeeConfig, tedeeLocks, tedeeAccesses } from './tedee.js'
 import { currentId, updateStatus, updateProgress, getUpdateHistory, consumePendingUpdate, requestUpdate, requestRollback } from './update.js'
 import { importAirbnb, parseAirbnbCsv } from './import-airbnb.js'
-import { syncAirbnb, airbnbStatus, crearPairing, pairingVigente, consumirPairing, guardarSesion } from './airbnb-sync.js'
+import { syncAirbnb, airbnbStatus, crearPairing, pairingVigente, consumirPairing, guardarSesion, marcarSesionRestaurada } from './airbnb-sync.js'
 import { configurePush, flushNotificationQueue, notifyUsers } from './push.js'
 import { registerPushRoutes } from './routes-push.js'
 import * as alerts from './alerts.js'
@@ -406,7 +406,8 @@ app.post('/api/airbnb/session', async (c) => {
     return c.json({ error: 'no se pudo escribir la sesión en disco', code: 'write' }, 500)
   }
   consumirPairing(prodDb, parsed.data.code)
-  console.log(`[airbnb] sesión subida desde el capturador (${parsed.data.session.cookies.length} cookies)`)
+  const flancoOk = marcarSesionRestaurada(prodDb)
+  console.log(`[airbnb] sesión subida desde el capturador (${parsed.data.session.cookies.length} cookies)${flancoOk ? ', estado restaurado' : ''}`)
   return c.json({ ok: true, ruta })
 })
 

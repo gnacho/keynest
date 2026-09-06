@@ -161,3 +161,26 @@ export async function syncAirbnb(db) {
   console.log(`[airbnb] cruce: ${res.cruzadas} reservas, ${res.sinMatch} sin match, sesión ${res.sesionViva ? 'viva' : 'MUERTA'}`)
   return res
 }
+
+/**
+ * Marca el estado guardado como restaurado nada más recibir una sesión nueva
+ * por pairing. Adelanta el flanco (kv + push de recuperación) para no esperar
+ * al job horario; syncAirbnb lo confirma luego con los datos reales del
+ * scraper sin duplicar el aviso (el flanco ya queda consumido).
+ * Devuelve true si el estado anterior era de sesión muerta.
+ */
+export function marcarSesionRestaurada(db) {
+  const anterior = (() => { try { return JSON.parse(kvGet(db, CLAVE_ESTADO) || '{}') } catch { return {} } })()
+  kvSet(db, CLAVE_ESTADO, JSON.stringify({
+    viva: true,
+    ultimo_check: new Date().toISOString(),
+    extraccion_ok: false,
+    detalle: 'sesión restaurada por pairing; pendiente de verificación del scraper',
+  }))
+  const antesMuerta = anterior.viva === false
+  if (antesMuerta) {
+    console.log('[airbnb] sesión marcada como restaurada por pairing')
+    notifyAll(db, 'airbnb_sesion_ok', {}, { severity: 'normal', url: '/reservas' })
+  }
+  return antesMuerta
+}
