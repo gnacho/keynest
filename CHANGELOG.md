@@ -7,6 +7,17 @@ y este proyecto se adhiere a [Versionado Semántico](https://semver.org/lang/es/
 
 ## [Unreleased]
 
+## [1.5.50] - 2026-09-06
+
+### Fixed
+
+- El aviso de sesión de Airbnb caducada se oculta solo al recuperarse la
+  sesión, sin recargar la página ni descartarlo a mano: el ribbon re-chequea
+  el estado cada 15 s mientras está visible. (#248, #249)
+- Al renovar la sesión de Airbnb por código de emparejamiento, el estado
+  guardado pasa a `viva:true` al momento y llega el aviso de recuperación sin
+  esperar al job horario del scraper. (#250, #251)
+
 ## [0.2.0] - 2026-09-02
 
 ### Changed
