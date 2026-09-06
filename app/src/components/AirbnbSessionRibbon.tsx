@@ -7,6 +7,9 @@ import AirbnbRenewDialog from '@/components/AirbnbRenewDialog';
 
 const DISMISS_KEY = 'keynest-airbnb-sesion-dismiss';
 const REAPPEAR_MS = 24 * 60 * 60 * 1000;
+// Re-chequeo periódico: el ribbon se oculta solo cuando la sesión vuelve a
+// estar viva (p.ej. tras renovar), sin recargar la página ni descartarlo.
+const POLL_MS = 15 * 1000;
 
 interface AirbnbStatus {
   sesion: { viva?: boolean; ultimo_check?: string | null; extraccion_ok?: boolean; detalle?: string | null };
@@ -24,11 +27,14 @@ export default function AirbnbSessionRibbon() {
 
   useEffect(() => {
     let stale = false;
-    const run = async () => {
+    const check = async () => {
       try {
         const s = await api<AirbnbStatus>('/api/airbnb/status');
         if (stale) return;
         if (s.sesion?.viva !== false) {
+          // Recuperada (o sin datos de caída): ocultar y limpiar un dismiss
+          // previo para que una nueva caída vuelva a avisar de inmediato.
+          window.localStorage.removeItem(DISMISS_KEY);
           setMuerta(false);
           return;
         }
@@ -40,9 +46,11 @@ export default function AirbnbSessionRibbon() {
         /* sin red o sesión expirada: no molestar */
       }
     };
-    void run();
+    void check();
+    const id = window.setInterval(check, POLL_MS);
     return () => {
       stale = true;
+      window.clearInterval(id);
     };
   }, []);
 
