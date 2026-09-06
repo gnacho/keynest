@@ -5,6 +5,13 @@ Todos los cambios notables de Keynest se documentan en este fichero.
 El formato se basa en [Keep a Changelog](https://keepachangelog.com/es/1.1.0/),
 y este proyecto se adhiere a [Versionado Semántico](https://semver.org/lang/es/).
 
+> **Convención de versiones (desde v1.5.50, 6-Sep-2026):** la serie canónica de
+> release es **1.x** (tags `v*` que consume el auto-updater). Las secciones `0.x`
+> de este fichero (0.1.2...0.2.0, 23-Ago a 2-Sep) fueron un esquema paralelo que
+> nunca se publicó con tag; se conservan como histórico. Para publicar una
+> release usar `scripts/release.sh` (calcula la versión y crea el tag con el
+> mensaje correcto).
+
 ## [Unreleased]
 
 ## [1.5.50] - 2026-09-06
