@@ -39,11 +39,11 @@ function escribeReservas(reservas) {
 function escribeSesion(viva, detalle) {
   writeFileSync(join(dataDir, 'airbnb_sesion.json'), JSON.stringify({ viva, detalle: detalle ?? null }))
 }
-function insertaReserva(id, code) {
+function insertaReserva(id, code, extra = {}) {
   db.prepare(
-    `INSERT INTO reservations (id, property_id, uid, checkin, checkout, summary, confirmation_code, created_at)
-     VALUES (?, 'p1', ?, '2026-08-10', '2026-08-12', 'A', ?, ?)`,
-  ).run(id, `uid-${id}`, code, Date.now())
+    `INSERT INTO reservations (id, property_id, uid, checkin, checkout, summary, confirmation_code, guest_name, booked_date, created_at)
+     VALUES (?, 'p1', ?, '2026-08-10', '2026-08-12', 'A', ?, ?, ?, ?)`,
+  ).run(id, `uid-${id}`, code, extra.guest_name ?? '', extra.booked_date ?? '', Date.now())
 }
 
 describe('aplicarCruce', () => {
@@ -59,6 +59,36 @@ describe('aplicarCruce', () => {
     const fila = db.prepare('SELECT guests, amount FROM reservations WHERE id = ?').get('res-1')
     expect(fila.guests).toBe(3)
     expect(fila.amount).toBe(220.5)
+  })
+
+  it('rellena guest_name y booked_date cuando la reserva los tiene vacíos', () => {
+    insertaReserva('res-2', 'HM2')
+    escribeReservas([
+      { confirmation_code: 'HM2', guests: 4, amount: 300, guest_name: 'Laith Kawar', booked_date: '2026-05-01' },
+    ])
+    aplicarCruce(db)
+    const fila = db.prepare('SELECT guest_name, booked_date FROM reservations WHERE id = ?').get('res-2')
+    expect(fila.guest_name).toBe('Laith Kawar')
+    expect(fila.booked_date).toBe('2026-05-01')
+  })
+
+  it('no pisa guest_name ni booked_date existentes (edición manual/CSV)', () => {
+    insertaReserva('res-3', 'HM3', { guest_name: 'Nombre Manual', booked_date: '2026-01-01' })
+    escribeReservas([
+      { confirmation_code: 'HM3', guests: 2, amount: 100, guest_name: 'Nombre Scraper', booked_date: '2026-06-01' },
+    ])
+    aplicarCruce(db)
+    const fila = db.prepare('SELECT guest_name, booked_date FROM reservations WHERE id = ?').get('res-3')
+    expect(fila.guest_name).toBe('Nombre Manual')
+    expect(fila.booked_date).toBe('2026-01-01')
+  })
+
+  it('no borra el guest_name existente si el scraper no trae nombre', () => {
+    insertaReserva('res-4', 'HM4', { guest_name: 'Nombre Previo' })
+    escribeReservas([{ confirmation_code: 'HM4', guests: 1, amount: 50 }])
+    aplicarCruce(db)
+    const fila = db.prepare('SELECT guest_name FROM reservations WHERE id = ?').get('res-4')
+    expect(fila.guest_name).toBe('Nombre Previo')
   })
 })
 
