@@ -14,6 +14,16 @@ y este proyecto se adhiere a [Versionado Semántico](https://semver.org/lang/es/
 
 ## [Unreleased]
 
+## [1.5.51] - 2026-09-10
+
+### Fixed
+
+- El cruce horario de Airbnb rellena ahora el nombre del inquilino
+  (`guest_name`) y la fecha de reserva (`booked_date`) cuando están vacíos,
+  así las reservas creadas por el sync iCal muestran el nombre real en vez
+  de "Airbnb · <código>". Nunca pisa un nombre existente (edición manual o
+  importación CSV). (#256)
+
 ## [1.5.50] - 2026-09-06
 
 ### Fixed
