@@ -8,6 +8,8 @@
 //
 // Este módulo:
 //   1. Cruza por confirmation_code y completa guests + amount en reservations.
+//      Además rellena guest_name y booked_date SOLO si están vacíos (nunca pisa
+//      un nombre editado a mano ni una importación CSV).
 //   2. Si la sesión de Airbnb está muerta: PUSH CRÍTICO NO DESACTIVABLE
 //      (forzar=true: ignora preferencias y quiet hours) + estado en kv para
 //      que la UI muestre un ribbon que reaparece a las 24h si se descarta.
@@ -99,7 +101,8 @@ export function airbnbStatus(db) {
 
 /**
  * Cruza las reservas del scraper contra la BD por confirmation_code y
- * actualiza guests + amount. Devuelve {cruzadas, sinMatch, sesionViva}.
+ * actualiza guests + amount; rellena guest_name y booked_date solo si están
+ * vacíos. Devuelve {cruzadas, sinMatch, sesionViva}.
  * El push de sesión muerta es FUERA de aquí (lo lanza el job con la BD real)
  * porque notifyAll necesita la BD; aquí no hay BD propia.
  */
@@ -109,7 +112,14 @@ export function aplicarCruce(db) {
   const sesion = leerJSON(path.join(dir, 'airbnb_sesion.json'))
 
   const stmtGet = db.prepare('SELECT id FROM reservations WHERE confirmation_code = ?')
-  const stmtUpd = db.prepare('UPDATE reservations SET guests = ?, amount = ? WHERE id = ?')
+  const stmtUpd = db.prepare(`
+    UPDATE reservations SET
+      guests = ?,
+      amount = ?,
+      guest_name = CASE WHEN TRIM(COALESCE(guest_name, '')) = '' THEN COALESCE(?, guest_name) ELSE guest_name END,
+      booked_date = CASE WHEN COALESCE(booked_date, '') = '' THEN COALESCE(?, booked_date) ELSE booked_date END
+    WHERE id = ?
+  `)
   let cruzadas = 0
   let sinMatch = 0
 
@@ -119,7 +129,7 @@ export function aplicarCruce(db) {
         if (!r || !r.confirmation_code) continue
         const fila = stmtGet.get(r.confirmation_code)
         if (!fila) { sinMatch++; continue }
-        stmtUpd.run(r.guests ?? null, r.amount ?? null, fila.id)
+        stmtUpd.run(r.guests ?? null, r.amount ?? null, r.guest_name ?? null, r.booked_date ?? null, fila.id)
         cruzadas++
       }
     })
