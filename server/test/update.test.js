@@ -140,3 +140,93 @@ test('updateStatus marca checkFailed cuando GitHub no responde (#231)', async ()
     rmSync(dir, { recursive: true, force: true })
   }
 })
+
+const seedCache = (db, entry) =>
+  db.prepare('INSERT INTO kv (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value')
+    .run('gh_latest_release', JSON.stringify(entry))
+
+describe('latestInfo anti rate-limit (#265)', () => {
+  const withDb = async (fn) => {
+    const dir = mkdtempSync(join(tmpdir(), 'keynest-lkg-'))
+    const db = openDb(dir, 'test.db')
+    try {
+      await fn(db, dir)
+    } finally {
+      vi.unstubAllGlobals()
+      delete process.env.GITHUB_TOKEN
+      db.close()
+      rmSync(dir, { recursive: true, force: true })
+    }
+  }
+  const resOk = (data, etag) => ({
+    ok: true,
+    status: 200,
+    json: () => Promise.resolve(data),
+    headers: { get: (h) => (h === 'etag' ? etag : null) },
+  })
+  const res403 = () => ({
+    ok: false,
+    status: 403,
+    headers: { get: () => null },
+  })
+
+  it('un 403 tras el TTL sirve el last-known-good ≤24h como stale', async () => {
+    await withDb(async (db, dir) => {
+      seedCache(db, { at: Date.now() - 10 * 60 * 1000, id: '9.9.9', body: '- nota', etag: 'W/"a1"' })
+      vi.stubGlobal('fetch', vi.fn(() => Promise.resolve(res403())))
+      const st = await updateStatus(db, dir)
+      expect(st.latest).toBe('9.9.9')
+      expect(st.notes).toBe('- nota')
+      expect(st.checkFailed).toBe(false)
+      expect(st.stale).toBe(true)
+    })
+  })
+
+  it('un 403 sin caché útil (<24h superada) sigue siendo checkFailed', async () => {
+    await withDb(async (db, dir) => {
+      seedCache(db, { at: Date.now() - 25 * 60 * 60 * 1000, id: '9.9.9', body: '' })
+      vi.stubGlobal('fetch', vi.fn(() => Promise.resolve(res403())))
+      const st = await updateStatus(db, dir)
+      expect(st.latest).toBeNull()
+      expect(st.checkFailed).toBe(true)
+    })
+  })
+
+  it('un 304 confirma la caché y refresca su ventana', async () => {
+    await withDb(async (db, dir) => {
+      const at0 = Date.now() - 10 * 60 * 1000
+      seedCache(db, { at: at0, id: '9.9.9', body: '- nota', etag: 'W/"a1"' })
+      const calls = []
+      vi.stubGlobal('fetch', vi.fn((_, init) => {
+        calls.push(init.headers)
+        return Promise.resolve({ ok: false, status: 304, headers: { get: () => null } })
+      }))
+      const st = await updateStatus(db, dir)
+      expect(st.latest).toBe('9.9.9')
+      expect(st.stale).toBe(false)
+      // petición condicional con el etag de la caché
+      expect(calls[0]['If-None-Match']).toBe('W/"a1"')
+      // la ventana de la caché se refrescó (at > at0)
+      const saved = JSON.parse(db.prepare('SELECT value FROM kv WHERE key = ?').get('gh_latest_release').value)
+      expect(saved.at).toBeGreaterThan(at0)
+      expect(saved.etag).toBe('W/"a1"')
+    })
+  })
+
+  it('un 200 guarda el etag del release y GITHUB_TOKEN viaja como Bearer', async () => {
+    await withDb(async (db, dir) => {
+      process.env.GITHUB_TOKEN = 'ghp_testtoken'
+      const calls = []
+      vi.stubGlobal('fetch', vi.fn((_, init) => {
+        calls.push(init.headers)
+        return Promise.resolve(resOk({ tag_name: 'v9.9.10', body: 'x' }, 'W/"b2"'))
+      }))
+      const st = await updateStatus(db, dir)
+      expect(st.latest).toBe('9.9.10')
+      expect(st.stale).toBe(false)
+      expect(calls[0].Authorization).toBe('Bearer ghp_testtoken')
+      const saved = JSON.parse(db.prepare('SELECT value FROM kv WHERE key = ?').get('gh_latest_release').value)
+      expect(saved.etag).toBe('W/"b2"')
+    })
+  })
+})
