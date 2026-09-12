@@ -14,6 +14,24 @@ y este proyecto se adhiere a [Versionado Semántico](https://semver.org/lang/es/
 
 ## [Unreleased]
 
+## [1.5.52] - 2026-09-12
+
+### Fixed
+
+- Al hacer clic en la alerta de una reserva nueva (campana o push) la vista
+  aterriza en ESA reserva: salta a la pestaña donde vive (Próximas, Activas
+  o Completadas), la abre expandida y hace scroll hasta ella. El cambio de
+  pestaña ocurre una sola vez por enlace y no pisa los cambios manuales. (#259)
+- Hacer clic en una alerta de la campana la descarta (en el dispositivo y
+  sincronizado con el servidor) y cierra el popover al navegar. (#259)
+- La campana ya no marca como "nueva" la reserva con el check-in más lejano
+  con un "hace 2 días" inventado: solo se marcan las reservas reservadas de
+  verdad en los últimos 7 días, con su fecha real, y las que no tienen fecha
+  de reserva nunca se marcan. (#261)
+- El selector de inmueble es compacto (130-210 px, nombres largos con puntos
+  suspensivos) y la fila de filtros encoge en vez de desplazar los chips de
+  estado fuera de línea en pantallas de móvil plegable desplegado (~756 px). (#260)
+
 ## [1.5.51] - 2026-09-10
 
 ### Fixed
