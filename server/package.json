@@ -14,7 +14,7 @@
     "@hono/node-server": "^2.1.0",
     "bcryptjs": "^3.0.2",
     "better-sqlite3": "^13.0.3",
-    "hono": "^4.13.0",
+    "hono": "^4.13.5",
     "web-push": "^3.6.7",
     "zod": "^4.0.0"
   },
@@ -22,6 +22,6 @@
     "better-sqlite3@13.0.3": true
   },
   "devDependencies": {
-    "vitest": "^4.1.10"
+    "vitest": "^4.1.11"
   }
 }
