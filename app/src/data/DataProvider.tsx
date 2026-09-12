@@ -22,7 +22,7 @@ import type {
   Reservation,
   TedeeAccess,
 } from './types';
-import { addDays, isSameDay, startOfDay } from '@/lib/format';
+import { isSameDay, startOfDay } from '@/lib/format';
 
 /* -------------------------------------------------- mapeos API → dominio */
 interface ApiProperty {
@@ -690,20 +690,29 @@ export default function DataProvider({ children }: { children: ReactNode }) {
             to: `/tedee?lock=${l.id}`,
           });
         }
-        const newest = reservations.current
-          .filter((r) => r.status !== 'completada')
-          .sort((a, b) => b.checkIn.getTime() - a.checkIn.getTime())[0];
-        if (newest) {
-          const p = properties.current.find((pp) => pp.id === newest.propertyId);
-          if (p) {
-            out.push({
-              id: `not-new-${newest.id}`,
-              text: i18n.t('notif.nuevaReserva', { name: p.name }),
-              time: addDays(today, -1),
-              tone: 'blue',
-              to: `/reservas?reserva=${newest.id}`,
-            });
-          }
+        // "Nueva reserva" honesta (#261): solo reservas con booked_date en los
+        // últimos 7 días y con su fecha REAL (antes: la de check-in más lejano
+        // con un "hace 2 días" ficticio → salían reservas históricas). Sin
+        // booked_date no se marca como nueva (el aviso real de uids nuevos
+        // lo emite el sync del server).
+        const NUEVA_MS = 7 * 86400000;
+        const nuevas = reservations.current
+          .filter((r) => r.status !== 'completada' && r.bookedDate)
+          .filter((r) => today.getTime() - new Date(`${r.bookedDate}T12:00:00`).getTime() <= NUEVA_MS)
+          .sort(
+            (a, b) =>
+              new Date(`${b.bookedDate}T12:00:00`).getTime() - new Date(`${a.bookedDate}T12:00:00`).getTime(),
+          );
+        for (const r of nuevas) {
+          const p = properties.current.find((pp) => pp.id === r.propertyId);
+          if (!p) continue;
+          out.push({
+            id: `not-new-${r.id}`,
+            text: i18n.t('notif.nuevaReserva', { name: p.name }),
+            time: new Date(`${r.bookedDate}T12:00:00`),
+            tone: 'blue',
+            to: `/reservas?reserva=${r.id}`,
+          });
         }
         return out.slice(0, 5);
       },
