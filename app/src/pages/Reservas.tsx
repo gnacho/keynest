@@ -227,6 +227,25 @@ export default function Reservas() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [base, filteredProp?.id, lookaheadDays]);
 
+  /* ?reserva=<id>: si el filtro de estado ocultaría la reserva objetivo,
+     saltar a la pestaña donde vive (una reserva nueva está en "próximas") (#259).
+     Se ejecuta una vez por reserva enlazada: no pelea con el usuario si luego
+     cambia de pestaña manualmente. */
+  const autoTipoDone = useRef<string | null>(null);
+  useEffect(() => {
+    if (!reservaParam || autoTipoDone.current === reservaParam) return;
+    const target = base.find((r) => r.id === reservaParam);
+    if (!target) return;
+    autoTipoDone.current = reservaParam;
+    const cat = categoryOf(target, today);
+    const wanted = cat === 'activa' ? 'activas' : cat === 'completada' ? 'completadas' : 'proximas';
+    if (tipo === 'todos' || tipo === wanted) return;
+    const next = new URLSearchParams(params);
+    next.set('tipo', wanted);
+    setParams(next, { replace: true });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [reservaParam, base, tipo]);
+
   /* ?reserva=<id>: auto-expandir, resaltar y scroll suave */
   useEffect(() => {
     if (loading || !reservaParam) return;
@@ -237,7 +256,7 @@ export default function Reservas() {
     }, 250);
     return () => clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [loading, reservaParam, sorted.length]);
+  }, [loading, reservaParam, tipo, sorted.length]);
 
   const showToast = (msg: string) => {
     setToast(msg);
@@ -369,10 +388,10 @@ export default function Reservas() {
       <div className="flex flex-wrap items-center gap-2">
         <FilterBar
           hideAll
-          className="mx-0 min-w-0 flex-1 px-0 sm:flex-none"
+          className="mx-0 min-w-0 flex-1 px-0 sm:flex-initial"
           typeOptions={STATUS_OPTIONS.map((o) => ({ value: o.value, label: t(o.labelKey) }))}
         >
-          <div className="relative min-w-0 flex-1">
+          <div className="relative min-w-0 flex-1 sm:max-w-[200px]">
             <Search
               className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2"
               style={{ color: 'var(--text-faint)' }}
