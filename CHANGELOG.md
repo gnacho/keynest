@@ -14,6 +14,18 @@ y este proyecto se adhiere a [Versionado Semántico](https://semver.org/lang/es/
 
 ## [Unreleased]
 
+## [1.5.53] - 2026-09-12
+
+### Security
+
+- Actualización de dependencias por advisories de seguridad (Dependabot,
+  6 alertas cerradas): Hono 4.13.0 → 4.13.7 (anidamiento sin límite en
+  `parseBody()` con agotamiento de memoria, diferencial de caché del
+  parser de query y fix incompleto de `toSSG()`), vitest → 4.1.11
+  (path traversal en el mocker, solo entornos de test) y js-yaml → 4.3.2
+  (uso de CPU con merges vacíos; dependencia transitiva del tooling de
+  lint, nunca llega al bundle). (#263)
+
 ## [1.5.52] - 2026-09-12
 
 ### Fixed
