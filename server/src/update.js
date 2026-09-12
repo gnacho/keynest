@@ -20,6 +20,7 @@ const MARKER = process.env.RELEASE_MARKER || '/opt/keynest/.release-id'
 const OPT_DIR = process.env.KEYNEST_OPT_DIR || '/opt/keynest'
 const CACHE_KEY = 'gh_latest_release'
 const CACHE_TTL = 5 * 60 * 1000
+const STALE_TTL = 24 * 60 * 60 * 1000 // last-known-good (#265): ventana de degradación
 const UPDATE_FLAG = '.update-requested'
 const ROLLBACK_FLAG = '.rollback-requested'
 
@@ -35,24 +36,56 @@ export function currentId() {
 // Última release ESTABLE (releases/latest, tag v*), no la prerelease "latest" de main.
 // Caché en kv con TTL 5 min para no pegar a la API de GitHub en cada llamada.
 // Devuelve {id, body} para que la UI muestre el changelog del release (#232).
+// Anti rate-limit (#265): peticiones condicionales con ETag (los 304 no
+// consumen cuota), GITHUB_TOKEN opcional y degradación a last-known-good
+// (≤24h) cuando GitHub falla, en vez de descartar el dato.
 async function latestInfo(prodDb) {
-  const cached = kvGet(prodDb, CACHE_KEY)
-  if (cached) {
+  let cached = null
+  const raw = kvGet(prodDb, CACHE_KEY)
+  if (raw) {
     try {
-      const c = JSON.parse(cached)
-      if (Date.now() - c.at < CACHE_TTL) return { id: c.id, body: c.body ?? '' }
+      cached = JSON.parse(raw)
     } catch { /* noop */ }
   }
-  const res = await fetch(`https://api.github.com/repos/${REPO}/releases/latest`, {
-    headers: { 'User-Agent': 'keynest-updater', Accept: 'application/vnd.github+json' },
-    signal: AbortSignal.timeout(10000),
-  })
-  if (!res.ok) return null
-  const data = await res.json()
-  const id = String(data.tag_name ?? '').replace(/^v/, '')
-  const body = typeof data.body === 'string' ? data.body : ''
-  kvSet(prodDb, CACHE_KEY, JSON.stringify({ at: Date.now(), id, body }))
-  return { id, body }
+  if (cached && Date.now() - cached.at < CACHE_TTL) {
+    return { id: cached.id, body: cached.body ?? '', stale: false }
+  }
+  const headers = { 'User-Agent': 'keynest-updater', Accept: 'application/vnd.github+json' }
+  if (cached?.etag) headers['If-None-Match'] = cached.etag
+  if (process.env.GITHUB_TOKEN) headers.Authorization = `Bearer ${process.env.GITHUB_TOKEN}`
+  try {
+    const res = await fetch(`https://api.github.com/repos/${REPO}/releases/latest`, {
+      headers,
+      signal: AbortSignal.timeout(10000),
+    })
+    if (res.status === 304 && cached) {
+      // Confirmación condicional: la caché sigue vigente y refresca su ventana.
+      kvSet(prodDb, CACHE_KEY, JSON.stringify({ ...cached, at: Date.now() }))
+      return { id: cached.id, body: cached.body ?? '', stale: false }
+    }
+    if (res.ok) {
+      const data = await res.json()
+      const id = String(data.tag_name ?? '').replace(/^v/, '')
+      const body = typeof data.body === 'string' ? data.body : ''
+      const etag = res.headers.get('etag') ?? ''
+      kvSet(prodDb, CACHE_KEY, JSON.stringify({ at: Date.now(), id, body, etag }))
+      return { id, body, stale: false }
+    }
+    if (res.status === 403) {
+      const rem = res.headers.get('x-ratelimit-remaining')
+      const reset = res.headers.get('x-ratelimit-reset')
+      if (rem === '0') {
+        const cuando = reset ? new Date(Number(reset) * 1000).toISOString() : 'desconocido'
+        console.error(`[update] rate-limit de GitHub (cuota agotada; reset ${cuando})`)
+      }
+    }
+  } catch { /* red caída: caer al last-known-good */ }
+  // Last-known-good (#265): servir la versión conocida ≤24h como stale en
+  // vez de "sin novedades"; solo sin dato útil devolvemos null (checkFailed).
+  if (cached && Date.now() - cached.at < STALE_TTL) {
+    return { id: cached.id, body: cached.body ?? '', stale: true }
+  }
+  return null
 }
 
 // Comparación semver numérica: '1.10.0' > '1.9.0'; prefijos 'v' y pre-release ignorados.
@@ -72,7 +105,16 @@ export async function updateStatus(prodDb, dataDir) {
   const readiness = await readinessChecks(prodDb, dataDir, latest?.id ?? null)
   // checkFailed (#231): el fetch a GitHub falló (p. ej. 403 rate-limit 60/h por
   // IP). Sin esto, "sin novedades" y "no se pudo comprobar" son indistinguibles.
-  return { current, latest: latest?.id ?? null, available, notes: latest?.body ?? '', checkFailed: latest === null, readiness }
+  // stale (#265): latest viene de un last-known-good ≤24h, no de un check vivo.
+  return {
+    current,
+    latest: latest?.id ?? null,
+    available,
+    notes: latest?.body ?? '',
+    checkFailed: latest === null,
+    stale: latest?.stale ?? false,
+    readiness,
+  }
 }
 
 // Progreso del apply (#232): keynest-update.sh escribe update-progress.json
