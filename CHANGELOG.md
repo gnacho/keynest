@@ -14,6 +14,17 @@ y este proyecto se adhiere a [Versionado Semántico](https://semver.org/lang/es/
 
 ## [Unreleased]
 
+## [1.5.54] - 2026-09-12
+
+### Added
+
+- El check de actualizaciones se endurece contra el rate-limit de GitHub:
+  si la API falla (cuota agotada o red caída) se sirve la última release
+  conocida (hasta 24 h, marcada como stale) en vez de fingir "sin
+  novedades"; los refrescos usan peticiones condicionales con ETag (las
+  respuestas 304 no consumen cuota) y se puede configurar un
+  `GITHUB_TOKEN` opcional para servidores tras una NAT compartida. (#265)
+
 ## [1.5.53] - 2026-09-12
 
 ### Security
