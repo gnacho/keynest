@@ -61,6 +61,7 @@ export default function NotificationsPopover() {
   const navigate = useNavigate();
   const data = useData();
   const [dismissed, setDismissed] = useState<Set<string>>(() => loadLocalDismissed());
+  const [open, setOpen] = useState(false);
   const merged = useRef(false);
 
   // Merge server-side dismissed IDs on first bootstrap load (multi-device sync, #140)
@@ -93,8 +94,21 @@ export default function NotificationsPopover() {
     void syncToServer(newIds);
   };
 
+  /* Clic en una alerta: descartarla (local + server), cerrar el popover y navegar (#259) */
+  const openNotification = (n: { id: string; to: string }) => {
+    setDismissed((prev) => {
+      const next = new Set(prev);
+      next.add(n.id);
+      saveLocalDismissed(next);
+      return next;
+    });
+    void syncToServer([n.id]);
+    setOpen(false);
+    navigate(n.to);
+  };
+
   return (
-    <Popover>
+    <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
         <button
           type="button"
@@ -132,7 +146,7 @@ export default function NotificationsPopover() {
             <button
               key={n.id}
               type="button"
-              onClick={() => navigate(n.to)}
+              onClick={() => openNotification(n)}
               className="flex w-full items-start gap-2.5 rounded-xl px-2 py-2 text-left transition-colors hover:bg-[var(--surface-2)]"
             >
               <span className="mt-1.5 h-2 w-2 shrink-0 rounded-full" style={{ backgroundColor: DOT[n.tone] ?? '#64748B' }} />
