@@ -55,9 +55,11 @@ export default function FilterBar({ typeOptions, typeParam = 'tipo', className, 
     <div
       className={cn('flex flex-wrap items-center gap-2', className)}
     >
-      <div className="flex min-w-0 flex-1 items-center gap-2 sm:flex-none">
+      {/* Select compacto: min 130 / máx 210 con truncado, y la cadena entera
+          puede encoger (flex-initial) para no empujar los chips fuera (#260) */}
+      <div className="flex min-w-0 flex-1 items-center gap-2 sm:flex-initial">
         <Select value={inmueble} onValueChange={(v) => setParam('inmueble', v, v === effectiveDefault)}>
-          <SelectTrigger className="h-9 w-full min-w-0 flex-1 gap-2 rounded-xl border-[var(--border)] bg-[var(--surface)] text-sm font-medium shadow-none sm:w-auto sm:min-w-[180px] sm:flex-none">
+          <SelectTrigger className="h-9 w-full min-w-0 flex-1 gap-2 rounded-xl border-[var(--border)] bg-[var(--surface)] text-sm font-medium shadow-none sm:w-auto sm:min-w-[130px] sm:max-w-[210px] sm:flex-initial [&_[data-slot=select-value]]:block [&_[data-slot=select-value]]:truncate">
             <SelectValue placeholder={t('cal.todos')} />
           </SelectTrigger>
           <SelectContent className="rounded-xl border-[var(--border)] bg-[var(--surface)]">
