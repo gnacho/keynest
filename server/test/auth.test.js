@@ -10,6 +10,7 @@ import {
   deleteUser,
   destroyOtherSessions,
   ensureBootstrapAdmin,
+  renewSessionIfDue,
   setUserPassword,
   setUserRole,
 } from '../src/auth.js';
@@ -92,5 +93,47 @@ describe('gestión de usuarios (admin)', () => {
     const restantes = db.prepare('SELECT id FROM sessions WHERE user_id = ?').all(u.id).map((r) => r.id);
     expect(restantes).toEqual(['sess-b']);
     deleteUser(db, u.id); // limpieza
+  });
+});
+
+describe('expiración deslizante de sesiones (#267)', () => {
+  const insertSession = (id, userId, expiresAt, remember) =>
+    db.prepare('INSERT INTO sessions (id, user_id, created_at, expires_at, ua, is_demo, remember) VALUES (?, ?, ?, ?, ?, 0, ?)')
+      .run(id, userId, Date.now(), expiresAt, 'test', remember ? 1 : 0);
+
+  it('la migración 23 añade la columna remember a sessions', () => {
+    const cols = db.prepare('PRAGMA table_info(sessions)').all().map((c) => c.name);
+    expect(cols).toContain('remember');
+  });
+
+  it('sesión persistente por debajo del umbral: renueva expires_at', async () => {
+    const u = await createUser(db, { username: 'slide-user', password: 'clave99' });
+    const soon = Date.now() + 10 * 24 * 3600 * 1000; // 10 días < umbral (15 días)
+    insertSession('sess-slide', u.id, soon, true);
+    const s = db.prepare('SELECT * FROM sessions WHERE id = ?').get('sess-slide');
+    expect(renewSessionIfDue(db, s)).toBe(true);
+    const after = db.prepare('SELECT expires_at FROM sessions WHERE id = ?').get('sess-slide').expires_at;
+    expect(after).toBeGreaterThan(Date.now() + 25 * 24 * 3600 * 1000);
+    deleteUser(db, u.id);
+  });
+
+  it('sesión persistente por encima del umbral: no toca nada', async () => {
+    const u = await createUser(db, { username: 'fresh-user', password: 'clave99' });
+    const fresh = Date.now() + 20 * 24 * 3600 * 1000; // 20 días > umbral (15 días)
+    insertSession('sess-fresh', u.id, fresh, true);
+    const s = db.prepare('SELECT * FROM sessions WHERE id = ?').get('sess-fresh');
+    expect(renewSessionIfDue(db, s)).toBe(false);
+    expect(db.prepare('SELECT expires_at FROM sessions WHERE id = ?').get('sess-fresh').expires_at).toBe(fresh);
+    deleteUser(db, u.id);
+  });
+
+  it('sesión no persistente (sin recuérdame): nunca renueva', async () => {
+    const u = await createUser(db, { username: 'nopersist-user', password: 'clave99' });
+    const soon = Date.now() + 60 * 1000;
+    insertSession('sess-nopersist', u.id, soon, false);
+    const s = db.prepare('SELECT * FROM sessions WHERE id = ?').get('sess-nopersist');
+    expect(renewSessionIfDue(db, s)).toBe(false);
+    expect(db.prepare('SELECT expires_at FROM sessions WHERE id = ?').get('sess-nopersist').expires_at).toBe(soon);
+    deleteUser(db, u.id);
   });
 });

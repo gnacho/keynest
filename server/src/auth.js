@@ -4,7 +4,10 @@ import { getCookie, setCookie, deleteCookie } from 'hono/cookie'
 import { kvGet, kvSet } from './db.js'
 
 const COOKIE_NAME = 'keynest_session'
-const SESSION_TTL_MS = 7 * 24 * 3600 * 1000 // 7d
+const SESSION_TTL_MS = 30 * 24 * 3600 * 1000 // 30d
+// Renovación deslizante: con menos de la mitad del TTL por delante se extiende
+// expires_at y se re-emite la cookie (solo sesiones persistentes, #267).
+const SESSION_RENEW_THRESHOLD_MS = SESSION_TTL_MS / 2
 
 function hmac(secret, data) {
   return crypto.createHmac('sha256', secret).update(data).digest('hex')
@@ -87,11 +90,34 @@ export function loginOk(db, c) {
   db.prepare('DELETE FROM login_attempts WHERE ip = ?').run(clientIp(c))
 }
 
-function createSession(db, userId, ua, isDemo = false) {
+function createSession(db, userId, ua, isDemo = false, remember = false) {
   const id = crypto.randomUUID()
-  db.prepare('INSERT INTO sessions (id, user_id, created_at, expires_at, ua, is_demo) VALUES (?, ?, ?, ?, ?, ?)')
-    .run(id, userId, Date.now(), Date.now() + SESSION_TTL_MS, ua || '', isDemo ? 1 : 0)
+  db.prepare('INSERT INTO sessions (id, user_id, created_at, expires_at, ua, is_demo, remember) VALUES (?, ?, ?, ?, ?, ?, ?)')
+    .run(id, userId, Date.now(), Date.now() + SESSION_TTL_MS, ua || '', isDemo ? 1 : 0, remember ? 1 : 0)
   return id
+}
+
+/* Renueva la expiración de una sesión persistente cuando queda por debajo del
+ * umbral (expiración deslizante, #267). Las sesiones "no recuérdame" (cookie
+ * de sesión) nunca se renuevan. Devuelve true si renovó (el caller re-emite
+ * la cookie con maxAge fresco). */
+export function renewSessionIfDue(db, s) {
+  if (!s || !s.remember) return false
+  const now = Date.now()
+  if (s.expires_at - now >= SESSION_RENEW_THRESHOLD_MS) return false
+  db.prepare('UPDATE sessions SET expires_at = ? WHERE id = ?').run(now + SESSION_TTL_MS, s.id)
+  s.expires_at = now + SESSION_TTL_MS
+  return true
+}
+
+function renewCookie(db, s, c) {
+  setCookie(c, COOKIE_NAME, `${s.id}.${hmac(sessionSecret(db), s.id)}`, {
+    httpOnly: true,
+    sameSite: 'Lax',
+    secure: false,
+    maxAge: SESSION_TTL_MS / 1000,
+    path: '/',
+  })
 }
 
 export function sessionFromCookie(db, c) {
@@ -107,8 +133,7 @@ export function sessionFromCookie(db, c) {
 }
 
 /** Usuario de la sesión; las sesiones viven en prodDb y el flag is_demo decide la BD de datos. */
-export function currentUser(prodDb, demoDb, c) {
-  const s = sessionFromCookie(prodDb, c)
+export function currentUser(prodDb, demoDb, c, s = sessionFromCookie(prodDb, c)) {
   if (!s) return null
   const dataDb = s.is_demo ? demoDb : prodDb
   const user = dataDb.prepare('SELECT id, username, email, phone, language, role, lookahead_days, display_name, avatar, dismissed_notifs, created_at FROM users WHERE id = ?').get(s.user_id) || null
@@ -118,8 +143,10 @@ export function currentUser(prodDb, demoDb, c) {
 
 export function requireAuth(prodDb, demoDb) {
   return async (c, next) => {
-    const user = currentUser(prodDb, demoDb, c)
+    const s = sessionFromCookie(prodDb, c)
+    const user = currentUser(prodDb, demoDb, c, s)
     if (!user) return c.json({ error: 'no autorizado' }, 401)
+    if (renewSessionIfDue(prodDb, s)) renewCookie(prodDb, s, c)
     c.set('user', user)
     c.set('db', user.is_demo ? demoDb : prodDb)
     await next()
@@ -129,9 +156,11 @@ export function requireAuth(prodDb, demoDb) {
 /** requireAuth + rol admin (factorizado: antes se repetía el check en ~11 endpoints). */
 export function requireAdmin(prodDb, demoDb) {
   return async (c, next) => {
-    const user = currentUser(prodDb, demoDb, c)
+    const s = sessionFromCookie(prodDb, c)
+    const user = currentUser(prodDb, demoDb, c, s)
     if (!user) return c.json({ error: 'no autorizado' }, 401)
     if (user.role !== 'admin') return c.json({ error: 'solo admin' }, 403)
+    if (renewSessionIfDue(prodDb, s)) renewCookie(prodDb, s, c)
     c.set('user', user)
     c.set('db', user.is_demo ? demoDb : prodDb)
     await next()
@@ -145,7 +174,7 @@ export function demoEnabled(prodDb) {
 
 export function handleDemoLogin(prodDb, c) {
   if (!demoEnabled(prodDb)) return null
-  const id = createSession(prodDb, 'demo-user', c.req.header('user-agent'), true)
+  const id = createSession(prodDb, 'demo-user', c.req.header('user-agent'), true, true)
   const mac = hmac(sessionSecret(prodDb), id)
   setCookie(c, COOKIE_NAME, `${id}.${mac}`, {
     httpOnly: true,
@@ -167,7 +196,7 @@ export async function handleLogin(db, c, { username, password, remember }) {
   }
   const valid = await bcrypt.compare(password || '', user.password_hash)
   if (!valid) return null
-  const id = createSession(db, user.id, c.req.header('user-agent'))
+  const id = createSession(db, user.id, c.req.header('user-agent'), false, Boolean(remember))
   const mac = hmac(sessionSecret(db), id)
   // Recuérdame: cookie 7d. Sin marcar: cookie de sesión (muere al cerrar el navegador)
   setCookie(c, COOKIE_NAME, `${id}.${mac}`, {

@@ -104,6 +104,10 @@ const MIGRATIONS = [
   //     borrarlo automáticamente al tocar o eliminar la limpieza.
   `ALTER TABLE expenses ADD COLUMN source_cleaning_id TEXT;
    CREATE INDEX IF NOT EXISTS idx_expenses_source_cleaning ON expenses(source_cleaning_id)`,
+  // 23: flag remember en sesiones (#267). Solo las sesiones persistentes
+  //     renuevan su expiración deslizante y re-emiten cookie; las de
+  //     "no recuérdame" (cookie de sesión) conservan su semántica.
+  `ALTER TABLE sessions ADD COLUMN remember INTEGER NOT NULL DEFAULT 0`,
 ]
 
 export function migrate(db) {
