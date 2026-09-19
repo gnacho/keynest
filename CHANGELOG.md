@@ -12,6 +12,17 @@ y este proyecto se adhiere a [Versionado Semántico](https://semver.org/lang/es/
 > release usar `scripts/release.sh` (calcula la versión y crea el tag con el
 > mensaje correcto).
 
+## [1.5.55] - 2026-09-19
+
+### Fixed
+
+- **Sesión de 30 días con caducidad deslizante (#267).** Antes la sesión caducaba
+  7 días después del login, sí o sí, aunque usaras la app a diario. Ahora las
+  sesiones persistentes ("Recuérdame") renuevan su expiración al usar la app y
+  la cookie se re-emite: si la usas con regularidad no volverás a perder el
+  login por calendario. Las sesiones sin "Recuérdame" conservan su
+  comportamiento (cookie de sesión).
+
 ## [Unreleased]
 
 ## [1.5.54] - 2026-09-12
