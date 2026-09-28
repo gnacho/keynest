@@ -162,7 +162,7 @@ export default function CalDayDetail({ date, open, onOpenChange, properties, onl
               <PersonAvatar name={r.guest.name} initials={r.guest.initials} size={32} />
               <div className="min-w-0">
                 <p className="truncate text-sm font-semibold">{r.guest.name}</p>
-                <p className="truncate text-xs" style={{ color: 'var(--text-muted)' }}>
+                <p className="truncate text-xs" style={{ color: 'var(--text-muted)' }} title={r.guest.country}>
                   {r.guest.country}
                 </p>
               </div>

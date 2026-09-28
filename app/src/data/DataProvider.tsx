@@ -3,6 +3,7 @@ import type { ReactNode } from 'react';
 import i18n, { applyLanguage } from '@/i18n';
 import { api } from '@/lib/api';
 import { fetchMe, isAuthed } from '@/lib/auth';
+import { paisDesdeUbicacion } from '@/lib/country-flag';
 import { DataContext } from './data-context';
 import type { AppSettings, DataApi, OccupancyInfo, PropertyInput, SyncResult } from './data-context';
 import type {
@@ -34,6 +35,7 @@ interface ApiReservation {
   summary: string; confirmation_code: string; phone_last4: string;
   amount?: number; notes?: string; guest_name?: string; booked_date?: string;
   guests?: number | null;
+  guest_location?: string;
 }
 
 function mapProperty(row: ApiProperty): Property {
@@ -61,6 +63,9 @@ function mapReservation(row: ApiReservation): Reservation {
   const code = row.confirmation_code || '';
   const realName = (row.guest_name || '').trim();
   const name = realName || (code ? `Airbnb · ${code}` : 'Airbnb');
+  const ubicacion = (row.guest_location || '').trim();
+  const pais = paisDesdeUbicacion(ubicacion);
+  const country = ubicacion ? `${pais ? `${pais.bandera} ` : ''}${ubicacion}` : '';
   const initials = realName
     ? realName.split(/\s+/).map((w) => w[0]).slice(0, 2).join('').toUpperCase()
     : (code || 'AB').slice(0, 2);
@@ -69,7 +74,7 @@ function mapReservation(row: ApiReservation): Reservation {
     propertyId: row.property_id,
     guest: {
       name,
-      country: '',
+      country,
       initials,
     },
     checkIn,

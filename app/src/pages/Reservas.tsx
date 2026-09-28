@@ -541,7 +541,11 @@ export default function Reservas() {
                       <PersonAvatar name={r.guest.name} initials={r.guest.initials} size={32} />
                       <span className="min-w-0">
                         <span className="block truncate text-sm font-semibold">{r.guest.name}</span>
-                        <span className="block truncate text-xs" style={{ color: 'var(--text-muted)' }}>
+                        <span
+                          className="block truncate text-xs"
+                          style={{ color: 'var(--text-muted)' }}
+                          title={r.guest.country}
+                        >
                           {r.guest.country}
                         </span>
                       </span>
@@ -670,7 +674,7 @@ export default function Reservas() {
                             <span className="tnum">{r.guestsCount}</span>
                           </span>
                         </span>
-                        <span className="block truncate text-xs" style={{ color: 'var(--text-muted)' }}>
+                        <span className="block truncate text-xs" style={{ color: 'var(--text-muted)' }} title={r.guest.country}>
                           {r.guest.country}
                         </span>
                       </span>

@@ -90,6 +90,31 @@ describe('aplicarCruce', () => {
     const fila = db.prepare('SELECT guest_name FROM reservations WHERE id = ?').get('res-4')
     expect(fila.guest_name).toBe('Nombre Previo')
   })
+
+  it('rellena guest_location cuando la reserva lo tiene vacío', () => {
+    insertaReserva('res-5', 'HM5')
+    escribeReservas([
+      { confirmation_code: 'HM5', guests: 2, amount: 100, guest_location: 'Vilnius, Lithuania' },
+    ])
+    aplicarCruce(db)
+    const fila = db.prepare('SELECT guest_location FROM reservations WHERE id = ?').get('res-5')
+    expect(fila.guest_location).toBe('Vilnius, Lithuania')
+  })
+
+  it('no pisa guest_location existente y aguanta scraper sin el campo', () => {
+    insertaReserva('res-6', 'HM6')
+    db.prepare("UPDATE reservations SET guest_location = 'Berlin, Germany' WHERE id = ?").run('res-6')
+    escribeReservas([
+      { confirmation_code: 'HM6', guests: 2, amount: 100, guest_location: 'Hamburg, Germany' },
+      { confirmation_code: 'HM7', guests: 1, amount: 40 },
+    ])
+    insertaReserva('res-7', 'HM7')
+    aplicarCruce(db)
+    const f6 = db.prepare('SELECT guest_location FROM reservations WHERE id = ?').get('res-6')
+    expect(f6.guest_location).toBe('Berlin, Germany')
+    const f7 = db.prepare('SELECT guest_location FROM reservations WHERE id = ?').get('res-7')
+    expect(f7.guest_location).toBe('')
+  })
 })
 
 describe('syncAirbnb', () => {
