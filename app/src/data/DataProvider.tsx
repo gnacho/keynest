@@ -76,6 +76,7 @@ function mapReservation(row: ApiReservation): Reservation {
       name,
       country,
       flag: pais ? pais.bandera : '',
+      countryCode: pais ? pais.codigo : '',
       initials,
     },
     checkIn,

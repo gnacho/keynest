@@ -26,6 +26,8 @@ export interface Guest {
   country: string;
   /** Emoji de bandera del país detectado ('' si no hay). */
   flag: string;
+  /** Código ISO 3166-1 alpha-2 del país ('' si no hay). */
+  countryCode: string;
   initials: string;
 }
 

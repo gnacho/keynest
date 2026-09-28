@@ -542,8 +542,13 @@ export default function Reservas() {
                       <span className="flex min-w-0 items-center gap-1.5">
                         <span className="truncate text-sm font-semibold">{r.guest.name}</span>
                         {r.guest.flag && (
-                          <span className="shrink-0 text-sm leading-none" title={r.guest.country}>
-                            {r.guest.flag}
+                          <span
+                            className="flex shrink-0 items-center gap-1 text-sm leading-none"
+                            style={{ color: 'var(--text-muted)' }}
+                            title={r.guest.country}
+                          >
+                            <span>{r.guest.flag}</span>
+                            <span className="text-xs font-medium">{r.guest.countryCode}</span>
                           </span>
                         )}
                       </span>
