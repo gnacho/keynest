@@ -115,21 +115,21 @@ export const USERS: AppUser[] = [
 /* ------------------------------------------------------------------ Huéspedes */
 
 const GUESTS: Guest[] = [
-  { name: 'Sofia Müller', country: 'Alemania', initials: 'SM' },
-  { name: "James O'Connor", country: 'Irlanda', initials: 'JO' },
-  { name: 'Chloé Dubois', country: 'Francia', initials: 'CD' },
-  { name: 'Marco Rossi', country: 'Italia', initials: 'MR' },
-  { name: 'Emma Johnson', country: 'EE. UU.', initials: 'EJ' },
-  { name: 'Lucas Silva', country: 'Brasil', initials: 'LS' },
-  { name: 'Anna Kowalska', country: 'Polonia', initials: 'AK' },
-  { name: 'David van Dijk', country: 'Países Bajos', initials: 'DV' },
-  { name: 'Ingrid Larsen', country: 'Noruega', initials: 'IL' },
-  { name: 'Pierre Martin', country: 'Francia', initials: 'PM' },
-  { name: 'Marta Gómez', country: 'España', initials: 'MG' },
-  { name: 'Tom Baker', country: 'Reino Unido', initials: 'TB' },
-  { name: 'Freya Nielsen', country: 'Dinamarca', initials: 'FN' },
-  { name: 'Luca Bianchi', country: 'Italia', initials: 'LB' },
-  { name: 'Hannah Schmidt', country: 'Austria', initials: 'HS' },
+  { name: 'Sofia Müller', country: 'Alemania', flag: '', countryCode: '', initials: 'SM' },
+  { name: "James O'Connor", country: 'Irlanda', flag: '', countryCode: '', initials: 'JO' },
+  { name: 'Chloé Dubois', country: 'Francia', flag: '', countryCode: '', initials: 'CD' },
+  { name: 'Marco Rossi', country: 'Italia', flag: '', countryCode: '', initials: 'MR' },
+  { name: 'Emma Johnson', country: 'EE. UU.', flag: '', countryCode: '', initials: 'EJ' },
+  { name: 'Lucas Silva', country: 'Brasil', flag: '', countryCode: '', initials: 'LS' },
+  { name: 'Anna Kowalska', country: 'Polonia', flag: '', countryCode: '', initials: 'AK' },
+  { name: 'David van Dijk', country: 'Países Bajos', flag: '', countryCode: '', initials: 'DV' },
+  { name: 'Ingrid Larsen', country: 'Noruega', flag: '', countryCode: '', initials: 'IL' },
+  { name: 'Pierre Martin', country: 'Francia', flag: '', countryCode: '', initials: 'PM' },
+  { name: 'Marta Gómez', country: 'España', flag: '', countryCode: '', initials: 'MG' },
+  { name: 'Tom Baker', country: 'Reino Unido', flag: '', countryCode: '', initials: 'TB' },
+  { name: 'Freya Nielsen', country: 'Dinamarca', flag: '', countryCode: '', initials: 'FN' },
+  { name: 'Luca Bianchi', country: 'Italia', flag: '', countryCode: '', initials: 'LB' },
+  { name: 'Hannah Schmidt', country: 'Austria', flag: '', countryCode: '', initials: 'HS' },
 ];
 
 const SPECIAL_REQUESTS = [

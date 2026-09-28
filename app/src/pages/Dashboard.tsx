@@ -196,9 +196,19 @@ export default function Dashboard() {
               {r.guestsCount}
             </span>
           </span>
-          {/* Desktop: nombre plano + guests muted */}
+          {/* Desktop: nombre plano + bandera/código + guests muted */}
           <span className="hidden items-center gap-1.5 md:flex">
             <span className="truncate text-sm font-semibold">{r.guest.name}</span>
+            {r.guest.flag && (
+              <span
+                className="flex shrink-0 items-center gap-1 leading-none"
+                style={{ color: 'var(--text-muted)' }}
+                title={r.guest.country}
+              >
+                <span>{r.guest.flag}</span>
+                <span className="text-xs font-medium">{r.guest.countryCode}</span>
+              </span>
+            )}
             <span className="flex shrink-0 items-center gap-0.5 text-xs" style={{ color: 'var(--text-muted)' }}>
               <Users className="h-3.5 w-3.5" />
               {r.guestsCount}

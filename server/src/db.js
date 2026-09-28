@@ -108,6 +108,10 @@ const MIGRATIONS = [
   //     renuevan su expiración deslizante y re-emiten cookie; las de
   //     "no recuérdame" (cookie de sesión) conservan su semántica.
   `ALTER TABLE sessions ADD COLUMN remember INTEGER NOT NULL DEFAULT 0`,
+  // 24: ubicación del huésped tal como la devuelve la API de Airbnb
+  //     (guest_user.location, p.ej. "Vilnius, Lithuania" o "FR"). La rellena
+  //     el cruce del scraper solo si está vacía (#269).
+  `ALTER TABLE reservations ADD COLUMN guest_location TEXT DEFAULT ''`,
 ]
 
 export function migrate(db) {
