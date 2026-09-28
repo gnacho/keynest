@@ -75,6 +75,7 @@ function mapReservation(row: ApiReservation): Reservation {
     guest: {
       name,
       country,
+      flag: pais ? pais.bandera : '',
       initials,
     },
     checkIn,

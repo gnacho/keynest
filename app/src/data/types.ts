@@ -24,6 +24,8 @@ export interface Property {
 export interface Guest {
   name: string;
   country: string;
+  /** Emoji de bandera del país detectado ('' si no hay). */
+  flag: string;
   initials: string;
 }
 

@@ -539,15 +539,13 @@ export default function Reservas() {
                   >
                     <span className="flex min-w-0 items-center gap-2.5">
                       <PersonAvatar name={r.guest.name} initials={r.guest.initials} size={32} />
-                      <span className="min-w-0">
-                        <span className="block truncate text-sm font-semibold">{r.guest.name}</span>
-                        <span
-                          className="block truncate text-xs"
-                          style={{ color: 'var(--text-muted)' }}
-                          title={r.guest.country}
-                        >
-                          {r.guest.country}
-                        </span>
+                      <span className="flex min-w-0 items-center gap-1.5">
+                        <span className="truncate text-sm font-semibold">{r.guest.name}</span>
+                        {r.guest.flag && (
+                          <span className="shrink-0 text-sm leading-none" title={r.guest.country}>
+                            {r.guest.flag}
+                          </span>
+                        )}
                       </span>
                     </span>
                     <span className="flex min-w-0 items-center gap-2">
@@ -673,9 +671,6 @@ export default function Reservas() {
                             <Users className="h-3.5 w-3.5" />
                             <span className="tnum">{r.guestsCount}</span>
                           </span>
-                        </span>
-                        <span className="block truncate text-xs" style={{ color: 'var(--text-muted)' }} title={r.guest.country}>
-                          {r.guest.country}
                         </span>
                       </span>
                       <StatusBadge label={t(`estadoReserva.${r.status}`)} />
