@@ -828,21 +828,28 @@ export default function Rentabilidad() {
                     endAngle={-270}
                     isAnimationActive={!reduce}
                     animationDuration={700}
-                    activeIndex={activePie}
-                    activeShape={(props: { cx?: number; cy?: number; innerRadius?: number; outerRadius?: number; startAngle?: number; endAngle?: number; fill?: string }) => (
-                      <Sector
-                        cx={props.cx}
-                        cy={props.cy}
-                        innerRadius={props.innerRadius}
-                        outerRadius={(props.outerRadius ?? 0) + 6}
-                        startAngle={props.startAngle}
-                        endAngle={props.endAngle}
-                        fill={props.fill}
-                        cornerRadius={6}
-                      />
-                    )}
-                    onMouseEnter={(_, i) => setActivePie(i)}
-                    onMouseLeave={() => setActivePie(-1)}
+                    shape={(props) => {
+                      // recharts 3: activeIndex/activeShape fueron eliminados
+                      // (los controla Tooltip). El "slice activo crece" se
+                      // reproduce con shape por porción; el color se toma
+                      // explícito de byType para no depender del merge de Cell.
+                      const p = props as { cx?: number; cy?: number; index?: number; innerRadius?: number; outerRadius?: number; startAngle?: number; endAngle?: number }
+                      const i = p.index ?? -1
+                      return (
+                        <g onMouseEnter={() => setActivePie(i)} onMouseLeave={() => setActivePie(-1)}>
+                          <Sector
+                            cx={p.cx}
+                            cy={p.cy}
+                            innerRadius={p.innerRadius}
+                            outerRadius={(p.outerRadius ?? 0) + (i === activePie ? 6 : 0)}
+                            startAngle={p.startAngle}
+                            endAngle={p.endAngle}
+                            fill={byType[i]?.color}
+                            cornerRadius={6}
+                          />
+                        </g>
+                      )
+                    }}
                   >
                     {byType.map((x) => (
                       <Cell key={x.type} fill={x.color} stroke="none" />

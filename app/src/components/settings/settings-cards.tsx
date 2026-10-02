@@ -7,7 +7,7 @@ import { useEffect, useState } from 'react';
 import type { ReactNode } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import React from 'react';
-import { Bell, Check, Download, FileText, Github, Heart, KeyRound, Languages, LogOut, Mail, Moon, MonitorSmartphone, Pencil, ShieldCheck, Sun, User, X } from 'lucide-react';
+import { Bell, Check, Download, ExternalLink, FileText, Heart, KeyRound, Languages, LogOut, Mail, Moon, MonitorSmartphone, Pencil, ShieldCheck, Sun, User, X } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -670,7 +670,7 @@ export function AboutCard() {
 
   const runtimeLine = `React v${React.version}`;
   const tiles = [
-    { key: 'code', icon: Github, label: tr('aj.aboutCode'), href: REPO_URL },
+    { key: 'code', icon: ExternalLink, label: tr('aj.aboutCode'), href: REPO_URL },
     { key: 'changelog', icon: FileText, label: tr('aj.aboutCambios'), href: 'https://keynest.cloudless.club' },
     { key: 'kofi', icon: Heart, label: tr('aj.aboutKofi'), href: 'https://ko-fi.com/gnacho' },
     { key: 'privacy', icon: ShieldCheck, label: tr('aj.aboutPrivacidad'), href: 'https://cloudless.club' },
