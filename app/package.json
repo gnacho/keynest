@@ -45,7 +45,7 @@
     "framer-motion": "^12.43.0",
     "i18next": "^26.4.2",
     "input-otp": "^1.5.0",
-    "lucide-react": "^0.562.0",
+    "lucide-react": "^1.50.0",
     "react": "^19.3.0",
     "react-day-picker": "^9.13.0",
     "react-dom": "^19.3.0",
