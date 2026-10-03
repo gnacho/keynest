@@ -42,6 +42,16 @@ y este proyecto se adhiere a [Versionado Semántico](https://semver.org/lang/es/
   login por calendario. Las sesiones sin "Recuérdame" conservan su
   comportamiento (cookie de sesión).
 
+## [1.5.57] - 2026-10-03
+
+### Changed
+
+- **Diálogo de actualización más grande (#273).** El asistente de
+  actualización ahora ocupa casi toda la ventana en escritorio, con las
+  notas de la release en un área con scroll que crece para llenarlo,
+  cabeceras de secciones en negrita y las acciones ancladas abajo. En
+  móvil se mantiene el formato compacto.
+
 ## [Unreleased]
 
 ## [1.5.54] - 2026-09-12
