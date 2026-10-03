@@ -12,6 +12,25 @@ y este proyecto se adhiere a [Versionado Semántico](https://semver.org/lang/es/
 > release usar `scripts/release.sh` (calcula la versión y crea el tag con el
 > mensaje correcto).
 
+## [1.5.56] - 2026-10-03
+
+### Added
+
+- **Bandera y código ISO del país del huésped (#269).** En Reservas y en el
+  Dashboard, cada huésped muestra su ubicación con la bandera de su país,
+  derivada del campo `guest_user.location` que ya devuelve la API de Airbnb
+  (sin peticiones extra al scraper). Incluye utilidad determinista de
+  resolución ISO 3166 alpha-2 con alias comunes (USA, UK, Holanda...) y
+  tooltip con la ubicación completa.
+
+### Changed
+
+- **Actualización de dependencias (#271).** Revisión rutinaria del stack:
+  React 19.3, Vite 8.3, eslint 10, lucide-react 1.x, framer-motion 14,
+  recharts 3 (gráfico de Rentabilidad adaptado), react-day-picker 10,
+  TypeScript 6 (toolchain nativo) y vitest 5. Sin cambios de funcionalidad:
+  build, lint, los 109 tests del servidor y npm audit quedan en verde.
+
 ## [1.5.55] - 2026-09-19
 
 ### Fixed
