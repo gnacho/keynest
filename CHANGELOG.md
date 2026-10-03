@@ -52,6 +52,15 @@ y este proyecto se adhiere a [Versionado Semántico](https://semver.org/lang/es/
   cabeceras de secciones en negrita y las acciones ancladas abajo. En
   móvil se mantiene el formato compacto.
 
+## [1.5.58] - 2026-10-03
+
+### Fixed
+
+- **Diálogo de actualización ajustado (#275).** El diálogo ya no ocupa casi
+  toda la pantalla: unos 800x600 en escritorio con las notas haciendo scroll
+  dentro, y la página de fondo ahora se ve claramente difuminada, no solo
+  oscurecida.
+
 ## [Unreleased]
 
 ## [1.5.54] - 2026-09-12
