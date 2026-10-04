@@ -254,6 +254,8 @@
     "necesitaAtencion_one": "{{count}} cerradura necesita atención",
     "necesitaAtencion_other": "{{count}} cerraduras necesitan atención",
     "bateriaPct": "batería {{pct}} %",
+    "bateriaTecladoPct": "teclado al {{pct}} %",
+    "teclado": "Teclado",
     "ver": "Ver",
     "puertaPrincipal": "Puerta principal",
     "sinConexion": "Sin conexión {{time}}",
@@ -905,6 +907,7 @@
   "notif": {
     "salidaHoy": "Salida hoy · {{name}}",
     "bateriaBaja": "Cerradura de {{name}}: batería al {{pct}}%",
+    "bateriaTeclado": "Teclado de {{name}}: batería al {{pct}}%",
     "nuevaReserva": "Nueva reserva en {{name}}"
   },
   "wo": {

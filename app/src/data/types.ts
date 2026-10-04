@@ -74,6 +74,8 @@ export interface Lock {
   battery: number; // %
   online: boolean;
   lastSeen: Date;
+  /** Teclado (keypad) emparejado (#279); null si la cerradura no tiene o no viene con batería. */
+  keypad: { name: string; battery: number; modified?: string | null } | null;
 }
 
 export type PersonRole = 'limpieza' | 'proveedor';

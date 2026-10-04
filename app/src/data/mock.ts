@@ -197,11 +197,11 @@ export const RESERVATIONS: Reservation[] = buildReservations();
 /* ---------------------------------------------------------------- Cerraduras */
 
 export const LOCKS: Lock[] = [
-  { id: 'lock-marina', propertyId: 'p-marina', name: 'Tedee Pro · Marina', battery: 87, online: true, lastSeen: at(0, 9, 12) },
-  { id: 'lock-ruzafa', propertyId: 'p-ruzafa', name: 'Tedee Pro · Ruzafa', battery: 64, online: true, lastSeen: at(0, 8, 47) },
-  { id: 'lock-carmen', propertyId: 'p-carmen', name: 'Tedee Go · El Carmen', battery: 92, online: true, lastSeen: at(0, 10, 3) },
-  { id: 'lock-malvarrosa', propertyId: 'p-malvarrosa', name: 'Tedee Pro · Malvarrosa', battery: 45, online: true, lastSeen: at(0, 7, 58) },
-  { id: 'lock-benimaclet', propertyId: 'p-benimaclet', name: 'Tedee Go · Benimaclet', battery: 18, online: false, lastSeen: at(0, Math.max(0, new Date().getHours() - 3), 21) },
+  { id: 'lock-marina', propertyId: 'p-marina', name: 'Tedee Pro · Marina', battery: 87, online: true, lastSeen: at(0, 9, 12), keypad: { name: 'marina-pad', battery: 74, modified: null } },
+  { id: 'lock-ruzafa', propertyId: 'p-ruzafa', name: 'Tedee Pro · Ruzafa', battery: 64, online: true, lastSeen: at(0, 8, 47), keypad: null },
+  { id: 'lock-carmen', propertyId: 'p-carmen', name: 'Tedee Go · El Carmen', battery: 92, online: true, lastSeen: at(0, 10, 3), keypad: { name: 'carmen-pad', battery: 24, modified: null } },
+  { id: 'lock-malvarrosa', propertyId: 'p-malvarrosa', name: 'Tedee Pro · Malvarrosa', battery: 45, online: true, lastSeen: at(0, 7, 58), keypad: null },
+  { id: 'lock-benimaclet', propertyId: 'p-benimaclet', name: 'Tedee Go · Benimaclet', battery: 18, online: false, lastSeen: at(0, Math.max(0, new Date().getHours() - 3), 21), keypad: null },
 ];
 
 /* -------------------------------------------------------------- Accesos Tedee */

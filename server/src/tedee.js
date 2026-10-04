@@ -49,11 +49,39 @@ export async function tedeeFetch(db, path, cloudPath) {
   return res.json()
 }
 
-/** Lista de cerraduras: [{id, name, battery, online, rssi, state, serial, propertyId}]
+/** Batería de los teclados (keypads) emparejados con cada cerradura (#279).
+ *  GET /api/v37/my/device/details?IncludeAccessories=true → result.keypads[]
+ *  con deviceState.batteryLevel (batteryLevelModifiedDateTime solo si <30 días,
+ *  docs oficiales) y connectedToLockId → cerradura emparejada.
+ *  Solo cloud: el bridge local no expone keypads. Devuelve Map(lockId →
+ *  {name, battery, modified}); ante error devuelve Map vacío para que las
+ *  cerraduras no dejen de cargarse por el teclado. */
+export async function tecladosPorCerradura(db) {
+  const mapa = new Map()
+  if (!isCloudUrl(tedeeConfig(db).url)) return mapa
+  try {
+    const raw = await tedeeFetch(db, null, '/api/v37/my/device/details?IncludeAccessories=true')
+    const list = Array.isArray(raw?.result?.keypads) ? raw.result.keypads : []
+    for (const k of list) {
+      const lockId = Number(k.connectedToLockId)
+      const battery = k.deviceState?.batteryLevel
+      if (!lockId || typeof battery !== 'number') continue
+      mapa.set(lockId, {
+        name: k.name || 'Keypad',
+        battery,
+        modified: k.deviceState?.batteryLevelModifiedTime ?? null,
+      })
+    }
+  } catch { /* sin teclados visibles: seguimos con las cerraduras */ }
+  return mapa
+}
+
+/** Lista de cerraduras: [{id, name, battery, online, rssi, state, serial, propertyId, keypad}]
  *  Bridge: GET /v1.0/lock. Cloud: GET /api/v37/my/lock (PAK).
  *  propertyId se cruza con properties.tedee_lock_id (si hay match).
  *  soloAsignadas (#277): devuelve solo las cerraduras asignadas a un inmueble;
- *  el resto es ruido de la cuenta (no se muestra ni se notifica). */
+ *  el resto es ruido de la cuenta (no se muestra ni se notifica).
+ *  keypad (#279): teclado emparejado {name, battery, modified} o null. */
 export async function tedeeLocks(db, { soloAsignadas = false } = {}) {
   const cloud = isCloudUrl(tedeeConfig(db).url)
   const raw = await tedeeFetch(db, '/v1.0/lock', '/api/v37/my/lock')
@@ -90,8 +118,15 @@ export async function tedeeLocks(db, { soloAsignadas = false } = {}) {
       propertyId: propByLock.get(Number(l.id)) ?? '',
     }))
   }
-  if (soloAsignadas) return todas.filter((l) => l.propertyId !== '')
-  return todas
+  if (todas.length === 0) return []
+  const teclados = await tecladosPorCerradura(db)
+  if (soloAsignadas) return todas.filter((l) => l.propertyId !== '').map(conTeclado)
+  return todas.map(conTeclado)
+
+  /** #279: añade el teclado emparejado (null si no hay o no viene con batería). */
+  function conTeclado(l) {
+    return { ...l, keypad: teclados.get(Number(l.id)) ?? null }
+  }
 }
 
 /** Reservas con nombre de huésped agrupadas por inmueble (#277). */

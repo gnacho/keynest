@@ -7,6 +7,7 @@ import {
   BatteryMedium,
   BatteryWarning,
   Crown,
+  Keyboard,
   Lock,
   RefreshCw,
   Smartphone,
@@ -167,6 +168,18 @@ function LockCard({
               {lock.battery} %
             </span>
           </div>
+
+          {lock.keypad && (
+            <div className="mt-1 flex items-center gap-2">
+              <Keyboard className="h-3.5 w-3.5 shrink-0" style={{ color: batteryTone(lock.keypad.battery).color }} />
+              <span className="text-[11px]" style={{ color: 'var(--text-muted)' }}>
+                {t('ted.teclado')}
+              </span>
+              <span className="ml-auto font-display tnum text-[11px] font-semibold" style={{ color: batteryTone(lock.keypad.battery).color }}>
+                {lock.keypad.battery} %
+              </span>
+            </div>
+          )}
         </div>
       </div>
 
@@ -337,7 +350,7 @@ export default function Tedee() {
               {problemLocks
                 .map((l) => {
                   const p = data.getProperty(l.propertyId);
-                  const reasons = [!l.online && 'offline', l.battery < 30 && t('ted.bateriaPct', { pct: l.battery })]
+                  const reasons = [!l.online && 'offline', l.battery < 30 && t('ted.bateriaPct', { pct: l.battery }), l.keypad && l.keypad.battery < 30 && t('ted.bateriaTecladoPct', { pct: l.keypad.battery })]
                     .filter(Boolean)
                     .join(' · ');
                   return `${p?.name ?? l.name} (${reasons})`;
@@ -520,6 +533,30 @@ export default function Tedee() {
                   );
                 })()}
               </div>
+
+              {detailLock.keypad && (
+                <div className="flex items-center gap-3 rounded-xl p-3" style={{ backgroundColor: 'var(--surface-2)' }}>
+                  {(() => {
+                    const toneK = batteryTone(detailLock.keypad.battery);
+                    return (
+                      <>
+                        <Keyboard className="h-5 w-5" style={{ color: toneK.color }} />
+                        <div className="flex-1">
+                          <p className="text-xs font-medium" style={{ color: 'var(--text-muted)' }}>
+                            {t('ted.teclado')}
+                          </p>
+                          <span className="mt-1 block h-1.5 overflow-hidden rounded-full" style={{ backgroundColor: 'var(--border)' }}>
+                            <span className="block h-full rounded-full" style={{ width: `${detailLock.keypad.battery}%`, backgroundColor: toneK.color }} />
+                          </span>
+                        </div>
+                        <span className="font-display tnum text-lg font-semibold" style={{ color: toneK.color }}>
+                          {detailLock.keypad.battery} %
+                        </span>
+                      </>
+                    );
+                  })()}
+                </div>
+              )}
 
               <div>
                 <p className="mb-1 text-[11px] font-semibold uppercase tracking-[0.08em]" style={{ color: 'var(--text-faint)' }}>

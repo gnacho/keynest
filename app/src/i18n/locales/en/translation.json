@@ -254,6 +254,8 @@
     "necesitaAtencion_one": "{{count}} lock needs attention",
     "necesitaAtencion_other": "{{count}} locks need attention",
     "bateriaPct": "battery {{pct}} %",
+    "bateriaTecladoPct": "keypad at {{pct}} %",
+    "teclado": "Keypad",
     "ver": "View",
     "puertaPrincipal": "Main door",
     "sinConexion": "Offline {{time}}",
@@ -905,6 +907,7 @@
   "notif": {
     "salidaHoy": "Check-out today · {{name}}",
     "bateriaBaja": "Lock at {{name}}: battery at {{pct}}%",
+    "bateriaTeclado": "{{name}} keypad: battery at {{pct}}%",
     "nuevaReserva": "New reservation at {{name}}"
   },
   "wo": {

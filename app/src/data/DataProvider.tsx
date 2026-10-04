@@ -178,6 +178,7 @@ interface ApiTedeeLock {
   id: number; name: string; battery: number; online: boolean;
   rssi: number | null; state: number | null; jammed: boolean;
   serial: string; propertyId: string;
+  keypad?: { name: string; battery: number; modified?: string | null } | null;
 }
 
 interface ApiTedeeAccess {
@@ -194,6 +195,7 @@ function mapLock(row: ApiTedeeLock): Lock {
     battery: row.battery ?? 0,
     online: Boolean(row.online),
     lastSeen: new Date(),
+    keypad: row.keypad ?? null,
   };
 }
 
@@ -697,6 +699,16 @@ export default function DataProvider({ children }: { children: ReactNode }) {
             tone: 'rose',
             to: `/tedee?lock=${l.id}`,
           });
+          // Teclado emparejado con batería baja (#279): aviso separado.
+          if (l.keypad && l.keypad.battery < 30) {
+            out.push({
+              id: `not-keypad-${l.id}`,
+              text: i18n.t('notif.bateriaTeclado', { name: p.name, pct: l.keypad.battery }),
+              time: l.lastSeen,
+              tone: 'rose',
+              to: `/tedee?lock=${l.id}`,
+            });
+          }
         }
         // "Nueva reserva" honesta (#261): solo reservas con booked_date en los
         // últimos 7 días y con su fecha REAL (antes: la de check-in más lejano

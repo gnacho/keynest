@@ -90,7 +90,8 @@ describe('tedeeAccesses', () => {
 
   it('devuelve [] cuando las cerraduras no tienen actividad', async () => {
     configurarTedeeCloud(db)
-    mockResponse({ result: [cloudLock] }) // locks
+    mockResponse({ result: [cloudLock] })
+    mockResponse({ result: { keypads: [] } }) // details (#279) // locks
     mockResponse({ result: [] }) // deviceactivity vacío
     const acc = await tedeeAccesses(db)
     expect(acc).toEqual([])
@@ -100,6 +101,7 @@ describe('tedeeAccesses', () => {
     insertarPropiedad(176718)
     configurarTedeeCloud(db)
     mockResponse({ result: [cloudLock] })
+    mockResponse({ result: { keypads: [] } }) // details (#279)
     mockResponse({
       result: [
         { id: 1, event: 61, date: '2026-08-09T10:00:00Z', pinAlias: 'Ana' },
@@ -122,6 +124,7 @@ describe('tedeeAccesses', () => {
     insertarPropiedad(176718)
     configurarTedeeCloud(db)
     mockResponse({ result: [cloudLock] })
+    mockResponse({ result: { keypads: [] } }) // details (#279)
     mockResponse({
       result: [{ id: 3, event: 32, date: '2026-08-09T14:00:00Z' }],
     })
@@ -136,6 +139,7 @@ describe('tedeeAccesses', () => {
     insertarPropiedad(176718)
     configurarTedeeCloud(db)
     mockResponse({ result: [cloudLock] })
+    mockResponse({ result: { keypads: [] } }) // details (#279)
     mockResponse({
       result: [
         { id: 10, event: 77, date: '2026-08-09T09:00:00Z', username: 'Carlos' },
@@ -151,6 +155,7 @@ describe('tedeeAccesses', () => {
     insertarPropiedad(176718)
     configurarTedeeCloud(db)
     mockResponse({ result: [cloudLock] })
+    mockResponse({ result: { keypads: [] } }) // details (#279)
     mockResponse({
       result: [
         { id: 20, event: 1, date: '2026-08-09T10:00:00Z' },
@@ -167,6 +172,7 @@ describe('tedeeAccesses', () => {
     insertarPropiedad(176718)
     configurarTedeeCloud(db)
     mockResponse({ result: [cloudLock] })
+    mockResponse({ result: { keypads: [] } }) // details (#279)
     mockResponse({
       result: [{ id: 30, event: 61, date: '2026-08-09T11:00:00Z', pinAlias: 'Luis' }],
     })
@@ -180,6 +186,7 @@ describe('tedeeAccesses', () => {
     insertarPropiedad(176718)
     configurarTedeeCloud(db)
     mockResponse({ result: [cloudLock] })
+    mockResponse({ result: { keypads: [] } }) // details (#279)
     mockResponse({
       result: [
         { id: 40, event: 61, date: '2026-08-01T10:00:00Z' },
@@ -200,6 +207,7 @@ describe('tedeeAccesses', () => {
     insertarPropiedad(176718)
     configurarTedeeCloud(db)
     mockResponse({ result: [cloudLock] })
+    mockResponse({ result: { keypads: [] } }) // details (#279)
     mockResponse({
       result: [{ id: 50, event: 61, date: '2026-08-09T10:00:00Z', accessLinkName: 'Enlace compartido' }],
     })
@@ -225,6 +233,7 @@ describe('tedeeAccesses', () => {
         { id: 999, name: 'Garaje', isConnected: true, deviceState: { batteryLevel: 60 }, serialNumber: 'G-1' },
       ],
     })
+    mockResponse({ result: { keypads: [] } }) // details (#279)
     mockResponse({
       result: [{ id: 100, event: 61, date: '2026-08-09T08:00:00Z', pinAlias: 'X' }],
     })
@@ -279,6 +288,7 @@ describe('inquilino del acceso (#277)', () => {
     insertarReserva(prop, '2026-08-05', '2026-08-14', 'Laith Kawar')
     configurarTedeeCloud(db)
     mockResponse({ result: [cloudLock] })
+    mockResponse({ result: { keypads: [] } }) // details (#279)
     mockResponse({ result: [{ id: 400, event: 61, date: dia }] }) // sin actor
     const acc = await tedeeAccesses(db)
     expect(acc).toHaveLength(1)
@@ -291,6 +301,7 @@ describe('inquilino del acceso (#277)', () => {
     insertarReserva(prop, '2026-08-20', '2026-08-25', 'Otro huésped')
     configurarTedeeCloud(db)
     mockResponse({ result: [cloudLock] })
+    mockResponse({ result: { keypads: [] } }) // details (#279)
     mockResponse({ result: [{ id: 401, event: 61, date: dia, pinAlias: 'Ana' }] })
     const acc = await tedeeAccesses(db)
     expect(acc[0].guestName).toBe('')
@@ -302,6 +313,7 @@ describe('inquilino del acceso (#277)', () => {
     insertarReserva(prop, '2026-08-05', '2026-08-09', 'Saliente')
     configurarTedeeCloud(db)
     mockResponse({ result: [cloudLock] })
+    mockResponse({ result: { keypads: [] } }) // details (#279)
     // 10:00Z → mismo día local; lock por keypad = salida ese mismo día
     mockResponse({ result: [{ id: 402, event: 65, date: '2026-08-09T08:00:00' }] })
     const acc = await tedeeAccesses(db)
@@ -314,6 +326,7 @@ describe('inquilino del acceso (#277)', () => {
     insertarReserva(prop, '2026-08-09', '2026-08-14', 'Entrante')
     configurarTedeeCloud(db)
     mockResponse({ result: [cloudLock] })
+    mockResponse({ result: { keypads: [] } }) // details (#279)
     mockResponse({ result: [{ id: 403, event: 61, date: dia }] })
     const acc = await tedeeAccesses(db)
     expect(acc[0].guestName).toBe('Saliente')
@@ -325,6 +338,7 @@ describe('inquilino del acceso (#277)', () => {
     insertarReserva(otra, '2026-08-01', '2026-08-30', 'De otro inmueble')
     configurarTedeeCloud(db)
     mockResponse({ result: [cloudLock] })
+    mockResponse({ result: { keypads: [] } }) // details (#279)
     mockResponse({ result: [{ id: 404, event: 61, date: dia }] })
     const acc = await tedeeAccesses(db)
     expect(acc[0].guestName).toBe('')
@@ -337,6 +351,7 @@ describe('tedeeLocks — propertyId', () => {
     const id = insertarPropiedad(176718)
     configurarTedeeCloud(db)
     mockResponse({ result: [cloudLock] })
+    mockResponse({ result: { keypads: [] } }) // details (#279)
     const locks = await tedeeLocks(db)
     expect(locks).toHaveLength(1)
     expect(locks[0].propertyId).toBe(id)
@@ -345,6 +360,7 @@ describe('tedeeLocks — propertyId', () => {
   it('propertyId vacío cuando el lock no está asociado', async () => {
     configurarTedeeCloud(db)
     mockResponse({ result: [cloudLock] })
+    mockResponse({ result: { keypads: [] } }) // details (#279)
     const locks = await tedeeLocks(db)
     expect(locks).toHaveLength(1)
     expect(locks[0].propertyId).toBe('')
@@ -363,5 +379,60 @@ describe('tedeeLocks — propertyId', () => {
     expect(locks).toHaveLength(2)
     expect(locks[0].propertyId).toBe(id)
     expect(locks[1].propertyId).toBe('')
+  })
+})
+
+describe('teclados emparejados (#279)', () => {
+  it('la cerradura recibe la batería de su teclado (connectedToLockId)', async () => {
+    insertarPropiedad(176718)
+    configurarTedeeCloud(db)
+    mockResponse({ result: [cloudLock] })
+    mockResponse({
+      result: {
+        keypads: [{ id: 9001, type: 3, name: 'ag47-pad', connectedToLockId: 176718, deviceState: { batteryLevel: 8, batteryLevelModifiedTime: '2026-10-04T17:55:33Z' } }],
+      },
+    })
+    const locks = await tedeeLocks(db)
+    expect(locks[0].keypad).toEqual({ name: 'ag47-pad', battery: 8, modified: '2026-10-04T17:55:33Z' })
+  })
+
+  it('keypad sin deviceState (sin batería) → keypad null', async () => {
+    insertarPropiedad(176718)
+    configurarTedeeCloud(db)
+    mockResponse({ result: [cloudLock] })
+    mockResponse({
+      result: { keypads: [{ id: 9002, type: 10, name: 'sin-bateria', connectedToLockId: 176718 }] },
+    })
+    const locks = await tedeeLocks(db)
+    expect(locks[0].keypad).toBeNull()
+  })
+
+  it('keypad de otra cerradura no se mezcla', async () => {
+    insertarPropiedad(176718)
+    configurarTedeeCloud(db)
+    mockResponse({ result: [cloudLock] })
+    mockResponse({
+      result: { keypads: [{ id: 9003, type: 3, name: 'otro', connectedToLockId: 999, deviceState: { batteryLevel: 50 } }] },
+    })
+    const locks = await tedeeLocks(db)
+    expect(locks[0].keypad).toBeNull()
+  })
+
+  it('bridge local: keypad null (no expone keypads)', async () => {
+    insertarPropiedad(176718)
+    configurarTedeeBridge(db)
+    mockResponse([{ id: 176718, name: 'Portal', batteryLevel: 70, isConnected: true, state: 2, serialNumber: 'SN-B' }])
+    const locks = await tedeeLocks(db)
+    expect(locks[0].keypad).toBeNull()
+  })
+
+  it('details caído: cerraduras cargan igual con keypad null', async () => {
+    insertarPropiedad(176718)
+    configurarTedeeCloud(db)
+    mockResponse({ result: [cloudLock] })
+    mockResponse({ error: 'oops' }, 500)
+    const locks = await tedeeLocks(db)
+    expect(locks).toHaveLength(1)
+    expect(locks[0].keypad).toBeNull()
   })
 })
