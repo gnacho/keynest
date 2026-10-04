@@ -12,6 +12,19 @@ y este proyecto se adhiere a [Versionado Semántico](https://semver.org/lang/es/
 > release usar `scripts/release.sh` (calcula la versión y crea el tag con el
 > mensaje correcto).
 
+## [1.5.59] - 2026-10-04
+
+### Added
+
+- **Tedee: solo cerraduras con inmueble y nombres de inquilinos (#277).** La
+  página de Cerraduras ahora muestra únicamente las cerraduras asignadas a un
+  inmueble (El resto de las que devuelva la API de Tedee quedan ocultas), y las
+  alertas de offline, recuperación y batería solo se envían para esas. El
+  registro de accesos resuelve el nombre del inquilino de la reserva activa en
+  la fecha de cada apertura y lo muestra como protagonista; el alias del PIN de
+  Tedee (en la práctica, el código de reserva de Airbnb) queda como detalle
+  secundario.
+
 ## [1.5.56] - 2026-10-03
 
 ### Added
