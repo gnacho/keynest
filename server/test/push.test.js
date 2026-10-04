@@ -351,7 +351,7 @@ describe('alertas: transacción abonada (24h post check-in)', () => {
 })
 
 describe('alertas: Tedee', () => {
-  const lockOn = { id: 1, name: 'Portal', battery: 85, online: true }
+  const lockOn = { id: 1, name: 'Portal', propertyId: 'p1', battery: 85, online: true }
   const lockOff = { ...lockOn, online: false }
 
   it('offline a los 3 ticks (crítica), sin reenvíos, y avisa al recuperar', async () => {
@@ -414,6 +414,19 @@ describe('alertas: Tedee', () => {
     expect(llamadas).toHaveLength(0)
     await checker.check()
     expect(llamadas.map((l) => l.tipo)).toEqual(['tedee_offline'])
+  })
+
+  it('cerradura sin inmueble asignado no notifica (#277)', async () => {
+    const { llamadas, notifyFn } = captura()
+    const checker = createTedeeChecker({
+      db,
+      notifyFn,
+      locksFn: async () => [{ id: 7, name: 'Sobrante', propertyId: '', battery: 10, online: false }],
+    })
+    await checker.check()
+    await checker.check()
+    await checker.check()
+    expect(llamadas).toHaveLength(0) // ni offline ni batería: no está asignada
   })
 
   it('sin configurar Tedee no hace nada', async () => {

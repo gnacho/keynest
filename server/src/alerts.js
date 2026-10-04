@@ -163,22 +163,29 @@ export function createTedeeChecker({ db, notifyFn = notifyAll, locksFn = tedeeLo
   function estadoDe(id) {
     let e = estado.get(id)
     if (!e) {
-      e = { nombre: String(id), mal: 0, alertadoOff: false, alertadoBat: false }
+      e = { nombre: String(id), propertyId: '', mal: 0, alertadoOff: false, alertadoBat: false }
       estado.set(id, e)
     }
     return e
   }
 
+  // #277: solo se vigilan (y notifican) las cerraduras asignadas a un inmueble.
+  function asignadas(locks) {
+    return locks.filter((l) => String(l.propertyId || '') !== '')
+  }
+
   async function check() {
     let locks
     try {
-      locks = await locksFn(db)
+      locks = asignadas(await locksFn(db))
     } catch (err) {
       if (err?.message === 'not-configured') return // sin config Tedee: nada que vigilar
       // Bridge/API caído: las cerraduras conocidas cuentan tick offline (si
       // nunca hubo un fetch bueno, no hay nada que alertar: sin falsos +).
+      // Solo las asignadas (#277): cerraduras sin inmueble no notifican.
       if (!vioCerraduras) return
       for (const e of estado.values()) {
+        if (!e.propertyId) continue
         e.mal++
         if (!e.alertadoOff && e.mal >= TICKS_TEDEE_OFFLINE) {
           e.alertadoOff = true
@@ -191,6 +198,7 @@ export function createTedeeChecker({ db, notifyFn = notifyAll, locksFn = tedeeLo
     for (const l of locks) {
       const e = estadoDe(l.id)
       e.nombre = l.name || e.nombre
+      e.propertyId = String(l.propertyId || '')
       if (!l.online) {
         e.mal++
         if (!e.alertadoOff && e.mal >= TICKS_TEDEE_OFFLINE) {

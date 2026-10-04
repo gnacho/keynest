@@ -183,7 +183,7 @@ interface ApiTedeeLock {
 interface ApiTedeeAccess {
   id: string; at: string; actorName: string;
   actorRole: TedeeAccess['actorRole']; type: TedeeAccess['type'];
-  propertyId: string; lockId: string;
+  propertyId: string; lockId: string; guestName?: string;
 }
 
 function mapLock(row: ApiTedeeLock): Lock {
@@ -206,6 +206,7 @@ function mapAccess(row: ApiTedeeAccess): TedeeAccess {
     type: row.type,
     propertyId: row.propertyId ?? '',
     lockId: row.lockId,
+    guestName: row.guestName ?? '',
   };
 }
 

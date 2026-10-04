@@ -63,6 +63,8 @@ export interface TedeeAccess {
   type: AccessType;
   propertyId: string;
   lockId: string;
+  /** Inquilino de la reserva activa en la fecha del acceso (#277); '' si no hay match. */
+  guestName?: string;
 }
 
 export interface Lock {

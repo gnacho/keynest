@@ -51,13 +51,20 @@ const cloudLock = {
   deviceState: { batteryLevel: 85, state: 2 }, serialNumber: 'SN-001',
 }
 
-function insertarPropiedad(lockId) {
+function insertarPropiedad(lockId, slug = 'prop') {
   const id = crypto.randomUUID()
   db.prepare(
     `INSERT INTO properties (id, slug, name, address, bedrooms, bathrooms, area, photo, checklist, instructions, created_at, tedee_lock_id)
-     VALUES (?, 'prop', 'Mi Propiedad', 'Calle 1', 1, 1, 50, '', '[]', '', ?, ?)`,
-  ).run(id, new Date().toISOString(), lockId)
+     VALUES (?, ?, 'Mi Propiedad', 'Calle 1', 1, 1, 50, '', '[]', '', ?, ?)`,
+  ).run(id, slug, new Date().toISOString(), lockId)
   return id
+}
+
+function insertarReserva(propertyId, checkin, checkout, guestName) {
+  db.prepare(
+    `INSERT INTO reservations (id, property_id, uid, checkin, checkout, summary, confirmation_code, phone_last4, guest_name, created_at)
+     VALUES (?, ?, ?, ?, ?, 'Reserved', 'CODE', '', ?, ?)`,
+  ).run(crypto.randomUUID(), propertyId, `uid-${crypto.randomUUID()}`, checkin, checkout, guestName, Date.now())
 }
 
 describe('tedeeAccesses', () => {
@@ -90,6 +97,7 @@ describe('tedeeAccesses', () => {
   })
 
   it('mapea PIN unlock → entrada, keypad lock → salida, orden descendente', async () => {
+    insertarPropiedad(176718)
     configurarTedeeCloud(db)
     mockResponse({ result: [cloudLock] })
     mockResponse({
@@ -111,6 +119,7 @@ describe('tedeeAccesses', () => {
   })
 
   it('eventos de app → remota, sin actor → propietario', async () => {
+    insertarPropiedad(176718)
     configurarTedeeCloud(db)
     mockResponse({ result: [cloudLock] })
     mockResponse({
@@ -124,6 +133,7 @@ describe('tedeeAccesses', () => {
   })
 
   it('huella → entrada', async () => {
+    insertarPropiedad(176718)
     configurarTedeeCloud(db)
     mockResponse({ result: [cloudLock] })
     mockResponse({
@@ -138,6 +148,7 @@ describe('tedeeAccesses', () => {
   })
 
   it('ignora eventos no-access (batería, calibración...)', async () => {
+    insertarPropiedad(176718)
     configurarTedeeCloud(db)
     mockResponse({ result: [cloudLock] })
     mockResponse({
@@ -166,6 +177,7 @@ describe('tedeeAccesses', () => {
   })
 
   it('sort descendente por fecha', async () => {
+    insertarPropiedad(176718)
     configurarTedeeCloud(db)
     mockResponse({ result: [cloudLock] })
     mockResponse({
@@ -185,6 +197,7 @@ describe('tedeeAccesses', () => {
   })
 
   it('extrae actorName de accessLinkName', async () => {
+    insertarPropiedad(176718)
     configurarTedeeCloud(db)
     mockResponse({ result: [cloudLock] })
     mockResponse({
@@ -203,6 +216,8 @@ describe('tedeeAccesses', () => {
   })
 
   it('consolida accesos de múltiples cerraduras', async () => {
+    insertarPropiedad(176718, 'portal')
+    insertarPropiedad(999, 'garaje')
     configurarTedeeCloud(db)
     mockResponse({
       result: [
@@ -222,6 +237,98 @@ describe('tedeeAccesses', () => {
     expect(acc[0].type).toBe('salida')
     expect(acc[1].lockId).toBe('176718') // portal 08:00
     expect(acc[1].type).toBe('entrada')
+  })
+})
+
+describe('solo cerraduras asignadas (#277)', () => {
+  it('tedeeLocks(soloAsignadas) filtra las cerraduras sin inmueble', async () => {
+    insertarPropiedad(176718)
+    configurarTedeeCloud(db)
+    mockResponse({
+      result: [
+        cloudLock,
+        { id: 999, name: 'Sin asignar', isConnected: false, deviceState: { batteryLevel: 0 }, serialNumber: 'XX' },
+      ],
+    })
+    const locks = await tedeeLocks(db, { soloAsignadas: true })
+    expect(locks).toHaveLength(1)
+    expect(locks[0].id).toBe(176718)
+  })
+
+  it('tedeeAccesses ignora los accesos de cerraduras sin inmueble', async () => {
+    configurarTedeeCloud(db)
+    mockResponse({
+      result: [
+        { id: 999, name: 'Sin asignar', isConnected: true, deviceState: { batteryLevel: 60 }, serialNumber: 'XX' },
+      ],
+    })
+    mockResponse({
+      result: [{ id: 300, event: 61, date: '2026-08-09T08:00:00Z', pinAlias: 'X' }],
+    })
+    const acc = await tedeeAccesses(db)
+    expect(acc).toEqual([])
+  })
+})
+
+describe('inquilino del acceso (#277)', () => {
+  // Fechas locales (sin Z): fechaLocal() no depende del TZ del entorno.
+  const dia = '2026-08-09T12:00:00'
+
+  it('reserva activa → guestName con el nombre del huésped', async () => {
+    const prop = insertarPropiedad(176718)
+    insertarReserva(prop, '2026-08-05', '2026-08-14', 'Laith Kawar')
+    configurarTedeeCloud(db)
+    mockResponse({ result: [cloudLock] })
+    mockResponse({ result: [{ id: 400, event: 61, date: dia }] }) // sin actor
+    const acc = await tedeeAccesses(db)
+    expect(acc).toHaveLength(1)
+    expect(acc[0].guestName).toBe('Laith Kawar')
+    expect(acc[0].actorRole).toBe('huésped')
+  })
+
+  it('sin reserva que cubra la fecha → guestName vacío', async () => {
+    const prop = insertarPropiedad(176718)
+    insertarReserva(prop, '2026-08-20', '2026-08-25', 'Otro huésped')
+    configurarTedeeCloud(db)
+    mockResponse({ result: [cloudLock] })
+    mockResponse({ result: [{ id: 401, event: 61, date: dia, pinAlias: 'Ana' }] })
+    const acc = await tedeeAccesses(db)
+    expect(acc[0].guestName).toBe('')
+    expect(acc[0].actorRole).toBe('huésped') // por el alias del PIN
+  })
+
+  it('el día del checkout sigue siendo del huésped saliente', async () => {
+    const prop = insertarPropiedad(176718)
+    insertarReserva(prop, '2026-08-05', '2026-08-09', 'Saliente')
+    configurarTedeeCloud(db)
+    mockResponse({ result: [cloudLock] })
+    // 10:00Z → mismo día local; lock por keypad = salida ese mismo día
+    mockResponse({ result: [{ id: 402, event: 65, date: '2026-08-09T08:00:00' }] })
+    const acc = await tedeeAccesses(db)
+    expect(acc[0].guestName).toBe('Saliente')
+  })
+
+  it('empate checkout+checkin el mismo día → gana el ya alojado', async () => {
+    const prop = insertarPropiedad(176718)
+    insertarReserva(prop, '2026-08-01', '2026-08-09', 'Saliente')
+    insertarReserva(prop, '2026-08-09', '2026-08-14', 'Entrante')
+    configurarTedeeCloud(db)
+    mockResponse({ result: [cloudLock] })
+    mockResponse({ result: [{ id: 403, event: 61, date: dia }] })
+    const acc = await tedeeAccesses(db)
+    expect(acc[0].guestName).toBe('Saliente')
+  })
+
+  it('reservas de otros inmuebles no contaminan el acceso', async () => {
+    insertarPropiedad(176718)
+    const otra = insertarPropiedad(1, 'otra')
+    insertarReserva(otra, '2026-08-01', '2026-08-30', 'De otro inmueble')
+    configurarTedeeCloud(db)
+    mockResponse({ result: [cloudLock] })
+    mockResponse({ result: [{ id: 404, event: 61, date: dia }] })
+    const acc = await tedeeAccesses(db)
+    expect(acc[0].guestName).toBe('')
+    expect(acc[0].actorRole).toBe('propietario')
   })
 })
 

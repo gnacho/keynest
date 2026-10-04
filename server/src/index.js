@@ -505,12 +505,13 @@ guarded.get('/bootstrap', async (c) => {
     })(),
   }
   const users = db.prepare('SELECT id, username AS name, phone, role FROM users').all()
-  // Tedee (best-effort): cerraduras + accesos reales desde la cloud; si falla
-  // o no está configurado, arrays vacíos (la página Tedee muestra vacío).
+  // Tedee (best-effort): cerraduras asignadas a inmuebles (#277: el resto se
+  // oculta) + accesos reales desde la cloud; si falla o no está configurado,
+  // arrays vacíos (la página Tedee muestra vacío).
   let locks = []
   let accesses = []
   try {
-    const [lk, ac] = await Promise.all([tedeeLocks(db), tedeeAccesses(db)])
+    const [lk, ac] = await Promise.all([tedeeLocks(db, { soloAsignadas: true }), tedeeAccesses(db)])
     locks = lk
     accesses = ac
   } catch { /* tedee no configurado o caído */ }

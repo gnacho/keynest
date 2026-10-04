@@ -419,6 +419,9 @@ export default function Tedee() {
                   const role = ROLE_META[a.actorRole];
                   const property = data.getProperty(a.propertyId);
                   const RoleIcon = a.type === 'remota' ? Smartphone : role.icon;
+                  // #277: nombre del inquilino de la reserva activa; fallback al alias Tedee.
+                  const nombre = a.guestName || a.actorName || t('ted.sinIdentificar');
+                  const conAlias = Boolean(a.guestName && a.actorName && a.guestName !== a.actorName);
                   return (
                     <motion.div key={a.id} variants={eventV} className="relative flex items-center gap-3 py-2 pl-0">
                       <motion.span
@@ -429,10 +432,10 @@ export default function Tedee() {
                         style={{ backgroundColor: meta.color, boxShadow: '0 0 0 3px var(--surface)' }}
                         aria-hidden
                       />
-                      <PersonAvatar name={a.actorName} size={32} />
+                      <PersonAvatar name={nombre} size={32} />
                       <span className="min-w-0 flex-1">
                         <span className="block truncate text-sm">
-                          <span className="font-semibold">{a.actorName}</span>{' '}
+                          <span className="font-semibold">{nombre}</span>{' '}
                           <span style={{ color: 'var(--text-muted)' }}>{t(meta.actionKey)}</span>
                         </span>
                         <span className="mt-0.5 flex items-center gap-2 text-xs" style={{ color: 'var(--text-muted)' }}>
@@ -440,6 +443,11 @@ export default function Tedee() {
                             <RoleIcon className="h-3 w-3" style={{ color: a.type === 'remota' ? '#3B82F6' : role.color }} />
                             {a.type === 'remota' ? t('ted.remotaCorta') : t(role.labelKey)}
                           </span>
+                          {conAlias && (
+                            <span className="max-w-[140px] truncate" style={{ color: 'var(--text-faint)' }} title={a.actorName}>
+                              {t('ted.aliasPin', { name: a.actorName })}
+                            </span>
+                          )}
                           {property && (
                             <span
                               className="inline-flex items-center gap-1 rounded-full py-0.5 pl-1 pr-2"
@@ -525,11 +533,12 @@ export default function Tedee() {
                   <div className="flex flex-col">
                     {detailAccesses.map((a) => {
                       const meta = TYPE_META[a.type];
+                      const nombre = a.guestName || a.actorName || t('ted.sinIdentificar');
                       return (
                         <div key={a.id} className="flex items-center gap-2.5 border-b py-2 last:border-0" style={{ borderColor: 'var(--border)' }}>
                           <span className="h-2 w-2 shrink-0 rounded-full" style={{ backgroundColor: meta.color }} />
                           <span className="min-w-0 flex-1 truncate text-sm">
-                            <span className="font-medium">{a.actorName}</span>{' '}
+                            <span className="font-medium">{nombre}</span>{' '}
                             <span style={{ color: 'var(--text-muted)' }}>{t(meta.actionKey)}</span>
                           </span>
                           <span className="shrink-0 text-xs" style={{ color: 'var(--text-faint)' }}>
