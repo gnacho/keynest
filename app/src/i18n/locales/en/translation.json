@@ -267,6 +267,8 @@
     "bateria": "Battery",
     "historial": "This lock's history",
     "sinAccesosRecientes": "No recent accesses.",
+    "sinIdentificar": "Unidentified",
+    "aliasPin": "{{name}}'s PIN",
     "abriendo": "Opening…",
     "abrirAhora": "Open now",
     "cerraduraOffline": "Lock offline",

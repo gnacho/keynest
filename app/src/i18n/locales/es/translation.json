@@ -267,6 +267,8 @@
     "bateria": "Batería",
     "historial": "Historial de esta cerradura",
     "sinAccesosRecientes": "Sin accesos recientes.",
+    "sinIdentificar": "Sin identificar",
+    "aliasPin": "PIN de {{name}}",
     "abriendo": "Abriendo…",
     "abrirAhora": "Abrir ahora",
     "cerraduraOffline": "Cerradura offline",
