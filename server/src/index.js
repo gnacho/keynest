@@ -478,6 +478,18 @@ guarded.get('/events', (c) => {
   })
 })
 
+/* Accesos Tedee con caché en caliente (10 min): la ventana de 90 días puede
+   paginar hasta 8 páginas por cerradura; sin caché cada bootstrap del front
+   repetiría todo el barrido contra la API de Tedee. */
+const accesosCache = { at: 0, datos: [] }
+async function accesosConCache(db) {
+  if (Date.now() - accesosCache.at < 10 * 60 * 1000 && accesosCache.datos.length) return accesosCache.datos
+  const datos = await tedeeAccesses(db)
+  accesosCache.at = Date.now()
+  accesosCache.datos = datos
+  return datos
+}
+
 guarded.get('/bootstrap', async (c) => {
   const db = c.get('db')
   const properties = db.prepare('SELECT * FROM properties ORDER BY created_at').all()
@@ -511,7 +523,7 @@ guarded.get('/bootstrap', async (c) => {
   let locks = []
   let accesses = []
   try {
-    const [lk, ac] = await Promise.all([tedeeLocks(db, { soloAsignadas: true }), tedeeAccesses(db)])
+    const [lk, ac] = await Promise.all([tedeeLocks(db, { soloAsignadas: true }), accesosConCache(db)])
     locks = lk
     accesses = ac
   } catch { /* tedee no configurado o caído */ }
@@ -731,6 +743,8 @@ const maintSchema = z.object({
   urgent: z.boolean().default(false),
   notes: z.string().default(''),
   checks: z.array(checkSchema).optional(),
+  scheduledDate: z.string().nullable().optional(),
+  assignedUserId: z.string().nullable().optional(),
 })
 guarded.post('/maintenance', async (c) => {
   const db = c.get('db')
@@ -740,9 +754,9 @@ guarded.post('/maintenance', async (c) => {
   const d = parsed.data
   if (!db.prepare('SELECT id FROM properties WHERE id = ?').get(d.propertyId)) return c.json({ error: 'inmueble no encontrado' }, 404)
   const id = crypto.randomUUID()
-  db.prepare(`INSERT INTO maintenance_tasks (id, property_id, title, category, expense_tag, urgent, notes, status, checks, created_at)
-              VALUES (?, ?, ?, ?, ?, ?, ?, 'nueva', ?, ?)`)
-    .run(id, d.propertyId, d.title, d.category, d.expenseTag, d.urgent ? 1 : 0, d.notes, JSON.stringify(d.checks ?? []), Date.now())
+  db.prepare(`INSERT INTO maintenance_tasks (id, property_id, title, category, expense_tag, urgent, notes, status, checks, scheduled_date, assigned_user_id, created_at)
+              VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`)
+    .run(id, d.propertyId, d.title, d.category, d.expenseTag, d.urgent ? 1 : 0, d.notes, d.assignedUserId ? 'asignada' : 'nueva', JSON.stringify(d.checks ?? []), d.scheduledDate ?? null, d.assignedUserId ?? null, Date.now())
   aud(c, 'create', 'maintenance', id, d.title)
   return c.json({ ok: true, task: db.prepare('SELECT * FROM maintenance_tasks WHERE id = ?').get(id) }, 201)
 })

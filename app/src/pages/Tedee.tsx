@@ -7,26 +7,22 @@ import {
   BatteryMedium,
   BatteryWarning,
   Crown,
+  Keyboard,
   Lock,
   RefreshCw,
+  Search,
   Smartphone,
   Sparkles,
   TriangleAlert,
   UserRound,
   WifiOff,
+  X,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import FilterBar from '@/components/FilterBar';
 import StatusBadge from '@/components/StatusBadge';
 import PersonAvatar from '@/components/PersonAvatar';
 import PropertyAvatar from '@/components/PropertyAvatar';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
 import { useTranslation } from 'react-i18next';
 import { useData } from '@/data/useData';
 import { myPropertyIds } from '@/lib/auth';
@@ -82,6 +78,7 @@ function LockCard({
   index,
   refreshKey,
   highlighted,
+  active,
   onOpen,
   onBatteryTask,
 }: {
@@ -89,6 +86,8 @@ function LockCard({
   index: number;
   refreshKey: number;
   highlighted: boolean;
+  /** Inmueble filtrado actualmente = esta cerradura. */
+  active?: boolean;
   onOpen: () => void;
   onBatteryTask: () => void;
 }) {
@@ -109,7 +108,7 @@ function LockCard({
       data-lock-id={lock.id}
       className={cn(
         'card flex h-full w-full flex-col gap-3 p-4 text-left transition-shadow duration-200 hover:shadow-overlay',
-        highlighted && 'ring-2 ring-[#6366F1]',
+        (highlighted || active) && 'ring-2 ring-[#6366F1]',
       )}
       style={!lock.online || lowBattery ? { border: '1.5px solid #F43F5E' } : undefined}
     >
@@ -167,6 +166,18 @@ function LockCard({
               {lock.battery} %
             </span>
           </div>
+
+          {lock.keypad && (
+            <div className="mt-1 flex items-center gap-2">
+              <Keyboard className="h-3.5 w-3.5 shrink-0" style={{ color: batteryTone(lock.keypad.battery).color }} />
+              <span className="text-[11px]" style={{ color: 'var(--text-muted)' }}>
+                {t('ted.teclado')}
+              </span>
+              <span className="ml-auto font-display tnum text-[11px] font-semibold" style={{ color: batteryTone(lock.keypad.battery).color }}>
+                {lock.keypad.battery} %
+              </span>
+            </div>
+          )}
         </div>
       </div>
 
@@ -201,10 +212,11 @@ export default function Tedee() {
   const data = useData();
   const navigate = useNavigate();
   const reduce = useReducedMotion();
-  const [params] = useSearchParams();
+  const [params, setParams] = useSearchParams();
 
   const inmueble = params.get('inmueble') ?? 'todos';
   const tipo = params.get('tipo') ?? 'todos';
+  const [q, setQ] = useState('');
 
   const dayLabel = (d: Date): string => {
     const today = startOfDay(new Date());
@@ -224,7 +236,6 @@ export default function Tedee() {
 
   const [refreshKey, setRefreshKey] = useState(0);
   const [spinning, setSpinning] = useState(false);
-  const [detailLock, setDetailLock] = useState<LockT | null>(null);
   const [visibleCount, setVisibleCount] = useState(8);
   const [highlightLock, setHighlightLock] = useState<string | null>(null);
   const listRef = useRef<HTMLDivElement>(null);
@@ -243,17 +254,23 @@ export default function Tedee() {
   const allAccesses = useMemo(() => {
     const accesses = data.getTedeeAccess();
     const mine = myPropertyIds(data.getProperties());
+    const needle = q.trim().toLowerCase();
     return accesses
       .filter((a) => {
         if (inmueble === 'mis') {
           if (!mine.has(a.propertyId)) return false;
         } else if (inmueble !== 'todos' && data.getProperty(a.propertyId)?.slug !== inmueble) return false;
         if (tipo !== 'todos' && a.type !== tipo) return false;
+        if (needle) {
+          const propertyName = data.getProperty(a.propertyId)?.name ?? '';
+          const haystack = `${a.actorName} ${a.guestName} ${propertyName}`.toLowerCase();
+          if (!haystack.includes(needle)) return false;
+        }
         return true;
       })
       .sort((a, b) => b.at.getTime() - a.at.getTime());
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [data, inmueble, tipo]);
+  }, [data, inmueble, tipo, q]);
 
   const visible = allAccesses.slice(0, visibleCount);
 
@@ -286,11 +303,6 @@ export default function Tedee() {
     setHighlightLock(lockId);
     setTimeout(() => setHighlightLock(null), 1400);
   };
-
-  const detailAccesses = detailLock
-    ? allAccesses.filter((a) => a.lockId === detailLock.id).slice(0, 6)
-    : [];
-  const detailProperty = detailLock ? data.getProperty(detailLock.propertyId) : undefined;
 
   return (
     <div className="flex flex-col gap-6">
@@ -337,7 +349,7 @@ export default function Tedee() {
               {problemLocks
                 .map((l) => {
                   const p = data.getProperty(l.propertyId);
-                  const reasons = [!l.online && 'offline', l.battery < 30 && t('ted.bateriaPct', { pct: l.battery })]
+                  const reasons = [!l.online && 'offline', l.battery < 30 && t('ted.bateriaPct', { pct: l.battery }), l.keypad && l.keypad.battery < 30 && t('ted.bateriaTecladoPct', { pct: l.keypad.battery })]
                     .filter(Boolean)
                     .join(' · ');
                   return `${p?.name ?? l.name} (${reasons})`;
@@ -366,12 +378,23 @@ export default function Tedee() {
                 index={i}
                 refreshKey={refreshKey}
                 highlighted={highlightLock === lock.id}
-                onOpen={() => setDetailLock(lock)}
+                active={inmueble !== 'todos' && data.getProperty(lock.propertyId)?.slug === inmueble}
+                onOpen={() => {
+                  const p = data.getProperty(lock.propertyId);
+                  if (!p) return;
+                  const next = new URLSearchParams(params);
+                  // Toggle: clic en la cerradura ya filtrada vuelve a mostrar todos.
+                  if (inmueble === p.slug) next.delete('inmueble');
+                  else {
+                    next.set('inmueble', p.slug);
+                    listRef.current?.scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block: 'start' });
+                  }
+                  setParams(next, { replace: true });
+                }}
                 onBatteryTask={() => {
                   const p = data.getProperty(lock.propertyId);
                   if (!p) return;
-                  toast.success(t('ted.tareaPilasCreada', { name: p.name }));
-                  navigate(`/mantenimiento?inmueble=${p.slug}`);
+                  navigate(`/mantenimiento?inmueble=${p.slug}&nueva=pilas&cerradura=${encodeURIComponent(lock.name)}`);
                 }}
               />
             </div>
@@ -381,11 +404,42 @@ export default function Tedee() {
 
       {/* ============================== Registro de accesos */}
       <section ref={listRef} className="card scroll-mt-20 p-4 sm:p-5">
-        <header className="mb-3 flex items-center justify-between">
+        <header className="mb-3 flex flex-wrap items-center justify-between gap-2">
           <h2 className="font-display text-[17px] font-semibold tracking-[-0.01em]">{t('ted.registro')}</h2>
-          <span className="text-xs font-medium" style={{ color: 'var(--text-faint)' }}>
-            {t('ted.eventos', { count: allAccesses.length })}
-          </span>
+          <div className="flex min-w-0 items-center gap-2">
+            <span className="relative">
+              <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2" style={{ color: 'var(--text-faint)' }} />
+              <input
+                value={q}
+                onChange={(e) => {
+                  setQ(e.target.value);
+                  setVisibleCount(8);
+                }}
+                placeholder={t('ted.buscarAccesos')}
+                aria-label={t('ted.buscarAccesos')}
+                className="h-9 w-44 rounded-xl border bg-[var(--surface)] pl-8 pr-8 text-sm outline-none focus:ring-2 focus:ring-[#6366F1] sm:w-56"
+                style={{ borderColor: 'var(--border)' }}
+              />
+              {q && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setQ('');
+                    setVisibleCount(8);
+                  }}
+                  aria-label={t('ted.limpiarBusqueda')}
+                  title={t('ted.limpiarBusqueda')}
+                  className="absolute right-1.5 top-1/2 flex h-6 w-6 -translate-y-1/2 items-center justify-center rounded-full transition-colors duration-150 hover:bg-[var(--surface-2)]"
+                  style={{ color: 'var(--text-muted)' }}
+                >
+                  <X className="h-3.5 w-3.5" />
+                </button>
+              )}
+            </span>
+            <span className="text-xs font-medium" style={{ color: 'var(--text-faint)' }}>
+              {t('ted.eventos', { count: allAccesses.length })}
+            </span>
+          </div>
         </header>
 
         {groups.length === 0 ? (
@@ -419,9 +473,12 @@ export default function Tedee() {
                   const role = ROLE_META[a.actorRole];
                   const property = data.getProperty(a.propertyId);
                   const RoleIcon = a.type === 'remota' ? Smartphone : role.icon;
-                  // #277: nombre del inquilino de la reserva activa; fallback al alias Tedee.
-                  const nombre = a.guestName || a.actorName || t('ted.sinIdentificar');
-                  const conAlias = Boolean(a.guestName && a.actorName && a.guestName !== a.actorName);
+                  // #277/#281: huésped → nombre del inquilino de la reserva activa
+                  // (fallback al alias Tedee); limpieza/propietario identificados por
+                  // su PIN/usuario → el actor real, nunca el huésped de la reserva.
+                  const conocido = a.actorRole === 'limpieza' || a.actorRole === 'propietario';
+                  const nombre = (conocido ? a.actorName || '' : a.guestName || a.actorName) || t('ted.sinIdentificar');
+                  const conAlias = !conocido && Boolean(a.guestName && a.actorName && a.guestName !== a.actorName);
                   return (
                     <motion.div key={a.id} variants={eventV} className="relative flex items-center gap-3 py-2 pl-0">
                       <motion.span
@@ -482,78 +539,7 @@ export default function Tedee() {
         )}
       </section>
 
-      {/* ============================== Detalle de cerradura */}
-      <Dialog open={!!detailLock} onOpenChange={(o) => !o && setDetailLock(null)}>
-        <DialogContent className="rounded-2xl border-[var(--border)] bg-[var(--surface)] shadow-overlay sm:max-w-md">
-          {detailLock && detailProperty && (
-            <>
-              <DialogHeader>
-                <DialogTitle className="flex items-center gap-2.5 font-display text-lg font-semibold">
-                  <PropertyAvatar property={detailProperty} size={36} />
-                  {detailLock.name}
-                </DialogTitle>
-                <DialogDescription style={{ color: 'var(--text-muted)' }}>
-                  {detailProperty.name} ·{' '}
-                  {detailLock.online ? t('ted.vista', { time: fmtRelative(detailLock.lastSeen) }) : t('ted.sinConexion', { time: fmtRelative(detailLock.lastSeen) })}
-                </DialogDescription>
-              </DialogHeader>
 
-              <div className="flex items-center gap-3 rounded-xl p-3" style={{ backgroundColor: 'var(--surface-2)' }}>
-                {(() => {
-                  const tone = batteryTone(detailLock.battery);
-                  const Icon = tone.icon;
-                  return (
-                    <>
-                      <Icon className="h-5 w-5" style={{ color: tone.color }} />
-                      <div className="flex-1">
-                        <p className="text-xs font-medium" style={{ color: 'var(--text-muted)' }}>
-                          {t('ted.bateria')}
-                        </p>
-                        <span className="mt-1 block h-1.5 overflow-hidden rounded-full" style={{ backgroundColor: 'var(--border)' }}>
-                          <span className="block h-full rounded-full" style={{ width: `${detailLock.battery}%`, backgroundColor: tone.color }} />
-                        </span>
-                      </div>
-                      <span className="font-display tnum text-lg font-semibold" style={{ color: tone.color }}>
-                        {detailLock.battery} %
-                      </span>
-                    </>
-                  );
-                })()}
-              </div>
-
-              <div>
-                <p className="mb-1 text-[11px] font-semibold uppercase tracking-[0.08em]" style={{ color: 'var(--text-faint)' }}>
-                  {t('ted.historial')}
-                </p>
-                {detailAccesses.length === 0 ? (
-                  <p className="py-3 text-sm" style={{ color: 'var(--text-muted)' }}>
-                    {t('ted.sinAccesosRecientes')}
-                  </p>
-                ) : (
-                  <div className="flex flex-col">
-                    {detailAccesses.map((a) => {
-                      const meta = TYPE_META[a.type];
-                      const nombre = a.guestName || a.actorName || t('ted.sinIdentificar');
-                      return (
-                        <div key={a.id} className="flex items-center gap-2.5 border-b py-2 last:border-0" style={{ borderColor: 'var(--border)' }}>
-                          <span className="h-2 w-2 shrink-0 rounded-full" style={{ backgroundColor: meta.color }} />
-                          <span className="min-w-0 flex-1 truncate text-sm">
-                            <span className="font-medium">{nombre}</span>{' '}
-                            <span style={{ color: 'var(--text-muted)' }}>{t(meta.actionKey)}</span>
-                          </span>
-                          <span className="shrink-0 text-xs" style={{ color: 'var(--text-faint)' }}>
-                            {timeLabel(a.at)}
-                          </span>
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
-            </>
-          )}
-        </DialogContent>
-      </Dialog>
 
     </div>
   );

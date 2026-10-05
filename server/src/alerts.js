@@ -29,6 +29,8 @@ import { notifyAll } from './push.js'
 const TICKS_TEDEE_OFFLINE = 3
 const TEDEE_BAT_BAJA = 20
 const TEDEE_BAT_REARME = 30
+const TEDEE_KEYPAD_BAJA = 20
+const TEDEE_KEYPAD_REARME = 30
 const MAX_AVISOS_INDIVIDUALES = 3
 
 // Fecha local YYYY-MM-DD en la zona del negocio (alquileres en España).
@@ -163,7 +165,7 @@ export function createTedeeChecker({ db, notifyFn = notifyAll, locksFn = tedeeLo
   function estadoDe(id) {
     let e = estado.get(id)
     if (!e) {
-      e = { nombre: String(id), propertyId: '', mal: 0, alertadoOff: false, alertadoBat: false }
+      e = { id: String(id), nombre: String(id), propertyId: '', mal: 0, alertadoOff: false, alertadoBat: false, alertadoKeypad: false }
       estado.set(id, e)
     }
     return e
@@ -219,6 +221,15 @@ export function createTedeeChecker({ db, notifyFn = notifyAll, locksFn = tedeeLo
           notifyFn(db, 'tedee_bateria', { nombre: e.nombre, nivel: l.battery }, { severity: 'high', url: `/tedee?lock=${e.id}` })
         } else if (e.alertadoBat && l.battery > TEDEE_BAT_REARME) {
           e.alertadoBat = false
+        }
+      }
+      // Batería del teclado emparejado (#279): mismo patrón que la de cerradura.
+      if (l.keypad && typeof l.keypad.battery === 'number' && l.keypad.battery > 0) {
+        if (!e.alertadoKeypad && l.keypad.battery <= TEDEE_KEYPAD_BAJA) {
+          e.alertadoKeypad = true
+          notifyFn(db, 'tedee_keypad_bateria', { nombre: l.keypad.name, nivel: l.keypad.battery }, { severity: 'high', url: `/tedee?lock=${e.id}` })
+        } else if (e.alertadoKeypad && l.keypad.battery > TEDEE_KEYPAD_REARME) {
+          e.alertadoKeypad = false
         }
       }
     }

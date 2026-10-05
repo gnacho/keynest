@@ -416,6 +416,29 @@ describe('alertas: Tedee', () => {
     expect(llamadas.map((l) => l.tipo)).toEqual(['tedee_offline'])
   })
 
+  it('batería de keypad ≤20% avisa una vez, rearma >30% y enlaza a la cerradura (#279)', async () => {
+    const { llamadas, notifyFn } = captura()
+    let keypad = { name: 'ag47-pad', battery: 8 }
+    const checker = createTedeeChecker({
+      db,
+      notifyFn,
+      locksFn: async () => [{ ...lockOn, battery: 80, keypad }],
+    })
+    await checker.check()
+    expect(llamadas.map((l) => l.tipo)).toEqual(['tedee_keypad_bateria'])
+    expect(llamadas[0].datos).toEqual({ nombre: 'ag47-pad', nivel: 8 })
+    expect(llamadas[0].opciones.severity).toBe('high')
+    expect(llamadas[0].opciones.url).toBe('/tedee?lock=1') // id real (antes lock=undefined)
+    await checker.check()
+    expect(llamadas).toHaveLength(1)
+    keypad = { name: 'ag47-pad', battery: 40 }
+    await checker.check()
+    expect(llamadas).toHaveLength(1) // rearmado en silencio
+    keypad = { name: 'ag47-pad', battery: 5 }
+    await checker.check()
+    expect(llamadas).toHaveLength(2) // vuelve a avisar tras el rearme
+  })
+
   it('cerradura sin inmueble asignado no notifica (#277)', async () => {
     const { llamadas, notifyFn } = captura()
     const checker = createTedeeChecker({

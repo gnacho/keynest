@@ -49,11 +49,39 @@ export async function tedeeFetch(db, path, cloudPath) {
   return res.json()
 }
 
-/** Lista de cerraduras: [{id, name, battery, online, rssi, state, serial, propertyId}]
+/** Batería de los teclados (keypads) emparejados con cada cerradura (#279).
+ *  GET /api/v37/my/device/details?IncludeAccessories=true → result.keypads[]
+ *  con deviceState.batteryLevel (batteryLevelModifiedDateTime solo si <30 días,
+ *  docs oficiales) y connectedToLockId → cerradura emparejada.
+ *  Solo cloud: el bridge local no expone keypads. Devuelve Map(lockId →
+ *  {name, battery, modified}); ante error devuelve Map vacío para que las
+ *  cerraduras no dejen de cargarse por el teclado. */
+export async function tecladosPorCerradura(db) {
+  const mapa = new Map()
+  if (!isCloudUrl(tedeeConfig(db).url)) return mapa
+  try {
+    const raw = await tedeeFetch(db, null, '/api/v37/my/device/details?IncludeAccessories=true')
+    const list = Array.isArray(raw?.result?.keypads) ? raw.result.keypads : []
+    for (const k of list) {
+      const lockId = Number(k.connectedToLockId)
+      const battery = k.deviceState?.batteryLevel
+      if (!lockId || typeof battery !== 'number') continue
+      mapa.set(lockId, {
+        name: k.name || 'Keypad',
+        battery,
+        modified: k.deviceState?.batteryLevelModifiedTime ?? null,
+      })
+    }
+  } catch { /* sin teclados visibles: seguimos con las cerraduras */ }
+  return mapa
+}
+
+/** Lista de cerraduras: [{id, name, battery, online, rssi, state, serial, propertyId, keypad}]
  *  Bridge: GET /v1.0/lock. Cloud: GET /api/v37/my/lock (PAK).
  *  propertyId se cruza con properties.tedee_lock_id (si hay match).
  *  soloAsignadas (#277): devuelve solo las cerraduras asignadas a un inmueble;
- *  el resto es ruido de la cuenta (no se muestra ni se notifica). */
+ *  el resto es ruido de la cuenta (no se muestra ni se notifica).
+ *  keypad (#279): teclado emparejado {name, battery, modified} o null. */
 export async function tedeeLocks(db, { soloAsignadas = false } = {}) {
   const cloud = isCloudUrl(tedeeConfig(db).url)
   const raw = await tedeeFetch(db, '/v1.0/lock', '/api/v37/my/lock')
@@ -90,8 +118,15 @@ export async function tedeeLocks(db, { soloAsignadas = false } = {}) {
       propertyId: propByLock.get(Number(l.id)) ?? '',
     }))
   }
-  if (soloAsignadas) return todas.filter((l) => l.propertyId !== '')
-  return todas
+  if (todas.length === 0) return []
+  const teclados = await tecladosPorCerradura(db)
+  if (soloAsignadas) return todas.filter((l) => l.propertyId !== '').map(conTeclado)
+  return todas.map(conTeclado)
+
+  /** #279: añade el teclado emparejado (null si no hay o no viene con batería). */
+  function conTeclado(l) {
+    return { ...l, keypad: teclados.get(Number(l.id)) ?? null }
+  }
 }
 
 /** Reservas con nombre de huésped agrupadas por inmueble (#277). */
@@ -130,48 +165,94 @@ function inquilinoEnFecha(reservas, fecha) {
 }
 
 /** Eventos de deviceactivity que suponen un ACCESO real (abrir/cerrar por persona).
- *  Unlock/pull por PIN, huella o app → entrada; lock por PIN/teclado → salida;
+ *  Unlock/pull por PIN, huella o app → entrada; lock por PIN/teclado/botón/manual → salida;
  *  acciones remotas desde la app → remota. Los eventos de sistema (batería,
- *  calibración, jammed…) se ignoran. Fuente: docs oficiales event-type. */
+ *  calibración, auto-lock sin actor, jammed…) se ignoran.
+ *  Fuente: docs oficiales event-type (tedee-tedee-api-doc). */
 const ACCESS_EVENT_TYPE = {
-  32: 'remota', 33: 'remota', 34: 'remota', 35: 'remota', // lock/unlock botón
+  32: 'remota', 33: 'remota', 35: 'remota', // lock remoto / unlock remoto/botón
+  34: 'salida', // LockedButton: cerrar con el botón del lock
+  38: 'salida', // LockedManual: cerrar manualmente
   51: 'remota', 52: 'remota', 53: 'remota', // pull spring
   61: 'entrada', 63: 'entrada', 64: 'entrada', 76: 'entrada', // pin unlock/pull
   65: 'salida', 66: 'salida', // locked by keypad (con/sin pin)
+  68: 'entrada', // ForceUnlockedByPin
   77: 'entrada', 78: 'entrada', 79: 'entrada', 80: 'entrada', 81: 'entrada', // huella
 }
 
 /** Log de accesos reales desde la cloud (GET /api/v37/my/deviceactivity?deviceId=).
  *  Devuelve [{id, at, actorName, actorRole, type, propertyId, lockId, guestName}]
  *  — NUNCA el PIN en claro. guestName (#277) = inquilino de la reserva activa del
- *  inmueble en la fecha del acceso ('' si no hay match).
+ *  inmueble en la fecha del acceso ('' si no hay match). Solo se aplica al actor
+ *  cuando NO es una persona conocida (#281): si el alias del evento coincide con
+ *  una persona del maestro (limpieza/proveedor), ese es el actor real y su rol.
+ *  Ventana por defecto: 90 días (200 eventos/página, máx. 8 páginas por
+ *  cerradura; tope para no martillear la API en cada bootstrap; el bootstrap
+ *  además cachea el resultado 10 min en index.js). Con 50 eventos no llegaba
+ *  ni a 7 días con huéspedes activos y limpiezas como Flor no salían.
  *  Solo cloud: el bridge local no expone deviceactivity. */
-export async function tedeeAccesses(db) {
+export async function tedeeAccesses(db, { dias = 90 } = {}) {
   if (!isCloudUrl(tedeeConfig(db).url)) return []
   // Solo cerraduras asignadas a un inmueble (#277): el resto se oculta.
   const locks = await tedeeLocks(db, { soloAsignadas: true })
   const reservasPorProp = reservasConHuesped(db)
+  const rolPorNombre = new Map(
+    db.prepare('SELECT name, role FROM people').all().map((p) => [p.name.trim().toLowerCase(), p.role]),
+  )
+  const limite = Date.now() - dias * 86400000
+  const vistos = new Set()
   const out = []
   for (const l of locks) {
-    const raw = await tedeeFetch(db, null, `/api/v37/my/deviceactivity?deviceId=${l.id}&elements=50`)
-    const list = Array.isArray(raw?.result) ? raw.result : []
-    for (const ev of list) {
-      const type = ACCESS_EVENT_TYPE[ev.event]
-      if (!type) continue
-      const at = ev.date ? new Date(ev.date) : new Date()
-      // pinAlias = nombre de la persona asignada al PIN; nunca el código.
-      const actorName = ev.pinAlias || ev.username || ev.accessLinkName || ''
-      const guestName = inquilinoEnFecha(reservasPorProp.get(l.propertyId), fechaLocal(at))
-      out.push({
-        id: `td-${ev.id}`,
-        at,
-        actorName,
-        actorRole: actorName || guestName ? 'huésped' : 'propietario',
-        type,
-        propertyId: l.propertyId ?? '',
-        lockId: String(l.id),
-        guestName,
-      })
+    // Paginación hacia atrás hasta cubrir la ventana completa (máx. 8 páginas).
+    let lastElemDate = null
+    for (let pagina = 0; pagina < 8; pagina++) {
+      const raw = await tedeeFetch(db, null, `/api/v37/my/deviceactivity?deviceId=${l.id}&elements=200${lastElemDate ? `&lastElemDate=${encodeURIComponent(lastElemDate)}` : ''}`)
+      const list = Array.isArray(raw?.result) ? raw.result : []
+      if (list.length === 0) break
+      for (const ev of list) {
+        const type = ACCESS_EVENT_TYPE[ev.event]
+        if (!type) continue
+        const at = ev.date ? new Date(ev.date) : new Date()
+        if (at.getTime() < limite) continue
+        const id = `td-${ev.id}`
+        if (vistos.has(id)) continue
+        vistos.add(id)
+        // pinAlias = nombre de la persona asignada al PIN; nunca el código.
+        // La API devuelve userName (docs oficiales device-activity); se acepta
+        // también username por compatibilidad con mocks/puentes antiguos.
+        const pinAlias = ev.pinAlias || ''
+        const username = ev.userName || ev.username || ''
+        const accessLink = ev.accessLinkName || ''
+        const actorName = pinAlias || username || accessLink
+        const guestName = inquilinoEnFecha(reservasPorProp.get(l.propertyId), fechaLocal(at))
+        // Rol (#281): actor (PIN o usuario de la app) que coincide con una persona
+        // del maestro → su rol real (limpieza/proveedor), aunque haya estancia.
+        // PIN o enlace de acceso sin match → huésped. Solo usuario de app →
+        // propietario: un cierre con botón/manual o apertura remota no la hace el
+        // inquilino. Sin actor, se conserva el cruce de reserva (#277).
+        const norm = (s) => s.trim().toLowerCase()
+        const rolPersona = pinAlias
+          ? rolPorNombre.get(norm(pinAlias))
+          : username ? rolPorNombre.get(norm(username)) : undefined
+        const actorRole = rolPersona
+          ? rolPersona === 'limpieza' ? 'limpieza' : 'propietario'
+          : pinAlias || accessLink ? 'huésped'
+          : username ? 'propietario'
+          : guestName ? 'huésped' : 'propietario'
+        out.push({
+          id,
+          at,
+          actorName,
+          actorRole,
+          type,
+          propertyId: l.propertyId ?? '',
+          lockId: String(l.id),
+          guestName,
+        })
+      }
+      const masViejo = list[list.length - 1].date ? new Date(list[list.length - 1].date).getTime() : 0
+      lastElemDate = list[list.length - 1].date
+      if (masViejo < limite || list.length < 200) break
     }
   }
   return out.sort((a, b) => b.at.getTime() - a.at.getTime())

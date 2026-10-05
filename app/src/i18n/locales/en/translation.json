@@ -254,13 +254,14 @@
     "necesitaAtencion_one": "{{count}} lock needs attention",
     "necesitaAtencion_other": "{{count}} locks need attention",
     "bateriaPct": "battery {{pct}} %",
+    "bateriaTecladoPct": "keypad at {{pct}} %",
+    "teclado": "Keypad",
     "ver": "View",
     "puertaPrincipal": "Main door",
     "sinConexion": "Offline {{time}}",
     "crearTareaPilas": "Create battery task",
-    "tareaPilasCreada": "Battery task created in {{name}}",
     "registro": "Access log",
-    "eventos": "{{count}} events · last 7 days",
+    "eventos": "{{count}} eventos · últimos 90 días",
     "sinAccesos": "No accesses for this filter.",
     "cargarMas": "Load more",
     "vista": "seen {{time}}",
@@ -275,7 +276,9 @@
     "confirmTitulo": "Open the door?",
     "confirmDesc": "A remote opening will be sent to «{{name}}».",
     "puertaAbierta": "Door opened",
-    "tu": "{{name}} (you)"
+    "tu": "{{name}} (you)",
+    "buscarAccesos": "Search by name or property…",
+    "limpiarBusqueda": "Clear search"
   },
   "limp": {
     "titulo": "Cleaning",
@@ -392,7 +395,11 @@
     "mostrarAntiguas": "Show +{{dias}} days",
     "ocultarAntiguas": "Hide old",
     "eliminar": "Delete",
-    "seguro": "Sure?"
+    "seguro": "Sure?",
+    "tareaPilasTitulo": "Replace lock batteries ({{lock}})",
+    "fechaPrevista": "Scheduled date",
+    "responsable": "Responsible",
+    "sinResponsable": "Unassigned"
   },
   "cat": {
     "cerradura": "Lock/batteries",
@@ -905,6 +912,7 @@
   "notif": {
     "salidaHoy": "Check-out today · {{name}}",
     "bateriaBaja": "Lock at {{name}}: battery at {{pct}}%",
+    "bateriaTeclado": "{{name}} keypad: battery at {{pct}}%",
     "nuevaReserva": "New reservation at {{name}}"
   },
   "wo": {

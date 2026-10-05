@@ -182,9 +182,9 @@ export interface DataApi {
   assignMaintenance: (taskId: string, personId: string) => void;
   assignUserToMaintenance: (taskId: string, userId: string) => void;
   /** Crea una tarea de mantenimiento real (BD). */
-  addMaintenance: (t: { propertyId: string; title: string; category: string; expenseTag: string; urgent: boolean; notes: string; checks?: CleaningCheck[] }) => Promise<MaintenanceTask | undefined>;
-  /** Edita campos de una tarea existente (título, categoría, etiqueta, urgente, notas, fecha prevista). */
-  editMaintenance: (id: string, patch: Partial<{ title: string; category: string; expenseTag: string; urgent: boolean; notes: string; scheduledDate: string | null; checks: CleaningCheck[] }>) => Promise<void>;
+  addMaintenance: (t: { propertyId: string; title: string; category: string; expenseTag: string; urgent: boolean; notes: string; checks?: CleaningCheck[]; scheduledDate?: string | null; assignedUserId?: string | null }) => Promise<MaintenanceTask | undefined>;
+  /** Edita campos de una tarea existente (título, categoría, etiqueta, urgente, notas, fecha prevista, responsable). */
+  editMaintenance: (id: string, patch: Partial<{ title: string; category: string; expenseTag: string; urgent: boolean; notes: string; scheduledDate: string | null; assignedUserId: string | null; checks: CleaningCheck[] }>) => Promise<void>;
   deleteMaintenance: (id: string) => Promise<void>;
   /** Crea un gasto persistente (issue #207); devuelve el gasto creado. */
   addExpense: (e: Omit<Expense, 'id'>) => Promise<Expense>;
