@@ -260,7 +260,6 @@
     "puertaPrincipal": "Main door",
     "sinConexion": "Offline {{time}}",
     "crearTareaPilas": "Create battery task",
-    "tareaPilasCreada": "Battery task created in {{name}}",
     "registro": "Access log",
     "eventos": "{{count}} events · last 7 days",
     "sinAccesos": "No accesses for this filter.",
@@ -394,7 +393,11 @@
     "mostrarAntiguas": "Show +{{dias}} days",
     "ocultarAntiguas": "Hide old",
     "eliminar": "Delete",
-    "seguro": "Sure?"
+    "seguro": "Sure?",
+    "tareaPilasTitulo": "Replace lock batteries ({{lock}})",
+    "fechaPrevista": "Scheduled date",
+    "responsable": "Responsible",
+    "sinResponsable": "Unassigned"
   },
   "cat": {
     "cerradura": "Lock/batteries",

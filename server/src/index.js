@@ -731,6 +731,8 @@ const maintSchema = z.object({
   urgent: z.boolean().default(false),
   notes: z.string().default(''),
   checks: z.array(checkSchema).optional(),
+  scheduledDate: z.string().nullable().optional(),
+  assignedUserId: z.string().nullable().optional(),
 })
 guarded.post('/maintenance', async (c) => {
   const db = c.get('db')
@@ -740,9 +742,9 @@ guarded.post('/maintenance', async (c) => {
   const d = parsed.data
   if (!db.prepare('SELECT id FROM properties WHERE id = ?').get(d.propertyId)) return c.json({ error: 'inmueble no encontrado' }, 404)
   const id = crypto.randomUUID()
-  db.prepare(`INSERT INTO maintenance_tasks (id, property_id, title, category, expense_tag, urgent, notes, status, checks, created_at)
-              VALUES (?, ?, ?, ?, ?, ?, ?, 'nueva', ?, ?)`)
-    .run(id, d.propertyId, d.title, d.category, d.expenseTag, d.urgent ? 1 : 0, d.notes, JSON.stringify(d.checks ?? []), Date.now())
+  db.prepare(`INSERT INTO maintenance_tasks (id, property_id, title, category, expense_tag, urgent, notes, status, checks, scheduled_date, assigned_user_id, created_at)
+              VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`)
+    .run(id, d.propertyId, d.title, d.category, d.expenseTag, d.urgent ? 1 : 0, d.notes, d.assignedUserId ? 'asignada' : 'nueva', JSON.stringify(d.checks ?? []), d.scheduledDate ?? null, d.assignedUserId ?? null, Date.now())
   aud(c, 'create', 'maintenance', id, d.title)
   return c.json({ ok: true, task: db.prepare('SELECT * FROM maintenance_tasks WHERE id = ?').get(id) }, 201)
 })

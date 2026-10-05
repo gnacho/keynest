@@ -37,6 +37,11 @@ import { cn } from '@/lib/utils';
 
 const EASE_OUT_QUART: [number, number, number, number] = [0.25, 1, 0.5, 1];
 
+/** Date -> 'YYYY-MM-DD' en hora local (valor de <input type="date">). */
+function toDateInput(d: Date): string {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
 const containerV: Variants = {
   hidden: {},
   show: { transition: { staggerChildren: 0.07 } },
@@ -63,7 +68,7 @@ export default function Mantenimiento() {
   const { t: tr } = useTranslation();
   const data = useData();
   const { toasts, push } = useToasts();
-  const [params] = useSearchParams();
+  const [params, setParams] = useSearchParams();
   const [categoria, setCategoria] = useState<MaintenanceCategory | 'todas'>('todas');
   const [soloUrgentes, setSoloUrgentes] = useState(false);
   const [newOpen, setNewOpen] = useState(false);
@@ -121,6 +126,37 @@ export default function Mantenimiento() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [data, selectedProperty?.id, data.version],
   );
+
+  // Deep-link desde Tedee (#280): ?nueva=pilas&cerradura=<nombre> abre el diálogo
+  // de nueva tarea pre-rellenado (inmueble, título, fecha libre, propietario).
+  const nuevaParam = params.get('nueva');
+  const cerraduraParam = params.get('cerradura');
+  const pilasPrefill = useMemo(() => {
+    if (nuevaParam !== 'pilas' || !selectedProperty) return undefined;
+    return {
+      slug: selectedProperty.slug,
+      title: tr('mant.tareaPilasTitulo', { lock: cerraduraParam ?? selectedProperty.name }),
+      category: 'cerradura/pilas' as MaintenanceCategory,
+      expenseTag: 'cerradura/pilas',
+      scheduledDate: toDateInput(freeWindow?.start ?? new Date()),
+      assignedUserId: selectedProperty.ownerId ?? undefined,
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [nuevaParam, selectedProperty?.id, cerraduraParam, freeWindow?.start]);
+
+  // Abre el diálogo una sola vez, guarda el prefill en estado (los params se
+  // limpian de la URL justo después: el prefill no debe recalcularse a undefined).
+  const [prefillTarea, setPrefillTarea] = useState<TaskPrefill | undefined>();
+  useEffect(() => {
+    if (!pilasPrefill) return;
+    setNewOpen(true);
+    setPrefillTarea(pilasPrefill);
+    const next = new URLSearchParams(params);
+    next.delete('nueva');
+    next.delete('cerradura');
+    setParams(next, { replace: true });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pilasPrefill]);
 
   const renderCard = (t: MaintenanceTask, animateEntry: boolean) => (
     <MaintenanceCard
@@ -386,8 +422,12 @@ export default function Mantenimiento() {
       {/* ============================== Dialogs: nueva tarea / editar (real, BD) */}
       <NewTaskDialog
         open={newOpen}
-        onOpenChange={setNewOpen}
+        onOpenChange={(o) => {
+          setNewOpen(o);
+          if (!o) setPrefillTarea(undefined);
+        }}
         onCreated={() => push(tr('mant.tareaCreadaOk'), 'rose')}
+        prefill={prefillTarea}
       />
       <NewTaskDialog
         open={editTask !== null}
@@ -408,16 +448,28 @@ export default function Mantenimiento() {
 }
 
 /* ---------------------------------------------------- Dialog "Nueva tarea" */
+interface TaskPrefill {
+  slug: string;
+  title: string;
+  category: MaintenanceCategory;
+  expenseTag: string;
+  /** 'YYYY-MM-DD' */
+  scheduledDate: string;
+  assignedUserId?: string;
+}
+
 function NewTaskDialog({
   open,
   onOpenChange,
   onCreated,
   task,
+  prefill,
 }: {
   open: boolean;
   onOpenChange: (o: boolean) => void;
   onCreated: () => void;
   task?: MaintenanceTask | null;
+  prefill?: TaskPrefill;
 }) {
   const { t: tr } = useTranslation();
   const data = useData();
@@ -432,10 +484,26 @@ function NewTaskDialog({
   const [urgente, setUrgente] = useState(false);
   const [notas, setNotas] = useState('');
   const [checksText, setChecksText] = useState('');
+  const [fecha, setFecha] = useState('');
+  const [responsable, setResponsable] = useState<string>();
 
-  // Modo edición: precargar la tarea
+  const reset = () => {
+    setSlug(undefined);
+    setTitulo('');
+    setCategoria(undefined);
+    setEtiqueta('');
+    setUrgente(false);
+    setNotas('');
+    setChecksText('');
+    setFecha('');
+    setResponsable(undefined);
+  };
+
+  // Modo edición: precargar la tarea; modo deep-link (#280): prefill de pilas;
+  // si no, diálogo limpio.
   useEffect(() => {
-    if (open && task) {
+    if (!open) return;
+    if (task) {
       const prop = data.getProperty(task.propertyId);
       setSlug(prop?.slug);
       setTitulo(task.title);
@@ -444,9 +512,23 @@ function NewTaskDialog({
       setUrgente(task.urgent);
       setNotas(task.notes);
       setChecksText((task.checks ?? []).map((k) => k.label).join('\n'));
+      setFecha(task.scheduledDate ? toDateInput(task.scheduledDate) : '');
+      setResponsable(task.assignedUserId);
+    } else if (prefill) {
+      setSlug(prefill.slug);
+      setTitulo(prefill.title);
+      setCategoria(prefill.category);
+      setEtiqueta(prefill.expenseTag);
+      setUrgente(false);
+      setNotas('');
+      setChecksText('');
+      setFecha(prefill.scheduledDate);
+      setResponsable(prefill.assignedUserId);
+    } else {
+      reset();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, task?.id]);
+  }, [open, task?.id, prefill]);
 
   const valid = Boolean(slug && titulo.trim() && categoria);
   const [busy, setBusy] = useState(false);
@@ -472,6 +554,8 @@ function NewTaskDialog({
         expenseTag: etiqueta.trim() || (categoria ?? ''),
         urgent: urgente,
         notes: notas.trim(),
+        scheduledDate: fecha || null,
+        assignedUserId: responsable ?? null,
         checks,
       });
       setBusy(false);
@@ -490,6 +574,8 @@ function NewTaskDialog({
       urgent: urgente,
       notes: notas.trim(),
       checks: checksFromText(),
+      scheduledDate: fecha || null,
+      assignedUserId: responsable ?? null,
     });
     setBusy(false);
     if (created) {
@@ -497,16 +583,6 @@ function NewTaskDialog({
       onOpenChange(false);
       reset();
     }
-  };
-
-  const reset = () => {
-    setSlug(undefined);
-    setTitulo('');
-    setCategoria(undefined);
-    setEtiqueta('');
-    setUrgente(false);
-    setNotas('');
-    setChecksText('');
   };
 
   const label = (text: string) => (
@@ -580,6 +656,32 @@ function NewTaskDialog({
           <div className="flex items-center justify-between self-end rounded-xl border px-3 py-2.5" style={{ borderColor: 'var(--border)' }}>
             <span className="text-sm font-semibold text-rose-500">{tr('mant.urgente')}</span>
             <Switch checked={urgente} onCheckedChange={setUrgente} />
+          </div>
+          <div>
+            {label(tr('mant.fechaPrevista'))}
+            <input
+              type="date"
+              value={fecha}
+              onChange={(e) => setFecha(e.target.value)}
+              className="h-10 w-full rounded-xl border bg-[var(--surface)] px-3 text-sm outline-none focus:ring-2 focus:ring-[#6366F1]"
+              style={{ borderColor: 'var(--border)' }}
+            />
+          </div>
+          <div>
+            {label(tr('mant.responsable'))}
+            <Select value={responsable ?? '__none__'} onValueChange={(v) => setResponsable(v === '__none__' ? undefined : v)}>
+              <SelectTrigger className="h-10 w-full rounded-xl border-[var(--border)] bg-[var(--surface)] text-sm shadow-none">
+                <SelectValue placeholder={tr('mant.sinResponsable')} />
+              </SelectTrigger>
+              <SelectContent className="rounded-xl border-[var(--border)] bg-[var(--surface)]">
+                <SelectItem value="__none__">{tr('mant.sinResponsable')}</SelectItem>
+                {data.getUsers().map((u) => (
+                  <SelectItem key={u.id} value={u.id}>
+                    {u.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
           <div className="sm:col-span-2">
             {label(tr('mant.notas'))}

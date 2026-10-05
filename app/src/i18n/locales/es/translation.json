@@ -260,7 +260,6 @@
     "puertaPrincipal": "Puerta principal",
     "sinConexion": "Sin conexión {{time}}",
     "crearTareaPilas": "Crear tarea de pilas",
-    "tareaPilasCreada": "Tarea de pilas creada en {{name}}",
     "registro": "Registro de accesos",
     "eventos": "{{count}} eventos · últimos 7 días",
     "sinAccesos": "Sin accesos para este filtro.",
@@ -394,7 +393,11 @@
     "mostrarAntiguas": "Mostrar +{{dias}} días",
     "ocultarAntiguas": "Ocultar antiguas",
     "eliminar": "Eliminar",
-    "seguro": "¿Seguro?"
+    "seguro": "¿Seguro?",
+    "tareaPilasTitulo": "Cambiar pilas de la cerradura ({{lock}})",
+    "fechaPrevista": "Fecha prevista",
+    "responsable": "Responsable",
+    "sinResponsable": "Sin responsable"
   },
   "cat": {
     "cerradura": "Cerradura/pilas",

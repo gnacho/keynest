@@ -67,6 +67,13 @@ function insertarReserva(propertyId, checkin, checkout, guestName) {
   ).run(crypto.randomUUID(), propertyId, `uid-${crypto.randomUUID()}`, checkin, checkout, guestName, Date.now())
 }
 
+function insertarPersona(name, role = 'limpieza') {
+  db.prepare(
+    `INSERT INTO people (id, name, phone, role, specialty, hourly_rate, created_at)
+     VALUES (?, ?, '', ?, '', 10, 0)`,
+  ).run(crypto.randomUUID(), name, role)
+}
+
 describe('tedeeAccesses', () => {
   it('devuelve [] cuando la url no es cloud (bridge local)', async () => {
     configurarTedeeBridge(db)
@@ -113,10 +120,11 @@ describe('tedeeAccesses', () => {
     expect(acc[0].type).toBe('salida')   // más reciente primero
     expect(acc[0].at.getTime()).toBe(new Date('2026-08-09T12:00:00Z').getTime())
     expect(acc[0].actorName).toBe('Ana')
-    expect(acc[0].actorRole).toBe('huésped')
+    expect(acc[0].actorRole).toBe('propietario') // solo username (app) → no huésped (#281)
     expect(acc[0].lockId).toBe('176718')
     expect(acc[0].id).toBe('td-2')
     expect(acc[1].type).toBe('entrada')
+    expect(acc[1].actorRole).toBe('huésped') // PIN sin match en personas → huésped
     expect(acc[1].id).toBe('td-1')
   })
 
@@ -133,6 +141,70 @@ describe('tedeeAccesses', () => {
     expect(acc[0].type).toBe('remota')
     expect(acc[0].actorRole).toBe('propietario')
     expect(acc[0].actorName).toBe('')
+  })
+
+  it('#281 PIN de persona de limpieza → actorRole limpieza, en entrada y en salida', async () => {
+    insertarPropiedad(176718)
+    insertarPersona('Flor')
+    configurarTedeeCloud(db)
+    mockResponse({ result: [cloudLock] })
+    mockResponse({ result: { keypads: [] } }) // details (#279)
+    mockResponse({
+      result: [
+        { id: 20, event: 61, date: '2026-08-09T10:00:00Z', pinAlias: 'Flor' },
+        { id: 21, event: 65, date: '2026-08-09T12:00:00Z', pinAlias: 'Flor' },
+      ],
+    })
+    const acc = await tedeeAccesses(db)
+    expect(acc).toHaveLength(2)
+    expect(acc[0].type).toBe('salida')
+    expect(acc[0].actorRole).toBe('limpieza')
+    expect(acc[0].actorName).toBe('Flor')
+    expect(acc[1].type).toBe('entrada')
+    expect(acc[1].actorRole).toBe('limpieza')
+  })
+
+  it('#281 persona conocida NO se etiqueta como huésped aunque haya estancia', async () => {
+    const pid = insertarPropiedad(176718)
+    insertarReserva(pid, '2026-08-01', '2026-08-31', 'Rainer Zbinden')
+    insertarPersona('Flor')
+    insertarPersona('Manolo Fontanero', 'proveedor')
+    configurarTedeeCloud(db)
+    mockResponse({ result: [cloudLock] })
+    mockResponse({ result: { keypads: [] } }) // details (#279)
+    mockResponse({
+      result: [
+        { id: 22, event: 61, date: '2026-08-09T10:00:00Z', pinAlias: 'Flor' },
+        { id: 23, event: 61, date: '2026-08-09T11:00:00Z', pinAlias: 'Manolo Fontanero' },
+        { id: 24, event: 61, date: '2026-08-09T12:00:00Z', pinAlias: 'Desconocido' },
+      ],
+    })
+    const acc = await tedeeAccesses(db)
+    expect(acc).toHaveLength(3)
+    expect(acc[2].actorRole).toBe('limpieza')
+    expect(acc[2].guestName).toBe('Rainer Zbinden') // el cruce sigue llegando al front
+    expect(acc[1].actorRole).toBe('propietario') // proveedor: actor real, no huésped
+    expect(acc[0].actorRole).toBe('huésped') // alias ajeno a personas → huésped
+  })
+
+  it('#281 cierre con botón del lock (34) o manual (38) → salida; force unlock por PIN (68) → entrada', async () => {
+    insertarPropiedad(176718)
+    configurarTedeeCloud(db)
+    mockResponse({ result: [cloudLock] })
+    mockResponse({ result: { keypads: [] } }) // details (#279)
+    mockResponse({
+      result: [
+        { id: 30, event: 34, date: '2026-08-09T10:00:00Z', username: 'Nacho' },
+        { id: 31, event: 38, date: '2026-08-09T11:00:00Z', username: 'Nacho' },
+        { id: 32, event: 68, date: '2026-08-09T12:00:00Z', pinAlias: 'Nacho' },
+      ],
+    })
+    const acc = await tedeeAccesses(db)
+    expect(acc).toHaveLength(3)
+    expect(acc[2].type).toBe('salida')
+    expect(acc[2].actorRole).toBe('propietario')
+    expect(acc[1].type).toBe('salida')
+    expect(acc[0].type).toBe('entrada')
   })
 
   it('huella → entrada', async () => {

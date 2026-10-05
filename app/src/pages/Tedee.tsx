@@ -383,8 +383,7 @@ export default function Tedee() {
                 onBatteryTask={() => {
                   const p = data.getProperty(lock.propertyId);
                   if (!p) return;
-                  toast.success(t('ted.tareaPilasCreada', { name: p.name }));
-                  navigate(`/mantenimiento?inmueble=${p.slug}`);
+                  navigate(`/mantenimiento?inmueble=${p.slug}&nueva=pilas&cerradura=${encodeURIComponent(lock.name)}`);
                 }}
               />
             </div>
@@ -432,9 +431,12 @@ export default function Tedee() {
                   const role = ROLE_META[a.actorRole];
                   const property = data.getProperty(a.propertyId);
                   const RoleIcon = a.type === 'remota' ? Smartphone : role.icon;
-                  // #277: nombre del inquilino de la reserva activa; fallback al alias Tedee.
-                  const nombre = a.guestName || a.actorName || t('ted.sinIdentificar');
-                  const conAlias = Boolean(a.guestName && a.actorName && a.guestName !== a.actorName);
+                  // #277/#281: huésped → nombre del inquilino de la reserva activa
+                  // (fallback al alias Tedee); limpieza/propietario identificados por
+                  // su PIN/usuario → el actor real, nunca el huésped de la reserva.
+                  const conocido = a.actorRole === 'limpieza' || a.actorRole === 'propietario';
+                  const nombre = (conocido ? a.actorName || '' : a.guestName || a.actorName) || t('ted.sinIdentificar');
+                  const conAlias = !conocido && Boolean(a.guestName && a.actorName && a.guestName !== a.actorName);
                   return (
                     <motion.div key={a.id} variants={eventV} className="relative flex items-center gap-3 py-2 pl-0">
                       <motion.span
