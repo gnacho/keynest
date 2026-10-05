@@ -173,7 +173,6 @@ const ACCESS_EVENT_TYPE = {
   32: 'remota', 33: 'remota', 35: 'remota', // lock remoto / unlock remoto/botón
   34: 'salida', // LockedButton: cerrar con el botón del lock
   38: 'salida', // LockedManual: cerrar manualmente
-  39: 'entrada', // UnlockedManual: abrir manualmente
   51: 'remota', 52: 'remota', 53: 'remota', // pull spring
   61: 'entrada', 63: 'entrada', 64: 'entrada', 76: 'entrada', // pin unlock/pull
   65: 'salida', 66: 'salida', // locked by keypad (con/sin pin)
