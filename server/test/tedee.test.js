@@ -207,6 +207,28 @@ describe('tedeeAccesses', () => {
     expect(acc[0].type).toBe('entrada')
   })
 
+  it('#281 usuario de la app (userName, sin PIN) → nombre real y rol por personas', async () => {
+    insertarPropiedad(176718)
+    insertarPersona('Flor')
+    configurarTedeeCloud(db)
+    mockResponse({ result: [cloudLock] })
+    mockResponse({ result: { keypads: [] } }) // details (#279)
+    mockResponse({
+      result: [
+        { id: 26, event: 33, date: '2026-08-09T10:00:00Z', userName: 'Flor' },
+        { id: 27, event: 33, date: '2026-08-09T11:00:00Z', userName: 'Nacho' },
+      ],
+    })
+    const acc = await tedeeAccesses(db)
+    expect(acc).toHaveLength(2)
+    // La API devuelve userName (docs oficiales); Flor está en people → limpieza
+    expect(acc[1].actorName).toBe('Flor')
+    expect(acc[1].actorRole).toBe('limpieza')
+    // usuario de app sin match en people → propietario, con su nombre
+    expect(acc[0].actorName).toBe('Nacho')
+    expect(acc[0].actorRole).toBe('propietario')
+  })
+
   it('huella → entrada', async () => {
     insertarPropiedad(176718)
     configurarTedeeCloud(db)

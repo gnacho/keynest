@@ -204,17 +204,22 @@ export async function tedeeAccesses(db) {
       if (!type) continue
       const at = ev.date ? new Date(ev.date) : new Date()
       // pinAlias = nombre de la persona asignada al PIN; nunca el código.
+      // La API devuelve userName (docs oficiales device-activity); se acepta
+      // también username por compatibilidad con mocks/puentes antiguos.
       const pinAlias = ev.pinAlias || ''
-      const username = ev.username || ''
+      const username = ev.userName || ev.username || ''
       const accessLink = ev.accessLinkName || ''
       const actorName = pinAlias || username || accessLink
       const guestName = inquilinoEnFecha(reservasPorProp.get(l.propertyId), fechaLocal(at))
-      // Rol (#281): PIN que coincide con una persona del maestro → su rol real
-      // (limpieza/proveedor), aunque haya estancia. PIN o enlace de acceso sin
-      // match → huésped. Solo username (app) → propietario: un cierre con
-      // botón/manual o apertura remota no la hace el inquilino. Sin actor, se
-      // conserva el cruce de reserva (#277).
-      const rolPersona = pinAlias ? rolPorNombre.get(pinAlias.trim().toLowerCase()) : undefined
+      // Rol (#281): actor (PIN o usuario de la app) que coincide con una persona
+      // del maestro → su rol real (limpieza/proveedor), aunque haya estancia.
+      // PIN o enlace de acceso sin match → huésped. Solo usuario de app →
+      // propietario: un cierre con botón/manual o apertura remota no la hace el
+      // inquilino. Sin actor, se conserva el cruce de reserva (#277).
+      const norm = (s) => s.trim().toLowerCase()
+      const rolPersona = pinAlias
+        ? rolPorNombre.get(norm(pinAlias))
+        : username ? rolPorNombre.get(norm(username)) : undefined
       const actorRole = rolPersona
         ? rolPersona === 'limpieza' ? 'limpieza' : 'propietario'
         : pinAlias || accessLink ? 'huésped'
