@@ -277,7 +277,8 @@
     "confirmDesc": "A remote opening will be sent to «{{name}}».",
     "puertaAbierta": "Door opened",
     "tu": "{{name}} (you)",
-    "buscarAccesos": "Search by name or property…"
+    "buscarAccesos": "Search by name or property…",
+    "limpiarBusqueda": "Clear search"
   },
   "limp": {
     "titulo": "Cleaning",

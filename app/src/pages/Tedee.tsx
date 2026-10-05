@@ -16,6 +16,7 @@ import {
   TriangleAlert,
   UserRound,
   WifiOff,
+  X,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import FilterBar from '@/components/FilterBar';
@@ -416,9 +417,24 @@ export default function Tedee() {
                 }}
                 placeholder={t('ted.buscarAccesos')}
                 aria-label={t('ted.buscarAccesos')}
-                className="h-9 w-44 rounded-xl border bg-[var(--surface)] pl-8 pr-3 text-sm outline-none focus:ring-2 focus:ring-[#6366F1] sm:w-56"
+                className="h-9 w-44 rounded-xl border bg-[var(--surface)] pl-8 pr-8 text-sm outline-none focus:ring-2 focus:ring-[#6366F1] sm:w-56"
                 style={{ borderColor: 'var(--border)' }}
               />
+              {q && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setQ('');
+                    setVisibleCount(8);
+                  }}
+                  aria-label={t('ted.limpiarBusqueda')}
+                  title={t('ted.limpiarBusqueda')}
+                  className="absolute right-1.5 top-1/2 flex h-6 w-6 -translate-y-1/2 items-center justify-center rounded-full transition-colors duration-150 hover:bg-[var(--surface-2)]"
+                  style={{ color: 'var(--text-muted)' }}
+                >
+                  <X className="h-3.5 w-3.5" />
+                </button>
+              )}
             </span>
             <span className="text-xs font-medium" style={{ color: 'var(--text-faint)' }}>
               {t('ted.eventos', { count: allAccesses.length })}
