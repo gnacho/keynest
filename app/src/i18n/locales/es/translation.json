@@ -276,7 +276,8 @@
     "confirmTitulo": "¿Abrir la puerta?",
     "confirmDesc": "Se enviará una apertura remota a «{{name}}».",
     "puertaAbierta": "Puerta abierta",
-    "tu": "{{name}} (tú)"
+    "tu": "{{name}} (tú)",
+    "buscarAccesos": "Buscar por nombre o inmueble…"
   },
   "limp": {
     "titulo": "Limpieza",
