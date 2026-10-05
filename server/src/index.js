@@ -478,6 +478,18 @@ guarded.get('/events', (c) => {
   })
 })
 
+/* Accesos Tedee con caché en caliente (10 min): la ventana de 90 días puede
+   paginar hasta 8 páginas por cerradura; sin caché cada bootstrap del front
+   repetiría todo el barrido contra la API de Tedee. */
+const accesosCache = { at: 0, datos: [] }
+async function accesosConCache(db) {
+  if (Date.now() - accesosCache.at < 10 * 60 * 1000 && accesosCache.datos.length) return accesosCache.datos
+  const datos = await tedeeAccesses(db)
+  accesosCache.at = Date.now()
+  accesosCache.datos = datos
+  return datos
+}
+
 guarded.get('/bootstrap', async (c) => {
   const db = c.get('db')
   const properties = db.prepare('SELECT * FROM properties ORDER BY created_at').all()
@@ -511,7 +523,7 @@ guarded.get('/bootstrap', async (c) => {
   let locks = []
   let accesses = []
   try {
-    const [lk, ac] = await Promise.all([tedeeLocks(db, { soloAsignadas: true }), tedeeAccesses(db)])
+    const [lk, ac] = await Promise.all([tedeeLocks(db, { soloAsignadas: true }), accesosConCache(db)])
     locks = lk
     accesses = ac
   } catch { /* tedee no configurado o caído */ }

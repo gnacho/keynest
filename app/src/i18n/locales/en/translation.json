@@ -261,7 +261,7 @@
     "sinConexion": "Offline {{time}}",
     "crearTareaPilas": "Create battery task",
     "registro": "Access log",
-    "eventos": "{{count}} eventos · últimos 30 días",
+    "eventos": "{{count}} eventos · últimos 90 días",
     "sinAccesos": "No accesses for this filter.",
     "cargarMas": "Load more",
     "vista": "seen {{time}}",

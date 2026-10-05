@@ -186,11 +186,12 @@ const ACCESS_EVENT_TYPE = {
  *  inmueble en la fecha del acceso ('' si no hay match). Solo se aplica al actor
  *  cuando NO es una persona conocida (#281): si el alias del evento coincide con
  *  una persona del maestro (limpieza/proveedor), ese es el actor real y su rol.
- *  Ventana por defecto: 30 días (200 eventos/página, máx. 3 páginas por
- *  cerradura; tope para no martillear la API en cada bootstrap). Con 50 eventos
- *  no llegaba ni a 7 días con huéspedes activos y limpiezas como Flor no salían.
+ *  Ventana por defecto: 90 días (200 eventos/página, máx. 8 páginas por
+ *  cerradura; tope para no martillear la API en cada bootstrap; el bootstrap
+ *  además cachea el resultado 10 min en index.js). Con 50 eventos no llegaba
+ *  ni a 7 días con huéspedes activos y limpiezas como Flor no salían.
  *  Solo cloud: el bridge local no expone deviceactivity. */
-export async function tedeeAccesses(db, { dias = 30 } = {}) {
+export async function tedeeAccesses(db, { dias = 90 } = {}) {
   if (!isCloudUrl(tedeeConfig(db).url)) return []
   // Solo cerraduras asignadas a un inmueble (#277): el resto se oculta.
   const locks = await tedeeLocks(db, { soloAsignadas: true })
@@ -202,9 +203,9 @@ export async function tedeeAccesses(db, { dias = 30 } = {}) {
   const vistos = new Set()
   const out = []
   for (const l of locks) {
-    // Paginación hacia atrás hasta cubrir la ventana completa (máx. 3 páginas).
+    // Paginación hacia atrás hasta cubrir la ventana completa (máx. 8 páginas).
     let lastElemDate = null
-    for (let pagina = 0; pagina < 3; pagina++) {
+    for (let pagina = 0; pagina < 8; pagina++) {
       const raw = await tedeeFetch(db, null, `/api/v37/my/deviceactivity?deviceId=${l.id}&elements=200${lastElemDate ? `&lastElemDate=${encodeURIComponent(lastElemDate)}` : ''}`)
       const list = Array.isArray(raw?.result) ? raw.result : []
       if (list.length === 0) break
