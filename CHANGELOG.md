@@ -12,6 +12,34 @@ y este proyecto se adhiere a [Versionado Semántico](https://semver.org/lang/es/
 > release usar `scripts/release.sh` (calcula la versión y crea el tag con el
 > mensaje correcto).
 
+## [1.5.60] - 2026-10-05
+
+### Added
+
+- **Tarea de pilas desde la cerradura (#280).** El aviso de batería baja de cada
+  cerradura abre directamente la ventana de nueva tarea con el inmueble, el
+  título sugerido, la categoría Cerradura/pilas, la primera fecha libre del
+  inmueble y el propietario como responsable ya rellenos. El diálogo de tareas
+  gana campos de fecha prevista y responsable (también al editar una tarea).
+- **Batería de los teclados PIN (#279).** Cada cerradura muestra la batería de
+  su teclado emparejado y avisa cuando baja del 20 %, con el mismo patrón que
+  la batería de la cerradura y un aviso propio en la campana.
+- **Registro de accesos: buscador y 90 días (#282).** Nuevo buscador por
+  persona, inmueble o tipo de acceso (con botón para limpiar el texto) y
+  ventana ampliada de 7 a 90 días: se pagina hacia atrás en la API de Tedee y
+  el servidor cachea el resultado 10 minutos para no repetir el barrido en
+  cada carga.
+- **Actores reales en el registro (#281).** El registro identifica a quien abre
+  de verdad, sin eventos inventados: el alias de PIN que coincide con una
+  persona del maestro (limpieza, proveedores) muestra a esa persona con su rol
+  aunque haya un inquilino alojado; las acciones hechas solo desde la app se
+  etiquetan como propietario; los cierres con el botón de la cerradura o
+  manual cuentan como salida.
+- **Clic en una tarjeta de cerradura filtra el registro (#282).** Al tocar una
+  tarjeta, el registro se filtra por ese inmueble (anillo activo y bajada al
+  listado); otro clic vuelve a mostrar todos. El antiguo diálogo de detalle de
+  cerradura se elimina.
+
 ## [1.5.59] - 2026-10-04
 
 ### Added
