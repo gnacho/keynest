@@ -261,7 +261,7 @@
     "sinConexion": "Sin conexión {{time}}",
     "crearTareaPilas": "Crear tarea de pilas",
     "registro": "Registro de accesos",
-    "eventos": "{{count}} eventos · últimos 7 días",
+    "eventos": "{{count}} eventos · últimos 30 días",
     "sinAccesos": "Sin accesos para este filtro.",
     "cargarMas": "Cargar más",
     "vista": "vista {{time}}",

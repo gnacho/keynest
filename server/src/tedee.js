@@ -186,8 +186,11 @@ const ACCESS_EVENT_TYPE = {
  *  inmueble en la fecha del acceso ('' si no hay match). Solo se aplica al actor
  *  cuando NO es una persona conocida (#281): si el alias del evento coincide con
  *  una persona del maestro (limpieza/proveedor), ese es el actor real y su rol.
+ *  Ventana por defecto: 30 días (200 eventos/página, máx. 3 páginas por
+ *  cerradura; tope para no martillear la API en cada bootstrap). Con 50 eventos
+ *  no llegaba ni a 7 días con huéspedes activos y limpiezas como Flor no salían.
  *  Solo cloud: el bridge local no expone deviceactivity. */
-export async function tedeeAccesses(db) {
+export async function tedeeAccesses(db, { dias = 30 } = {}) {
   if (!isCloudUrl(tedeeConfig(db).url)) return []
   // Solo cerraduras asignadas a un inmueble (#277): el resto se oculta.
   const locks = await tedeeLocks(db, { soloAsignadas: true })
@@ -195,46 +198,60 @@ export async function tedeeAccesses(db) {
   const rolPorNombre = new Map(
     db.prepare('SELECT name, role FROM people').all().map((p) => [p.name.trim().toLowerCase(), p.role]),
   )
+  const limite = Date.now() - dias * 86400000
+  const vistos = new Set()
   const out = []
   for (const l of locks) {
-    const raw = await tedeeFetch(db, null, `/api/v37/my/deviceactivity?deviceId=${l.id}&elements=50`)
-    const list = Array.isArray(raw?.result) ? raw.result : []
-    for (const ev of list) {
-      const type = ACCESS_EVENT_TYPE[ev.event]
-      if (!type) continue
-      const at = ev.date ? new Date(ev.date) : new Date()
-      // pinAlias = nombre de la persona asignada al PIN; nunca el código.
-      // La API devuelve userName (docs oficiales device-activity); se acepta
-      // también username por compatibilidad con mocks/puentes antiguos.
-      const pinAlias = ev.pinAlias || ''
-      const username = ev.userName || ev.username || ''
-      const accessLink = ev.accessLinkName || ''
-      const actorName = pinAlias || username || accessLink
-      const guestName = inquilinoEnFecha(reservasPorProp.get(l.propertyId), fechaLocal(at))
-      // Rol (#281): actor (PIN o usuario de la app) que coincide con una persona
-      // del maestro → su rol real (limpieza/proveedor), aunque haya estancia.
-      // PIN o enlace de acceso sin match → huésped. Solo usuario de app →
-      // propietario: un cierre con botón/manual o apertura remota no la hace el
-      // inquilino. Sin actor, se conserva el cruce de reserva (#277).
-      const norm = (s) => s.trim().toLowerCase()
-      const rolPersona = pinAlias
-        ? rolPorNombre.get(norm(pinAlias))
-        : username ? rolPorNombre.get(norm(username)) : undefined
-      const actorRole = rolPersona
-        ? rolPersona === 'limpieza' ? 'limpieza' : 'propietario'
-        : pinAlias || accessLink ? 'huésped'
-        : username ? 'propietario'
-        : guestName ? 'huésped' : 'propietario'
-      out.push({
-        id: `td-${ev.id}`,
-        at,
-        actorName,
-        actorRole,
-        type,
-        propertyId: l.propertyId ?? '',
-        lockId: String(l.id),
-        guestName,
-      })
+    // Paginación hacia atrás hasta cubrir la ventana completa (máx. 3 páginas).
+    let lastElemDate = null
+    for (let pagina = 0; pagina < 3; pagina++) {
+      const raw = await tedeeFetch(db, null, `/api/v37/my/deviceactivity?deviceId=${l.id}&elements=200${lastElemDate ? `&lastElemDate=${encodeURIComponent(lastElemDate)}` : ''}`)
+      const list = Array.isArray(raw?.result) ? raw.result : []
+      if (list.length === 0) break
+      for (const ev of list) {
+        const type = ACCESS_EVENT_TYPE[ev.event]
+        if (!type) continue
+        const at = ev.date ? new Date(ev.date) : new Date()
+        if (at.getTime() < limite) continue
+        const id = `td-${ev.id}`
+        if (vistos.has(id)) continue
+        vistos.add(id)
+        // pinAlias = nombre de la persona asignada al PIN; nunca el código.
+        // La API devuelve userName (docs oficiales device-activity); se acepta
+        // también username por compatibilidad con mocks/puentes antiguos.
+        const pinAlias = ev.pinAlias || ''
+        const username = ev.userName || ev.username || ''
+        const accessLink = ev.accessLinkName || ''
+        const actorName = pinAlias || username || accessLink
+        const guestName = inquilinoEnFecha(reservasPorProp.get(l.propertyId), fechaLocal(at))
+        // Rol (#281): actor (PIN o usuario de la app) que coincide con una persona
+        // del maestro → su rol real (limpieza/proveedor), aunque haya estancia.
+        // PIN o enlace de acceso sin match → huésped. Solo usuario de app →
+        // propietario: un cierre con botón/manual o apertura remota no la hace el
+        // inquilino. Sin actor, se conserva el cruce de reserva (#277).
+        const norm = (s) => s.trim().toLowerCase()
+        const rolPersona = pinAlias
+          ? rolPorNombre.get(norm(pinAlias))
+          : username ? rolPorNombre.get(norm(username)) : undefined
+        const actorRole = rolPersona
+          ? rolPersona === 'limpieza' ? 'limpieza' : 'propietario'
+          : pinAlias || accessLink ? 'huésped'
+          : username ? 'propietario'
+          : guestName ? 'huésped' : 'propietario'
+        out.push({
+          id,
+          at,
+          actorName,
+          actorRole,
+          type,
+          propertyId: l.propertyId ?? '',
+          lockId: String(l.id),
+          guestName,
+        })
+      }
+      const masViejo = list[list.length - 1].date ? new Date(list[list.length - 1].date).getTime() : 0
+      lastElemDate = list[list.length - 1].date
+      if (masViejo < limite || list.length < 200) break
     }
   }
   return out.sort((a, b) => b.at.getTime() - a.at.getTime())
