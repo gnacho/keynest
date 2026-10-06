@@ -13,6 +13,7 @@ import {
   LayoutDashboard,
   Lock,
   Moon,
+  MoreHorizontal,
   Settings,
   Sparkles,
   Sun,
@@ -23,6 +24,7 @@ import {
 import type { LucideIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
 import { Toaster } from '@/components/ui/sonner';
 import { toast } from 'sonner';
 import UpdateRibbon from '@/components/UpdateRibbon';
@@ -80,6 +82,11 @@ const SETTINGS_ITEM: NavItem = { to: '/ajustes', labelKey: 'ajustes', icon: Sett
    tampoco va: se gestiona desde el Sheet del inmueble en Resumen. */
 const BOTTOM_ITEMS: NavItem[] = VISIBLE_NAV.filter((i) => i.to !== '/inmuebles');
 
+/* Móvil: secciones que no caben en la bottom-nav van tras el botón "Más"
+   (sheet inferior, mismo patrón que NetPulse): Calendario, Mantenimiento,
+   Inmuebles, Tedee y Ajustes. */
+const MORE_ITEMS: NavItem[] = [...NAV_ITEMS.filter((i) => HIDDEN_ROUTES.includes(i.to)), { to: '/inmuebles', labelKey: 'inmuebles', icon: Building2 }, SETTINGS_ITEM];
+
 const TITLE_KEYS: Record<string, string> = {
   '/': 'resumen',
   '/calendario': 'calendario',
@@ -93,6 +100,75 @@ const TITLE_KEYS: Record<string, string> = {
 };
 
 const COLLAPSE_KEY = 'keynest-sidebar-collapsed';
+
+/* Botón "Más" de la bottom-nav móvil: abre un sheet con las secciones que no
+   caben (MORE_ITEMS). Mismo patrón que el MoreSheet de NetPulse. */
+function MoreNavItem({ moreActive, onNavigate }: { moreActive: boolean; onNavigate: (to: string) => void }) {
+  const { t } = useTranslation();
+  const [open, setOpen] = useState(false);
+  return (
+    <Sheet open={open} onOpenChange={setOpen}>
+      <SheetTrigger asChild>
+        <button
+          type="button"
+          aria-label={t('nav.mas')}
+          className="relative flex flex-col items-center justify-center gap-0.5"
+        >
+          {moreActive && (
+            <span
+              className="absolute top-1.5 h-8 w-14 rounded-xl"
+              style={{ backgroundColor: 'rgb(var(--accent-rgb) / 0.12)' }}
+            />
+          )}
+          <span className="relative">
+            <MoreHorizontal
+              className="h-5 w-5"
+              strokeWidth={moreActive ? 2.2 : 1.8}
+              style={{ color: moreActive ? 'var(--brand-from)' : 'var(--text-faint)' }}
+            />
+          </span>
+          <span
+            className="relative text-[10px] font-semibold"
+            style={{ color: moreActive ? '#6366F1' : 'var(--text-faint)' }}
+          >
+            {t('nav.mas')}
+          </span>
+        </button>
+      </SheetTrigger>
+      <SheetContent
+        side="bottom"
+        className="rounded-t-2xl border-[var(--border)] bg-[var(--surface)] pb-[max(1rem,env(safe-area-inset-bottom))]"
+      >
+        <SheetHeader>
+          <SheetTitle className="font-display">{t('nav.mas')}</SheetTitle>
+        </SheetHeader>
+        <div className="mt-2 space-y-1">
+          {MORE_ITEMS.map((item) => (
+            <Link
+              key={item.to}
+              to={item.to}
+              onClick={() => {
+                setOpen(false);
+                onNavigate(item.to);
+              }}
+              className="flex items-center gap-3 rounded-xl px-3 py-3 transition-colors hover:bg-[var(--surface-2)]"
+            >
+              <span
+                className="flex h-10 w-10 items-center justify-center rounded-xl"
+                style={{ backgroundColor: 'var(--surface-2)', color: 'var(--brand-from)' }}
+              >
+                <item.icon className="h-5 w-5" strokeWidth={1.8} />
+              </span>
+              <span className="text-sm font-medium" style={{ color: 'var(--text)' }}>
+                {t(`nav.${item.labelKey}`)}
+              </span>
+            </Link>
+          ))}
+        </div>
+      </SheetContent>
+    </Sheet>
+  );
+}
 
 /* Orden completo de vistas (dominio + Ajustes al final): define la dirección
    del deslizamiento móvil (forward/back) igual que el nav de Helios. */
@@ -715,7 +791,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
             paddingBottom: 'env(safe-area-inset-bottom)',
           }}
         >
-          <div className="grid h-16 grid-cols-4">
+          <div className="grid h-16 grid-cols-5">
             {BOTTOM_ITEMS.map((item) => {
               const active = isActive(item.to);
               const badge = badgeFor(item.to);
@@ -755,6 +831,17 @@ export default function AppShell({ children }: { children: ReactNode }) {
                 </Link>
               );
             })}
+
+            {/* ---- Botón "Más": secciones que no caben (NetPulse-style) ---- */}
+            {(() => {
+              const moreActive = MORE_ITEMS.some((i) => isActive(i.to));
+              return (
+                <MoreNavItem
+                  moreActive={moreActive}
+                  onNavigate={(to) => mobileNavRef.current(to)}
+                />
+              );
+            })()}
           </div>
         </nav>
       </div>
