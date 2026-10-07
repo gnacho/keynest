@@ -146,11 +146,24 @@ export default function Mantenimiento() {
 
   // Abre el diálogo una sola vez, guarda el prefill en estado (los params se
   // limpian de la URL justo después: el prefill no debe recalcularse a undefined).
+  // Si YA existe una tarea de pilas abierta para esa cerradura (#288), abre esa
+  // tarea en edición en lugar de crear otra.
   const [prefillTarea, setPrefillTarea] = useState<TaskPrefill | undefined>();
   useEffect(() => {
-    if (!pilasPrefill) return;
-    setNewOpen(true);
-    setPrefillTarea(pilasPrefill);
+    if (!pilasPrefill || !selectedProperty) return;
+    const existente = all.find(
+      (t) =>
+        t.propertyId === selectedProperty.id &&
+        t.category === 'cerradura/pilas' &&
+        t.status !== 'finalizada' &&
+        t.title === pilasPrefill.title,
+    );
+    if (existente) {
+      setEditTask(existente);
+    } else {
+      setNewOpen(true);
+      setPrefillTarea(pilasPrefill);
+    }
     const next = new URLSearchParams(params);
     next.delete('nueva');
     next.delete('cerradura');
@@ -378,8 +391,7 @@ export default function Mantenimiento() {
                   <button
                     type="button"
                     onClick={() => setOpenSections((s) => ({ ...s, [col.status]: !s[col.status] }))}
-                    className="sticky top-[104px] z-20 flex w-full items-center gap-2 rounded-xl px-2 py-2 backdrop-blur-md"
-                    style={{ backgroundColor: 'color-mix(in srgb, var(--bg) 88%, transparent)' }}
+                    className="flex w-full items-center gap-2 rounded-xl px-2 py-2"
                   >
                     <span className="h-2 w-2 rounded-full" style={{ backgroundColor: col.dot }} />
                     <h2 className="font-display text-[15px] font-semibold">{tr(col.labelKey)}</h2>
