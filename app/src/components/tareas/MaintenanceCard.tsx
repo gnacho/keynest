@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
-import { AnimatePresence, motion, useMotionValue, useReducedMotion, useTransform } from 'framer-motion';
+import { AnimatePresence, animate, motion, useMotionValue, useReducedMotion, useTransform } from 'framer-motion';
 import type { Variants } from 'framer-motion';
 import { Ban, CalendarOff, Check, ChevronsRight, Link2, Settings2, Undo2 } from 'lucide-react';
 import { toast } from 'sonner';
@@ -83,11 +83,18 @@ function SwipeToFinish({ onDone, children }: { onDone: () => void; children: Rea
       <motion.div
         style={{ x }}
         drag={finishing ? false : 'x'}
+        dragDirectionLock
         dragConstraints={{ left: 0, right: width }}
         dragElastic={0.1}
         dragTransition={{ bounceStiffness: 500, bounceDamping: 35 }}
         onDragEnd={(_, info) => {
           if (info.offset.x > width * 0.4) finish();
+        }}
+        /* Si el navegador roba el gesto (pointercancel, p.ej. al empezar un
+           scroll vertical), la tarjeta se quedaba "suelta" sin volver: la
+           devolvemos a 0 a mano (#287). */
+        onPointerCancel={() => {
+          if (!finishing) animate(x, 0, { type: 'spring', stiffness: 500, damping: 35 });
         }}
         animate={finishing && !reduce ? { scale: [1, 1.02, 1] } : { scale: 1 }}
         transition={{ duration: 0.3 }}
