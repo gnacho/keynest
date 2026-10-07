@@ -71,14 +71,15 @@ const DESKTOP_NAV: NavItem[] = NAV_ITEMS;
 
 /* Móvil (bottom-nav): solo los esenciales + Ajustes */
 const HIDDEN_ROUTES = ['/calendario', '/mantenimiento', '/tedee'];
-const VISIBLE_NAV: NavItem[] = NAV_ITEMS.filter((i) => !HIDDEN_ROUTES.includes(i.to));
 
 const SETTINGS_ITEM: NavItem = { to: '/ajustes', labelKey: 'ajustes', icon: Settings };
 
 /* Móvil (bottom-nav): esenciales (Resumen/Reservas/Limpieza/Rentabilidad) sin
    Ajustes — Ajustes se accede desde el avatar de usuario del header. Inmuebles
    tampoco va: se gestiona desde el Sheet del inmueble en Resumen. */
-const BOTTOM_ITEMS: NavItem[] = VISIBLE_NAV.filter((i) => i.to !== '/inmuebles');
+/* Móvil (bottom-nav): TODAS las secciones de dominio, en una fila
+   deslizable horizontalmente (overflow-x-auto). */
+const BOTTOM_ITEMS: NavItem[] = NAV_ITEMS;
 
 const TITLE_KEYS: Record<string, string> = {
   '/': 'resumen',
@@ -379,6 +380,18 @@ export default function AppShell({ children }: { children: ReactNode }) {
       handleMobileNav(to)(event);
     };
   }, [handleMobileNav]);
+
+  /* Bottom-nav deslizable: centra el item activo en la fila scrolleable. */
+  const bottomNavRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!isMobile) return;
+    const el = bottomNavRef.current;
+    const activeEl = el?.querySelector('[data-active="true"]');
+    if (el && activeEl) {
+      activeEl.scrollIntoView({ inline: 'center', block: 'nearest', behavior: reduce ? 'auto' : 'smooth' });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [location.pathname, isMobile]);
   useEffect(() => {
     if (!isMobile) return;
     const el = document.getElementById('kn-main');
@@ -715,7 +728,10 @@ export default function AppShell({ children }: { children: ReactNode }) {
             paddingBottom: 'env(safe-area-inset-bottom)',
           }}
         >
-          <div className="grid h-16 grid-cols-4">
+          <div
+            ref={bottomNavRef}
+            className="flex h-16 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+          >
             {BOTTOM_ITEMS.map((item) => {
               const active = isActive(item.to);
               const badge = badgeFor(item.to);
@@ -724,7 +740,8 @@ export default function AppShell({ children }: { children: ReactNode }) {
                   key={item.to}
                   to={item.to}
                   onClick={handleMobileNav(item.to)}
-                  className="relative flex flex-col items-center justify-center gap-0.5"
+                  data-active={active ? 'true' : undefined}
+                  className="relative flex min-w-[68px] flex-1 flex-col items-center justify-center gap-0.5"
                 >
                   {active && (
                     <motion.span

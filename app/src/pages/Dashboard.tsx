@@ -179,7 +179,7 @@ export default function Dashboard() {
         variants={itemV}
         type="button"
         onClick={() => navigate(`/reservas?inmueble=${p.slug}&reserva=${r.id}`)}
-        className="flex w-full items-center gap-3 rounded-xl px-2 py-2 text-left transition-colors duration-150 hover:bg-[var(--surface-2)]"
+        className="flex w-full items-center gap-2 rounded-xl px-2 py-2 text-left transition-colors duration-150 hover:bg-[var(--surface-2)] md:gap-3"
       >
         <PropertyAvatar property={p} size={40} />
         <span className="min-w-0 flex-1">
@@ -224,11 +224,11 @@ export default function Dashboard() {
             </span>
           )}
         </span>
-        <span className="flex items-center gap-1.5">
-          {/* Ranura fija del tag HOY/MAÑANA (#225): mismo ancho en todas las
-              filas para que las columnas queden alineadas; vacía si el día no
-              es hoy/mañana */}
-          <span className="flex w-[4.5rem] shrink-0 items-center justify-center">
+        <span className="flex flex-col items-end gap-1 md:flex-row md:items-center md:gap-1.5">
+          {/* Tag HOY/MAÑANA: en móvil va APILADO sobre el bloque de la derecha
+              (la ranura fija de 4.5rem se comía el nombre del huésped); en
+              desktop se mantiene la ranura fija para alinear columnas (#225). */}
+          <span className="flex md:w-[4.5rem] md:shrink-0 md:items-center md:justify-center">
             {(isToday || isTomorrow) && (
               <span
                 className="whitespace-nowrap rounded-full px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white"
@@ -238,36 +238,38 @@ export default function Dashboard() {
               </span>
             )}
           </span>
-          {/* CircleAlert si rotación (izquierda, alineado) */}
-          {rotacion && (
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <span className="flex shrink-0">
-                  <CircleAlert className="h-4 w-4" style={{ color: '#F43F5E' }} aria-label={t('dash.rotacion')} />
-                </span>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>{t('dash.rotacion')}</p>
-              </TooltipContent>
-            </Tooltip>
-          )}
-          {/* Chip Entrada/Salida con hora — oculto en móvil (el color de la tarjeta ya distingue) */}
-          <span
-            className="hidden items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold sm:inline-flex"
-            style={{ backgroundColor: 'var(--sl-chip-bg)', color: 'var(--sl-chip-text)' }}
-          >
-            {kind === 'in' ? t('common.entrada') : t('common.salida')} {fmtTime(date)}
-          </span>
-          {/* Chip fecha: día + mes */}
-          <span
-            className="flex flex-col items-center justify-center rounded-lg border leading-none"
-            style={{ minWidth: '44px', padding: '3px 6px', borderColor: `${accent}40`, backgroundColor: `${accent}14` }}
-          >
-            <span className="text-xl font-bold" style={{ color: accent }}>
-              {date.getDate()}
+          <span className="flex items-center gap-1.5">
+            {/* CircleAlert si rotación (izquierda, alineado) */}
+            {rotacion && (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <span className="flex shrink-0">
+                    <CircleAlert className="h-4 w-4" style={{ color: '#F43F5E' }} aria-label={t('dash.rotacion')} />
+                  </span>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>{t('dash.rotacion')}</p>
+                </TooltipContent>
+              </Tooltip>
+            )}
+            {/* Chip Entrada/Salida con hora — oculto en móvil (el color de la tarjeta ya distingue) */}
+            <span
+              className="hidden items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold sm:inline-flex"
+              style={{ backgroundColor: 'var(--sl-chip-bg)', color: 'var(--sl-chip-text)' }}
+            >
+              {kind === 'in' ? t('common.entrada') : t('common.salida')} {fmtTime(date)}
             </span>
-            <span className="mt-0.5 text-[10px] font-semibold uppercase tracking-wide" style={{ color: accent }}>
-              {fmtMonth(date, true)}
+            {/* Chip fecha: día + mes */}
+            <span
+              className="flex flex-col items-center justify-center rounded-lg border leading-none"
+              style={{ minWidth: '44px', padding: '3px 6px', borderColor: `${accent}40`, backgroundColor: `${accent}14` }}
+            >
+              <span className="text-xl font-bold" style={{ color: accent }}>
+                {date.getDate()}
+              </span>
+              <span className="mt-0.5 text-[10px] font-semibold uppercase tracking-wide" style={{ color: accent }}>
+                {fmtMonth(date, true)}
+              </span>
             </span>
           </span>
         </span>
