@@ -92,12 +92,20 @@ function LockCard({
   onBatteryTask: () => void;
 }) {
   const { t } = useTranslation();
-  const { getProperty } = useData();
+  const { getProperty, getMaintenance } = useData();
   const reduce = useReducedMotion();
   // Lock sin inmueble asociado (propertyId vacío): fallback para no romper el render.
   const property = getProperty(lock.propertyId) ?? { id: '', slug: '', name: lock.name, address: '', bedrooms: 0, bathrooms: 0, area: 0, photo: '', checklist: [], instructions: '' };
   const tone = batteryTone(lock.battery);
   const lowBattery = lock.battery < 30;
+  // ¿Ya existe una tarea de pilas para esta cerradura? (#288) El deep-link a
+  // Mantenimiento abre la existente; aquí solo cambiamos el texto del chip.
+  const batteryTaskExists = getMaintenance().some(
+    (task) =>
+      task.propertyId === property.id &&
+      task.category === 'cerradura/pilas' &&
+      task.title.toLowerCase().includes(lock.name.toLowerCase()),
+  );
   const BatteryIcon = tone.icon;
 
   return (
@@ -199,7 +207,7 @@ function LockCard({
           style={{ backgroundColor: 'var(--ro-chip-bg)', color: 'var(--ro-chip-text)' }}
         >
           <BatteryWarning className="h-3.5 w-3.5" />
-          {t('ted.crearTareaPilas')}
+          {batteryTaskExists ? t('ted.verTareaPilas') : t('ted.crearTareaPilas')}
         </span>
       )}
     </motion.button>
