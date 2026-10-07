@@ -146,18 +146,21 @@ export default function Mantenimiento() {
 
   // Abre el diálogo una sola vez, guarda el prefill en estado (los params se
   // limpian de la URL justo después: el prefill no debe recalcularse a undefined).
-  // Si YA existe una tarea de pilas abierta para esa cerradura (#288), abre esa
-  // tarea en edición en lugar de crear otra.
+  // Si YA existe una tarea de pilas para esa cerradura (#288), abre la más
+  // reciente en edición (aunque esté finalizada: la batería tarda en
+  // actualizarse tras el cambio) en lugar de crear otra.
   const [prefillTarea, setPrefillTarea] = useState<TaskPrefill | undefined>();
   useEffect(() => {
     if (!pilasPrefill || !selectedProperty) return;
-    const existente = all.find(
-      (t) =>
-        t.propertyId === selectedProperty.id &&
-        t.category === 'cerradura/pilas' &&
-        t.status !== 'finalizada' &&
-        t.title === pilasPrefill.title,
-    );
+    const lockName = cerraduraParam ?? '';
+    const existente = all
+      .filter(
+        (t) =>
+          t.propertyId === selectedProperty.id &&
+          t.category === 'cerradura/pilas' &&
+          (!lockName || t.title.toLowerCase().includes(lockName.toLowerCase())),
+      )
+      .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())[0];
     if (existente) {
       setEditTask(existente);
     } else {
