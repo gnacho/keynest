@@ -12,6 +12,16 @@ y este proyecto se adhiere a [Versionado Semántico](https://semver.org/lang/es/
 > release usar `scripts/release.sh` (calcula la versión y crea el tag con el
 > mensaje correcto).
 
+## [1.5.61] - 2026-10-07
+
+### Changed
+
+- **Menú inferior deslizable en móvil (#284).** La barra de navegación inferior
+  ahora muestra todas las secciones (Resumen, Calendario, Reservas, Limpieza,
+  Mantenimiento, Rentabilidad, Inmuebles y Tedee) en una fila que se desliza
+  horizontalmente, centrando automáticamente la pestaña activa. Adiós al
+  sheet «Más».
+
 ## [1.5.60] - 2026-10-05
 
 ### Added
