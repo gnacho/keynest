@@ -17,8 +17,20 @@ export default function PullToRefresh({ children }: { children: ReactNode }) {
   const [refreshing, setRefreshing] = useState(false);
 
   useEffect(() => {
+    /* No activar el pull si el gesto empieza dentro de un contenedor con
+       scroll propio (diálogos, listas internas, la bottom-nav): ahí el
+       deslizamiento es del contenedor, no un pull de página (#287). */
+    const isInScroller = (el: EventTarget | null): boolean => {
+      let n = el as HTMLElement | null;
+      while (n && n !== document.body && n !== document.documentElement) {
+        const st = getComputedStyle(n);
+        if ((st.overflowY === 'auto' || st.overflowY === 'scroll') && n.scrollHeight > n.clientHeight) return true;
+        n = n.parentElement;
+      }
+      return false;
+    };
     const onTouchStart = (e: TouchEvent) => {
-      if (window.scrollY <= 0 && e.touches.length === 1) {
+      if (window.scrollY <= 0 && e.touches.length === 1 && !isInScroller(e.target)) {
         startY.current = e.touches[0].clientY;
       } else {
         startY.current = null;

@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
-import { AnimatePresence, motion, useMotionValue, useReducedMotion, useTransform } from 'framer-motion';
+import { AnimatePresence, animate, motion, useMotionValue, useReducedMotion, useTransform } from 'framer-motion';
 import type { Variants } from 'framer-motion';
 import { Ban, CalendarOff, Check, ChevronsRight, Link2, Settings2, Undo2 } from 'lucide-react';
 import { toast } from 'sonner';
@@ -22,6 +22,10 @@ import { chipStyle } from '@/lib/semantic';
 import { cn } from '@/lib/utils';
 
 /* ------------------------------------------- Pista "deslizar para finalizar" */
+/* Implementación con pointer events propios (NO framer drag): el drag de
+   framer dejaba la tarjeta "suelta" (x a medias sin volver) cuando el gesto
+   se interrumpía o no llegaba al umbral (#287). Aquí pointerup/pointercancel
+   SIEMPRE devuelven x a 0 salvo que se supere el umbral. */
 function SwipeToFinish({ onDone, children }: { onDone: () => void; children: ReactNode }) {
   const { t } = useTranslation();
   const reduce = useReducedMotion();
@@ -30,6 +34,7 @@ function SwipeToFinish({ onDone, children }: { onDone: () => void; children: Rea
   const [finishing, setFinishing] = useState(false);
   const x = useMotionValue(0);
   const trackOpacity = useTransform(x, [0, 100], [0.4, 1]);
+  const gesture = useRef<{ startX: number; startY: number; locked: 'x' | 'y' | null; captured: boolean } | null>(null);
 
   useEffect(() => {
     const el = ref.current;
@@ -49,6 +54,44 @@ function SwipeToFinish({ onDone, children }: { onDone: () => void; children: Rea
       /* noop */
     }
     window.setTimeout(onDone, 320);
+  };
+
+  const onPointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (finishing) return;
+    gesture.current = { startX: e.clientX, startY: e.clientY, locked: null, captured: false };
+  };
+
+  const onPointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
+    const g = gesture.current;
+    if (!g || finishing) return;
+    const dx = e.clientX - g.startX;
+    const dy = e.clientY - g.startY;
+    if (!g.locked) {
+      // Zona muerta de 8px antes de decidir eje: un scroll vertical normal
+      // nunca mueve la tarjeta.
+      if (Math.abs(dx) < 8 && Math.abs(dy) < 8) return;
+      g.locked = Math.abs(dx) > Math.abs(dy) ? 'x' : 'y';
+      if (g.locked === 'x') {
+        g.captured = true;
+        e.currentTarget.setPointerCapture?.(e.pointerId);
+      }
+    }
+    if (g.locked === 'x') {
+      x.set(Math.max(0, Math.min(width, dx)));
+    }
+  };
+
+  const endGesture = () => {
+    const g = gesture.current;
+    gesture.current = null;
+    if (!g || finishing) return;
+    if (g.locked === 'x' && x.get() > width * 0.4) {
+      finish();
+    } else {
+      // Siempre volvemos a 0: release, scroll robado (pointercancel) o
+      // desliz corto que no llega al umbral.
+      animate(x, 0, reduce ? { duration: 0.15 } : { type: 'spring', stiffness: 500, damping: 35 });
+    }
   };
 
   return (
@@ -81,14 +124,11 @@ function SwipeToFinish({ onDone, children }: { onDone: () => void; children: Rea
       </AnimatePresence>
 
       <motion.div
-        style={{ x }}
-        drag={finishing ? false : 'x'}
-        dragConstraints={{ left: 0, right: width }}
-        dragElastic={0.1}
-        dragTransition={{ bounceStiffness: 500, bounceDamping: 35 }}
-        onDragEnd={(_, info) => {
-          if (info.offset.x > width * 0.4) finish();
-        }}
+        style={{ x, touchAction: 'pan-y' }}
+        onPointerDown={onPointerDown}
+        onPointerMove={onPointerMove}
+        onPointerUp={endGesture}
+        onPointerCancel={endGesture}
         animate={finishing && !reduce ? { scale: [1, 1.02, 1] } : { scale: 1 }}
         transition={{ duration: 0.3 }}
         className="relative rounded-2xl"

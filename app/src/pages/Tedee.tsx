@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { useNavigate, useSearchParams } from 'react-router';
+import { useSearchParams } from 'react-router';
 import { motion, useReducedMotion } from 'framer-motion';
 import type { Variants } from 'framer-motion';
 import {
@@ -26,7 +26,9 @@ import PropertyAvatar from '@/components/PropertyAvatar';
 import { useTranslation } from 'react-i18next';
 import { useData } from '@/data/useData';
 import { myPropertyIds } from '@/lib/auth';
-import type { Lock as LockT, TedeeAccess } from '@/data/types';
+import type { Lock as LockT, MaintenanceTask, TedeeAccess } from '@/data/types';
+import { NewTaskDialog, type TaskPrefill } from '@/components/tareas/NewTaskDialog';
+import { getFreeWindow } from '@/components/tareas/free-window';
 import { fmtDateShort, fmtRelative, fmtTime, isSameDay, startOfDay, addDays } from '@/lib/format';
 import { cn } from '@/lib/utils';
 
@@ -92,12 +94,20 @@ function LockCard({
   onBatteryTask: () => void;
 }) {
   const { t } = useTranslation();
-  const { getProperty } = useData();
+  const { getProperty, getMaintenance } = useData();
   const reduce = useReducedMotion();
   // Lock sin inmueble asociado (propertyId vacío): fallback para no romper el render.
   const property = getProperty(lock.propertyId) ?? { id: '', slug: '', name: lock.name, address: '', bedrooms: 0, bathrooms: 0, area: 0, photo: '', checklist: [], instructions: '' };
   const tone = batteryTone(lock.battery);
   const lowBattery = lock.battery < 30;
+  // ¿Ya existe una tarea de pilas para esta cerradura? (#288) El deep-link a
+  // Mantenimiento abre la existente; aquí solo cambiamos el texto del chip.
+  const batteryTaskExists = getMaintenance().some(
+    (task) =>
+      task.propertyId === property.id &&
+      task.category === 'cerradura/pilas' &&
+      task.title.toLowerCase().includes(lock.name.toLowerCase()),
+  );
   const BatteryIcon = tone.icon;
 
   return (
@@ -199,7 +209,7 @@ function LockCard({
           style={{ backgroundColor: 'var(--ro-chip-bg)', color: 'var(--ro-chip-text)' }}
         >
           <BatteryWarning className="h-3.5 w-3.5" />
-          {t('ted.crearTareaPilas')}
+          {batteryTaskExists ? t('ted.verTareaPilas') : t('ted.crearTareaPilas')}
         </span>
       )}
     </motion.button>
@@ -210,13 +220,46 @@ function LockCard({
 export default function Tedee() {
   const { t } = useTranslation();
   const data = useData();
-  const navigate = useNavigate();
   const reduce = useReducedMotion();
   const [params, setParams] = useSearchParams();
 
   const inmueble = params.get('inmueble') ?? 'todos';
   const tipo = params.get('tipo') ?? 'todos';
   const [q, setQ] = useState('');
+
+  /* Tarea de pilas: el diálogo se abre AQUÍ, sin navegar a Mantenimiento
+     (#288): si ya existe una para esa cerradura se abre en edición; si no,
+     se abre el alta pre-rellenada (mismo criterio que el deep-link). */
+  const [newTaskOpen, setNewTaskOpen] = useState(false);
+  const [prefillTarea, setPrefillTarea] = useState<TaskPrefill | undefined>();
+  const [editTask, setEditTask] = useState<MaintenanceTask | null>(null);
+  const openBatteryTask = (lock: LockT) => {
+    const p = data.getProperty(lock.propertyId);
+    if (!p) return;
+    const existente = data
+      .getMaintenance()
+      .filter(
+        (task) =>
+          task.propertyId === p.id &&
+          task.category === 'cerradura/pilas' &&
+          task.title.toLowerCase().includes(lock.name.toLowerCase()),
+      )
+      .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())[0];
+    if (existente) {
+      setEditTask(existente);
+      return;
+    }
+    const d = getFreeWindow(data, p.id)?.start ?? new Date();
+    setPrefillTarea({
+      slug: p.slug,
+      title: t('mant.tareaPilasTitulo', { lock: lock.name }),
+      category: 'cerradura/pilas',
+      expenseTag: 'cerradura/pilas',
+      scheduledDate: `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`,
+      assignedUserId: p.ownerId ?? undefined,
+    });
+    setNewTaskOpen(true);
+  };
 
   const dayLabel = (d: Date): string => {
     const today = startOfDay(new Date());
@@ -391,11 +434,7 @@ export default function Tedee() {
                   }
                   setParams(next, { replace: true });
                 }}
-                onBatteryTask={() => {
-                  const p = data.getProperty(lock.propertyId);
-                  if (!p) return;
-                  navigate(`/mantenimiento?inmueble=${p.slug}&nueva=pilas&cerradura=${encodeURIComponent(lock.name)}`);
-                }}
+                onBatteryTask={() => openBatteryTask(lock)}
               />
             </div>
           ))}
@@ -539,8 +578,22 @@ export default function Tedee() {
         )}
       </section>
 
-
-
+      {/* Diálogo de tarea de pilas en contexto (no navega fuera de Tedee) */}
+      <NewTaskDialog
+        open={newTaskOpen}
+        onOpenChange={(o) => {
+          setNewTaskOpen(o);
+          if (!o) setPrefillTarea(undefined);
+        }}
+        onCreated={() => toast.success(t('mant.tareaCreadaOk'))}
+        prefill={prefillTarea}
+      />
+      <NewTaskDialog
+        open={editTask !== null}
+        onOpenChange={(o) => !o && setEditTask(null)}
+        onCreated={() => toast.success(t('mant.tareaActualizada'))}
+        task={editTask}
+      />
     </div>
   );
 }

@@ -260,6 +260,7 @@
     "puertaPrincipal": "Puerta principal",
     "sinConexion": "Sin conexión {{time}}",
     "crearTareaPilas": "Crear tarea de pilas",
+    "verTareaPilas": "Ver tarea de pilas",
     "registro": "Registro de accesos",
     "eventos": "{{count}} eventos · últimos 90 días",
     "sinAccesos": "Sin accesos para este filtro.",

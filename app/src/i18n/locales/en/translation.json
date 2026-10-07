@@ -260,6 +260,7 @@
     "puertaPrincipal": "Main door",
     "sinConexion": "Offline {{time}}",
     "crearTareaPilas": "Create battery task",
+    "verTareaPilas": "View battery task",
     "registro": "Access log",
     "eventos": "{{count}} eventos · últimos 90 días",
     "sinAccesos": "No accesses for this filter.",
