@@ -12,6 +12,25 @@ y este proyecto se adhiere a [Versionado Semántico](https://semver.org/lang/es/
 > release usar `scripts/release.sh` (calcula la versión y crea el tag con el
 > mensaje correcto).
 
+## [1.5.62] - 2026-10-07
+
+### Fixed
+
+- **Mantenimiento en móvil, sin tarjetas "sueltas" (#287).** Las tarjetas
+  "desliza para finalizar" vuelven siempre a su sitio al soltar, el
+  encabezado de "Asignada" ya no se queda fijo al hacer scroll y el gesto
+  de deslizar ya no cambia de menú (para eso está la barra inferior
+  deslizable).
+
+### Changed
+
+- **Tarea de pilas sin salir de Tedee (#288).** El aviso de batería baja de
+  una cerradura abre ahora la tarea de pilas existente (o el alta
+  pre-rellenada) en un diálogo sobre la propia vista de Tedee, sin saltar
+  a Mantenimiento. El chip indica "Ver tarea de pilas" cuando ya existe.
+- **Pull-to-refresh más discreto.** Hacer scroll dentro de un diálogo o de
+  una lista interna ya no recarga la página.
+
 ## [1.5.61] - 2026-10-07
 
 ### Changed
