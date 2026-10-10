@@ -1,8 +1,7 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
-import type { ReactNode } from 'react';
-import { AnimatePresence, animate, motion, useMotionValue, useReducedMotion, useTransform } from 'framer-motion';
+import { useMemo, useState } from 'react';
+import { motion } from 'framer-motion';
 import type { Variants } from 'framer-motion';
-import { Ban, CalendarOff, Check, ChevronsRight, Link2, Settings2, Undo2 } from 'lucide-react';
+import { Ban, CalendarOff, Check, Link2, Settings2, Undo2 } from 'lucide-react';
 import { toast } from 'sonner';
 import ConfirmDialog from '@/components/ConfirmDialog';
 import MoneyText from '@/components/MoneyText';
@@ -20,124 +19,6 @@ import type { MaintenanceTask } from '@/data/types';
 import { fmtDateShort, isSameDay } from '@/lib/format';
 import { chipStyle } from '@/lib/semantic';
 import { cn } from '@/lib/utils';
-
-/* ------------------------------------------- Pista "deslizar para finalizar" */
-/* Implementación con pointer events propios (NO framer drag): el drag de
-   framer dejaba la tarjeta "suelta" (x a medias sin volver) cuando el gesto
-   se interrumpía o no llegaba al umbral (#287). Aquí pointerup/pointercancel
-   SIEMPRE devuelven x a 0 salvo que se supere el umbral. */
-function SwipeToFinish({ onDone, children }: { onDone: () => void; children: ReactNode }) {
-  const { t } = useTranslation();
-  const reduce = useReducedMotion();
-  const ref = useRef<HTMLDivElement>(null);
-  const [width, setWidth] = useState(320);
-  const [finishing, setFinishing] = useState(false);
-  const x = useMotionValue(0);
-  const trackOpacity = useTransform(x, [0, 100], [0.4, 1]);
-  const gesture = useRef<{ startX: number; startY: number; locked: 'x' | 'y' | null; captured: boolean } | null>(null);
-
-  useEffect(() => {
-    const el = ref.current;
-    if (!el) return;
-    setWidth(el.offsetWidth);
-    const ro = new ResizeObserver(() => setWidth(el.offsetWidth));
-    ro.observe(el);
-    return () => ro.disconnect();
-  }, []);
-
-  const finish = () => {
-    if (finishing) return;
-    setFinishing(true);
-    try {
-      navigator.vibrate?.(25);
-    } catch {
-      /* noop */
-    }
-    window.setTimeout(onDone, 320);
-  };
-
-  const onPointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
-    if (finishing) return;
-    gesture.current = { startX: e.clientX, startY: e.clientY, locked: null, captured: false };
-  };
-
-  const onPointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
-    const g = gesture.current;
-    if (!g || finishing) return;
-    const dx = e.clientX - g.startX;
-    const dy = e.clientY - g.startY;
-    if (!g.locked) {
-      // Zona muerta de 8px antes de decidir eje: un scroll vertical normal
-      // nunca mueve la tarjeta.
-      if (Math.abs(dx) < 8 && Math.abs(dy) < 8) return;
-      g.locked = Math.abs(dx) > Math.abs(dy) ? 'x' : 'y';
-      if (g.locked === 'x') {
-        g.captured = true;
-        e.currentTarget.setPointerCapture?.(e.pointerId);
-      }
-    }
-    if (g.locked === 'x') {
-      x.set(Math.max(0, Math.min(width, dx)));
-    }
-  };
-
-  const endGesture = () => {
-    const g = gesture.current;
-    gesture.current = null;
-    if (!g || finishing) return;
-    if (g.locked === 'x' && x.get() > width * 0.4) {
-      finish();
-    } else {
-      // Siempre volvemos a 0: release, scroll robado (pointercancel) o
-      // desliz corto que no llega al umbral.
-      animate(x, 0, reduce ? { duration: 0.15 } : { type: 'spring', stiffness: 500, damping: 35 });
-    }
-  };
-
-  return (
-    <div ref={ref} className="relative overflow-hidden rounded-2xl">
-      {/* Pista: gradiente slate → emerald + chevrons animados */}
-      <motion.div
-        style={{ opacity: trackOpacity }}
-        className="absolute inset-0 flex items-center justify-end gap-1.5 rounded-2xl bg-gradient-to-r from-slate-400 to-emerald-500 pr-4"
-      >
-        <span className="text-xs font-semibold text-white">{t('mant.desliza')}</span>
-        <motion.span
-          animate={reduce ? undefined : { x: [0, 8, 0] }}
-          transition={reduce ? undefined : { duration: 1.2, repeat: Infinity, ease: 'easeInOut' }}
-        >
-          <ChevronsRight className="h-4 w-4 text-white" />
-        </motion.span>
-      </motion.div>
-
-      {/* Flash emerald al superar el umbral */}
-      <AnimatePresence>
-        {finishing && (
-          <motion.div
-            initial={{ opacity: 0.65 }}
-            animate={{ opacity: 0 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.35 }}
-            className="pointer-events-none absolute inset-0 z-10 rounded-2xl bg-emerald-500"
-          />
-        )}
-      </AnimatePresence>
-
-      <motion.div
-        style={{ x, touchAction: 'pan-y' }}
-        onPointerDown={onPointerDown}
-        onPointerMove={onPointerMove}
-        onPointerUp={endGesture}
-        onPointerCancel={endGesture}
-        animate={finishing && !reduce ? { scale: [1, 1.02, 1] } : { scale: 1 }}
-        transition={{ duration: 0.3 }}
-        className="relative rounded-2xl"
-      >
-        {children}
-      </motion.div>
-    </div>
-  );
-}
 
 /* ------------------------------------------------------------------ Tarjeta */
 interface MaintenanceCardProps {
@@ -194,15 +75,34 @@ export default function MaintenanceCard({ task: t, variants, animateEntry = true
     );
   })();
 
+  // En móvil el cierre ya no depende de gestos (#290): tocar la tarjeta abre
+  // el diálogo, con Finalizar en su pie.
+  const openOnTap = belowLg && !data.isDemo && Boolean(onEdit);
+
   const card = (
     <motion.div
       layout="position"
       variants={animateEntry ? variants : undefined}
       initial={animateEntry ? undefined : false}
       transition={{ type: 'spring', stiffness: 400, damping: 34 }}
+      onClick={openOnTap ? onEdit : undefined}
+      role={openOnTap ? 'button' : undefined}
+      tabIndex={openOnTap ? 0 : undefined}
+      aria-label={openOnTap ? tr('mant.editarTarea') : undefined}
+      onKeyDown={
+        openOnTap
+          ? (e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                onEdit?.();
+              }
+            }
+          : undefined
+      }
       className={cn(
         'card flex flex-col gap-2 p-3.5',
         t.urgent && t.status !== 'finalizada' && 'border-2 border-rose-300 dark:border-rose-500/60',
+        openOnTap && 'cursor-pointer',
       )}
     >
       {/* Fila 1: título + urgente */}
@@ -218,7 +118,10 @@ export default function MaintenanceCard({ task: t, variants, animateEntry = true
           {!data.isDemo && onEdit && t.status !== 'finalizada' && (
             <button
               type="button"
-              onClick={onEdit}
+              onClick={(e) => {
+                e.stopPropagation();
+                onEdit();
+              }}
               aria-label={tr('mant.editarTarea')}
               className="group flex h-7 w-7 items-center justify-center rounded-lg transition-colors hover:bg-[var(--surface-2)]"
               style={{ color: 'var(--text-faint)' }}
@@ -270,7 +173,10 @@ export default function MaintenanceCard({ task: t, variants, animateEntry = true
         {!notesOpen && (
           <button
             type="button"
-            onClick={() => setNotesOpen(true)}
+            onClick={(e) => {
+              e.stopPropagation();
+              setNotesOpen(true);
+            }}
             className="font-semibold text-[#6366F1] hover:underline"
           >
             {tr('mant.mas')}
@@ -299,8 +205,11 @@ export default function MaintenanceCard({ task: t, variants, animateEntry = true
         </div>
       )}
 
-      {/* Asignación + acciones por estado */}
-      <div className="mt-0.5 flex items-center justify-between gap-2">
+      {/* Asignación + acciones por estado (zona interactiva: no abre el diálogo) */}
+      <div
+        className="mt-0.5 flex items-center justify-between gap-2"
+        onClick={(e) => e.stopPropagation()}
+      >
         {!data.isDemo && (
           <button
             type="button"
@@ -431,9 +340,5 @@ export default function MaintenanceCard({ task: t, variants, animateEntry = true
     </motion.div>
   );
 
-  // Gesto clave en móvil: deslizar para finalizar (umbral 40 %)
-  if (t.status === 'asignada' && belowLg && !data.isDemo) {
-    return <SwipeToFinish onDone={finish}>{card}</SwipeToFinish>;
-  }
   return card;
 }

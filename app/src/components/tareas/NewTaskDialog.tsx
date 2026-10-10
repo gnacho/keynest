@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Trash2 } from 'lucide-react';
+import { Check, Trash2, Undo2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import {
   Dialog,
@@ -16,6 +16,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useData } from '@/data/useData';
 import type { MaintenanceCategory, MaintenanceTask } from '@/data/types';
 import { cn } from '@/lib/utils';
@@ -39,12 +40,15 @@ export function NewTaskDialog({
   open,
   onOpenChange,
   onCreated,
+  onFinish,
   task,
   prefill,
 }: {
   open: boolean;
   onOpenChange: (o: boolean) => void;
   onCreated: () => void;
+  /** Se avisa cuando el diálogo finaliza (o reabre) la tarea, para el toast. */
+  onFinish?: () => void;
   task?: MaintenanceTask | null;
   prefill?: TaskPrefill;
 }) {
@@ -118,27 +122,36 @@ export function NewTaskDialog({
       .filter(Boolean)
       .map((label, i) => ({ id: `chk-${i}`, label, done: false }));
 
+  /** Guarda los cambios del formulario sobre la tarea en edición. */
+  const guardarCambios = async (): Promise<boolean> => {
+    if (!task || !valid) return false;
+    // Preserva el estado done de los checks que siguen existiendo
+    const prev = new Map((task.checks ?? []).map((k) => [k.label, k.done]));
+    const checks = checksFromText().map((k) => ({ ...k, done: prev.get(k.label) ?? false }));
+    await data.editMaintenance(task.id, {
+      title: titulo.trim(),
+      category: categoria ?? '',
+      expenseTag: etiqueta.trim() || (categoria ?? ''),
+      urgent: urgente,
+      notes: notas.trim(),
+      scheduledDate: fecha || null,
+      assignedUserId: responsable ?? null,
+      checks,
+    });
+    return true;
+  };
+
   const crear = async () => {
     if (!valid || busy) return;
     setBusy(true);
     if (task) {
-      // Preserva el estado done de los checks que siguen existiendo
-      const prev = new Map((task.checks ?? []).map((k) => [k.label, k.done]));
-      const checks = checksFromText().map((k) => ({ ...k, done: prev.get(k.label) ?? false }));
-      await data.editMaintenance(task.id, {
-        title: titulo.trim(),
-        category: categoria ?? '',
-        expenseTag: etiqueta.trim() || (categoria ?? ''),
-        urgent: urgente,
-        notes: notas.trim(),
-        scheduledDate: fecha || null,
-        assignedUserId: responsable ?? null,
-        checks,
-      });
+      const ok = await guardarCambios();
       setBusy(false);
-      onCreated();
-      onOpenChange(false);
-      reset();
+      if (ok) {
+        onCreated();
+        onOpenChange(false);
+        reset();
+      }
       return;
     }
     const prop = data.getProperties().find((p) => p.slug === slug);
@@ -162,10 +175,165 @@ export function NewTaskDialog({
     }
   };
 
+  /** Cierra la tarea: persiste el formulario y marca finalizada (#290). */
+  const finalizar = async () => {
+    if (!task || busy || !valid) return;
+    setBusy(true);
+    const ok = await guardarCambios();
+    if (ok) data.setMaintenanceStatus(task.id, 'finalizada');
+    setBusy(false);
+    if (ok) {
+      onFinish?.();
+      onOpenChange(false);
+      reset();
+    }
+  };
+
+  /** Reabre una tarea finalizada (asignada si tenía responsable, si no nueva). */
+  const reabrir = () => {
+    if (!task || busy) return;
+    data.setMaintenanceStatus(task.id, task.assigneeId || task.assignedUserId ? 'asignada' : 'nueva');
+    onFinish?.();
+    onOpenChange(false);
+    reset();
+  };
+
   const label = (text: string) => (
     <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-[0.08em]" style={{ color: 'var(--text-faint)' }}>
       {text}
     </p>
+  );
+
+  const campoInmueble = (
+    <div>
+      {label(tr('mant.inmueble'))}
+      <Select value={slug} onValueChange={setSlug} disabled={Boolean(task)}>
+        <SelectTrigger className="h-10 w-full rounded-xl border-[var(--border)] bg-[var(--surface)] text-sm shadow-none">
+          <SelectValue placeholder={tr('mant.seleccionaInmueble')} />
+        </SelectTrigger>
+        <SelectContent className="rounded-xl border-[var(--border)] bg-[var(--surface)]">
+          {data.getProperties().map((p) => (
+            <SelectItem key={p.slug} value={p.slug}>
+              {p.name}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+    </div>
+  );
+
+  const campoCategoria = (
+    <div>
+      {label(tr('mant.categoria'))}
+      <Select value={categoria} onValueChange={(v) => setCategoria(v as MaintenanceCategory)}>
+        <SelectTrigger className="h-10 w-full rounded-xl border-[var(--border)] bg-[var(--surface)] text-sm shadow-none">
+          <SelectValue placeholder={tr('mant.seleccionaCategoria')} />
+        </SelectTrigger>
+        <SelectContent className="rounded-xl border-[var(--border)] bg-[var(--surface)]">
+          {CATEGORY_OPTIONS.map((o) => (
+            <SelectItem key={o.value} value={o.value}>
+              {o.label}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+    </div>
+  );
+
+  const campoTitulo = (
+    <div>
+      {label(tr('mant.tituloCampo'))}
+      <input
+        value={titulo}
+        onChange={(e) => setTitulo(e.target.value)}
+        placeholder={tr('mant.tituloPlaceholder')}
+        className="h-10 w-full rounded-xl border bg-[var(--surface)] px-3 text-sm outline-none focus:ring-2 focus:ring-[#6366F1]"
+        style={{ borderColor: 'var(--border)' }}
+      />
+    </div>
+  );
+
+  const campoEtiqueta = (
+    <div>
+      {label(tr('mant.etiquetaGasto'))}
+      <input
+        value={etiqueta}
+        onChange={(e) => setEtiqueta(e.target.value)}
+        placeholder={tr('mant.etiquetaPlaceholder')}
+        className="h-10 w-full rounded-xl border bg-[var(--surface)] px-3 text-sm outline-none focus:ring-2 focus:ring-[#6366F1]"
+        style={{ borderColor: 'var(--border)' }}
+      />
+    </div>
+  );
+
+  const campoUrgente = (
+    <div className="flex items-center justify-between self-end rounded-xl border px-3 py-2.5" style={{ borderColor: 'var(--border)' }}>
+      <span className="text-sm font-semibold text-rose-500">{tr('mant.urgente')}</span>
+      <Switch checked={urgente} onCheckedChange={setUrgente} />
+    </div>
+  );
+
+  const campoFecha = (
+    <div>
+      {label(tr('mant.fechaPrevista'))}
+      <input
+        type="date"
+        value={fecha}
+        onChange={(e) => setFecha(e.target.value)}
+        className="h-10 w-full rounded-xl border bg-[var(--surface)] px-3 text-sm outline-none focus:ring-2 focus:ring-[#6366F1]"
+        style={{ borderColor: 'var(--border)' }}
+      />
+    </div>
+  );
+
+  const campoResponsable = (
+    <div>
+      {label(tr('mant.responsable'))}
+      <Select value={responsable ?? '__none__'} onValueChange={(v) => setResponsable(v === '__none__' ? undefined : v)}>
+        <SelectTrigger className="h-10 w-full rounded-xl border-[var(--border)] bg-[var(--surface)] text-sm shadow-none">
+          <SelectValue placeholder={tr('mant.sinResponsable')} />
+        </SelectTrigger>
+        <SelectContent className="rounded-xl border-[var(--border)] bg-[var(--surface)]">
+          <SelectItem value="__none__">{tr('mant.sinResponsable')}</SelectItem>
+          {data.getUsers().map((u) => (
+            <SelectItem key={u.id} value={u.id}>
+              {u.name}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+    </div>
+  );
+
+  const campoNotas = (
+    <div>
+      {label(tr('mant.notas'))}
+      <textarea
+        value={notas}
+        onChange={(e) => setNotas(e.target.value)}
+        rows={2}
+        placeholder={tr('mant.notasPlaceholder')}
+        className="w-full resize-none rounded-xl border bg-[var(--surface)] px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-[#6366F1]"
+        style={{ borderColor: 'var(--border)' }}
+      />
+    </div>
+  );
+
+  const campoChecks = (
+    <div>
+      {label(tr('mant.checks'))}
+      <textarea
+        value={checksText}
+        onChange={(e) => setChecksText(e.target.value)}
+        rows={3}
+        placeholder={tr('mant.checksPlaceholder')}
+        className="w-full resize-none rounded-xl border bg-[var(--surface)] px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-[#6366F1]"
+        style={{ borderColor: 'var(--border)' }}
+      />
+      <span className="text-[11px]" style={{ color: 'var(--text-faint)' }}>
+        {tr('mant.checksNota')}
+      </span>
+    </div>
   );
 
   return (
@@ -179,150 +347,106 @@ export function NewTaskDialog({
             {task ? tr('mant.editarDesc') : tr('mant.nuevaDesc')}
           </DialogDescription>
         </DialogHeader>
-        <div className="grid max-h-[85vh] grid-cols-1 gap-3 overflow-y-auto pr-1 sm:grid-cols-2">
-          <div>
-            {label(tr('mant.inmueble'))}
-            <Select value={slug} onValueChange={setSlug} disabled={Boolean(task)}>
-              <SelectTrigger className="h-10 w-full rounded-xl border-[var(--border)] bg-[var(--surface)] text-sm shadow-none">
-                <SelectValue placeholder={tr('mant.seleccionaInmueble')} />
-              </SelectTrigger>
-              <SelectContent className="rounded-xl border-[var(--border)] bg-[var(--surface)]">
-                {data.getProperties().map((p) => (
-                  <SelectItem key={p.slug} value={p.slug}>
-                    {p.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+        {task ? (
+          /* Edición (#290): dos pestañas para aprovechar el espacio en móvil.
+             Tarea = lo que se ejecuta; Detalles = metadatos y planificación. */
+          <Tabs defaultValue="tarea" className="gap-3">
+            <TabsList className="w-full rounded-xl">
+              <TabsTrigger value="tarea" className="rounded-lg text-sm font-semibold">
+                {tr('mant.tabTarea')}
+              </TabsTrigger>
+              <TabsTrigger value="detalles" className="rounded-lg text-sm font-semibold">
+                {tr('mant.tabDetalles')}
+              </TabsTrigger>
+            </TabsList>
+            <TabsContent value="tarea" className="flex max-h-[62vh] flex-col gap-3 overflow-y-auto pr-1">
+              {campoTitulo}
+              {campoNotas}
+              {campoChecks}
+            </TabsContent>
+            <TabsContent value="detalles" className="grid max-h-[62vh] grid-cols-1 gap-3 overflow-y-auto pr-1 sm:grid-cols-2">
+              {campoInmueble}
+              {campoCategoria}
+              {campoEtiqueta}
+              {campoUrgente}
+              {campoFecha}
+              {campoResponsable}
+            </TabsContent>
+          </Tabs>
+        ) : (
+          <div className="grid max-h-[62vh] grid-cols-1 gap-3 overflow-y-auto pr-1 sm:grid-cols-2">
+            {campoInmueble}
+            {campoCategoria}
+            {campoTitulo}
+            {campoEtiqueta}
+            {campoUrgente}
+            {campoFecha}
+            {campoResponsable}
+            <div className="sm:col-span-2">{campoNotas}</div>
+            <div className="sm:col-span-2">{campoChecks}</div>
           </div>
-          <div>
-            {label(tr('mant.categoria'))}
-            <Select value={categoria} onValueChange={(v) => setCategoria(v as MaintenanceCategory)}>
-              <SelectTrigger className="h-10 w-full rounded-xl border-[var(--border)] bg-[var(--surface)] text-sm shadow-none">
-                <SelectValue placeholder={tr('mant.seleccionaCategoria')} />
-              </SelectTrigger>
-              <SelectContent className="rounded-xl border-[var(--border)] bg-[var(--surface)]">
-                {CATEGORY_OPTIONS.map((o) => (
-                  <SelectItem key={o.value} value={o.value}>
-                    {o.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="sm:col-span-2">
-            {label(tr('mant.tituloCampo'))}
-            <input
-              value={titulo}
-              onChange={(e) => setTitulo(e.target.value)}
-              placeholder={tr('mant.tituloPlaceholder')}
-              className="h-10 w-full rounded-xl border bg-[var(--surface)] px-3 text-sm outline-none focus:ring-2 focus:ring-[#6366F1]"
-              style={{ borderColor: 'var(--border)' }}
-            />
-          </div>
-          <div>
-            {label(tr('mant.etiquetaGasto'))}
-            <input
-              value={etiqueta}
-              onChange={(e) => setEtiqueta(e.target.value)}
-              placeholder={tr('mant.etiquetaPlaceholder')}
-              className="h-10 w-full rounded-xl border bg-[var(--surface)] px-3 text-sm outline-none focus:ring-2 focus:ring-[#6366F1]"
-              style={{ borderColor: 'var(--border)' }}
-            />
-          </div>
-          <div className="flex items-center justify-between self-end rounded-xl border px-3 py-2.5" style={{ borderColor: 'var(--border)' }}>
-            <span className="text-sm font-semibold text-rose-500">{tr('mant.urgente')}</span>
-            <Switch checked={urgente} onCheckedChange={setUrgente} />
-          </div>
-          <div>
-            {label(tr('mant.fechaPrevista'))}
-            <input
-              type="date"
-              value={fecha}
-              onChange={(e) => setFecha(e.target.value)}
-              className="h-10 w-full rounded-xl border bg-[var(--surface)] px-3 text-sm outline-none focus:ring-2 focus:ring-[#6366F1]"
-              style={{ borderColor: 'var(--border)' }}
-            />
-          </div>
-          <div>
-            {label(tr('mant.responsable'))}
-            <Select value={responsable ?? '__none__'} onValueChange={(v) => setResponsable(v === '__none__' ? undefined : v)}>
-              <SelectTrigger className="h-10 w-full rounded-xl border-[var(--border)] bg-[var(--surface)] text-sm shadow-none">
-                <SelectValue placeholder={tr('mant.sinResponsable')} />
-              </SelectTrigger>
-              <SelectContent className="rounded-xl border-[var(--border)] bg-[var(--surface)]">
-                <SelectItem value="__none__">{tr('mant.sinResponsable')}</SelectItem>
-                {data.getUsers().map((u) => (
-                  <SelectItem key={u.id} value={u.id}>
-                    {u.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="sm:col-span-2">
-            {label(tr('mant.notas'))}
-            <textarea
-              value={notas}
-              onChange={(e) => setNotas(e.target.value)}
-              rows={2}
-              placeholder={tr('mant.notasPlaceholder')}
-              className="w-full resize-none rounded-xl border bg-[var(--surface)] px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-[#6366F1]"
-              style={{ borderColor: 'var(--border)' }}
-            />
-          </div>
-          <div className="sm:col-span-2">
-            {label(tr('mant.checks'))}
-            <textarea
-              value={checksText}
-              onChange={(e) => setChecksText(e.target.value)}
-              rows={3}
-              placeholder={tr('mant.checksPlaceholder')}
-              className="w-full resize-none rounded-xl border bg-[var(--surface)] px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-[#6366F1]"
-              style={{ borderColor: 'var(--border)' }}
-            />
-            <span className="text-[11px]" style={{ color: 'var(--text-faint)' }}>
-              {tr('mant.checksNota')}
-            </span>
-          </div>
-          <div className={`flex gap-2 sm:col-span-2 ${task ? 'flex-row' : ''}`}>
-            {task && (
-              <button
-                type="button"
-                disabled={busy}
-                onClick={() => {
-                  if (deleteConfirming) {
-                    void data.deleteMaintenance(task.id);
-                    setDeleteConfirming(false);
-                    onCreated();
-                    onOpenChange(false);
-                    reset();
-                  } else {
-                    setDeleteConfirming(true);
-                    setTimeout(() => setDeleteConfirming(false), 3000);
-                  }
-                }}
-                className={cn(
-                  'flex h-11 items-center gap-1.5 rounded-xl border px-4 text-sm font-semibold transition-all duration-150 disabled:opacity-50',
-                  deleteConfirming
-                    ? 'border-rose-300 bg-rose-500 text-white'
-                    : 'hover:bg-[var(--ro-chip-bg)]',
-                )}
-                style={deleteConfirming ? undefined : { borderColor: 'rgb(244 63 94 / 0.5)', color: '#F43F5E' }}
-              >
-                <Trash2 className="h-4 w-4" />
-                {deleteConfirming ? tr('mant.seguro') : tr('mant.eliminar')}
-              </button>
-            )}
+        )}
+        {/* Pie fijo: no scrollea con el formulario */}
+        <div className="flex gap-2">
+          {task && (
+            <button
+              type="button"
+              disabled={busy}
+              onClick={() => {
+                if (deleteConfirming) {
+                  void data.deleteMaintenance(task.id);
+                  setDeleteConfirming(false);
+                  onCreated();
+                  onOpenChange(false);
+                  reset();
+                } else {
+                  setDeleteConfirming(true);
+                  setTimeout(() => setDeleteConfirming(false), 3000);
+                }
+              }}
+              className={cn(
+                'flex h-11 items-center gap-1.5 rounded-xl border px-4 text-sm font-semibold transition-all duration-150 disabled:opacity-50',
+                deleteConfirming
+                  ? 'border-rose-300 bg-rose-500 text-white'
+                  : 'hover:bg-[var(--ro-chip-bg)]',
+              )}
+              style={deleteConfirming ? undefined : { borderColor: 'rgb(244 63 94 / 0.5)', color: '#F43F5E' }}
+            >
+              <Trash2 className="h-4 w-4" />
+              {deleteConfirming ? tr('mant.seguro') : tr('mant.eliminar')}
+            </button>
+          )}
+          {task && task.status !== 'finalizada' && (
             <button
               type="button"
               disabled={!valid || busy}
-              onClick={() => void crear()}
-              className="brand-gradient flex h-11 flex-1 items-center justify-center rounded-xl text-sm font-semibold text-white transition-all duration-150 hover:brightness-110 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
+              onClick={() => void finalizar()}
+              className="flex h-11 items-center gap-1.5 rounded-xl border border-emerald-500/50 px-4 text-sm font-semibold text-emerald-500 transition-all duration-150 hover:bg-emerald-500/10 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
             >
-              {busy ? tr('res.creando') : task ? tr('mant.guardar') : tr('mant.crearTarea')}
+              <Check className="h-4 w-4" strokeWidth={3} />
+              {tr('mant.finalizar')}
             </button>
-          </div>
+          )}
+          {task && task.status === 'finalizada' && (
+            <button
+              type="button"
+              disabled={busy}
+              onClick={reabrir}
+              className="flex h-11 items-center gap-1.5 rounded-xl border px-4 text-sm font-semibold transition-all duration-150 hover:bg-[var(--surface-2)] active:scale-[0.98] disabled:opacity-50"
+              style={{ borderColor: 'var(--border)', color: 'var(--text-muted)' }}
+            >
+              <Undo2 className="h-4 w-4" />
+              {tr('mant.reabrir')}
+            </button>
+          )}
+          <button
+            type="button"
+            disabled={!valid || busy}
+            onClick={() => void crear()}
+            className="brand-gradient flex h-11 flex-1 items-center justify-center rounded-xl text-sm font-semibold text-white transition-all duration-150 hover:brightness-110 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {busy ? tr('res.creando') : task ? tr('mant.guardar') : tr('mant.crearTarea')}
+          </button>
         </div>
       </DialogContent>
     </Dialog>
