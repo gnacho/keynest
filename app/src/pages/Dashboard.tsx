@@ -183,7 +183,7 @@ export default function Dashboard() {
       >
         <PropertyAvatar property={p} size={40} />
         <span className="min-w-0 flex-1">
-          {/* Móvil: nombre en pill de color + guests */}
+          {/* Móvil: nombre en pill de color + guests (bandera desde sm, #290) */}
           <span className="flex items-center gap-1.5 md:hidden">
             <span
               className="truncate rounded-full px-2 py-0.5 text-sm font-semibold"
@@ -191,13 +191,23 @@ export default function Dashboard() {
             >
               {r.guest.name}
             </span>
+            {r.guest.flag && (
+              <span
+                className="hidden shrink-0 items-center gap-1 leading-none sm:flex"
+                style={{ color: 'var(--text-muted)' }}
+                title={r.guest.country}
+              >
+                <span>{r.guest.flag}</span>
+                <span className="text-xs font-medium">{r.guest.countryCode}</span>
+              </span>
+            )}
             <span className="flex shrink-0 items-center gap-0.5 text-xs font-semibold" style={{ color: accent }}>
               <Users className="h-3.5 w-3.5" />
               {r.guestsCount}
             </span>
           </span>
           {/* Desktop: nombre plano + bandera/código + guests muted */}
-          <span className="hidden items-center gap-1.5 md:flex">
+          <span className="hidden items-center gap-1.5 sm:flex">
             <span className="truncate text-sm font-semibold">{r.guest.name}</span>
             {r.guest.flag && (
               <span
@@ -214,7 +224,22 @@ export default function Dashboard() {
               {r.guestsCount}
             </span>
           </span>
-          <span className="mt-0.5 block truncate text-xs" style={{ color: 'var(--text-muted)' }}>
+          {/* Ancho mínimo (< sm): la nacionalidad va junto al inmueble (la línea
+              del nombre no la muestra); desde sm vuelve junto al inquilino
+              (móvil en horizontal, folds abiertos, desktop). */}
+          <span className="mt-0.5 flex items-center gap-1.5 text-xs sm:hidden" style={{ color: 'var(--text-muted)' }}>
+            <span className="truncate">{p.name}</span>
+            {r.guest.flag && (
+              <span
+                className="flex shrink-0 items-center gap-1 leading-none"
+                title={r.guest.country}
+              >
+                <span>{r.guest.flag}</span>
+                <span className="font-medium">{r.guest.countryCode}</span>
+              </span>
+            )}
+          </span>
+          <span className="mt-0.5 hidden truncate text-xs sm:block" style={{ color: 'var(--text-muted)' }}>
             {p.name}
           </span>
           {needsAssignment && (
