@@ -67,6 +67,8 @@ export function NewTaskDialog({
   const [checksText, setChecksText] = useState('');
   const [fecha, setFecha] = useState('');
   const [responsable, setResponsable] = useState<string>();
+  /** Pestaña activa en edición (controlado: el inactivo lleva inert). */
+  const [tab, setTab] = useState<'tarea' | 'detalles'>('tarea');
 
   const reset = () => {
     setSlug(undefined);
@@ -353,9 +355,16 @@ export function NewTaskDialog({
         )}
         {task ? (
           /* Edición (#290): dos pestañas para aprovechar el espacio en móvil.
-             Tarea = lo que se ejecuta; Detalles = metadatos y planificación. */
-          <Tabs defaultValue="tarea" className="gap-3">
-            <TabsList className="w-full rounded-xl">
+             Tarea = lo que se ejecuta; Detalles = metadatos y planificación.
+             En sm+ ambas pestañas viven en la MISMA celda grid (forceMount):
+             el diálogo no cambia de alto al alternar. El TabsList deja hueco
+             a la derecha para no montarse con la X de cerrar. */
+          <Tabs
+            value={tab}
+            onValueChange={(v) => setTab(v as 'tarea' | 'detalles')}
+            className="flex flex-col gap-3 sm:grid sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] sm:gap-2"
+          >
+            <TabsList className="w-full rounded-xl sm:col-span-2 sm:mr-10">
               <TabsTrigger value="tarea" className="rounded-lg text-sm font-semibold">
                 {tr('mant.tabTarea')}
               </TabsTrigger>
@@ -363,12 +372,22 @@ export function NewTaskDialog({
                 {tr('mant.tabDetalles')}
               </TabsTrigger>
             </TabsList>
-            <TabsContent value="tarea" className="flex max-h-[62vh] flex-col gap-3 overflow-y-auto pr-1">
+            <TabsContent
+              forceMount
+              value="tarea"
+              inert={tab !== 'tarea'}
+              className="flex max-h-[62vh] flex-col gap-3 overflow-y-auto pr-1 data-[state=inactive]:invisible data-[state=inactive]:max-h-0 data-[state=inactive]:overflow-hidden sm:col-span-2 sm:col-start-1 sm:row-start-2 sm:data-[state=inactive]:max-h-none sm:data-[state=inactive]:overflow-visible"
+            >
               {campoTitulo}
               {campoNotas}
               {campoChecks}
             </TabsContent>
-            <TabsContent value="detalles" className="grid max-h-[62vh] grid-cols-1 gap-3 overflow-y-auto pr-1 sm:grid-cols-2">
+            <TabsContent
+              forceMount
+              value="detalles"
+              inert={tab !== 'detalles'}
+              className="grid max-h-[62vh] grid-cols-1 gap-3 overflow-y-auto pr-1 data-[state=inactive]:invisible data-[state=inactive]:max-h-0 data-[state=inactive]:overflow-hidden sm:col-span-2 sm:col-start-1 sm:row-start-2 sm:grid-cols-2 sm:data-[state=inactive]:max-h-none sm:data-[state=inactive]:overflow-visible"
+            >
               {campoInmueble}
               {campoCategoria}
               {campoEtiqueta}
