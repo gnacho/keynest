@@ -339,14 +339,18 @@ export function NewTaskDialog({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="rounded-2xl border-[var(--border)] bg-[var(--surface)] shadow-overlay sm:max-w-xl">
-        <DialogHeader>
-          <DialogTitle className="font-display text-lg font-semibold">
-            {task ? tr('mant.editarTitulo') : tr('mant.nuevaTarea')}
-          </DialogTitle>
-          <DialogDescription style={{ color: 'var(--text-muted)' }}>
-            {task ? tr('mant.editarDesc') : tr('mant.nuevaDesc')}
-          </DialogDescription>
-        </DialogHeader>
+        {task ? (
+          /* Edición: sin cabecera visible (pide el usuario, #290); el título
+             queda solo para lectores de pantalla. */
+          <DialogTitle className="sr-only">{tr('mant.editarTitulo')}</DialogTitle>
+        ) : (
+          <DialogHeader>
+            <DialogTitle className="font-display text-lg font-semibold">{tr('mant.nuevaTarea')}</DialogTitle>
+            <DialogDescription style={{ color: 'var(--text-muted)' }}>
+              {tr('mant.nuevaDesc')}
+            </DialogDescription>
+          </DialogHeader>
+        )}
         {task ? (
           /* Edición (#290): dos pestañas para aprovechar el espacio en móvil.
              Tarea = lo que se ejecuta; Detalles = metadatos y planificación. */
@@ -405,15 +409,16 @@ export function NewTaskDialog({
                 }
               }}
               className={cn(
-                'flex h-11 items-center gap-1.5 rounded-xl border px-4 text-sm font-semibold transition-all duration-150 disabled:opacity-50',
+                'flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border transition-all duration-150 disabled:opacity-50',
                 deleteConfirming
                   ? 'border-rose-300 bg-rose-500 text-white'
                   : 'hover:bg-[var(--ro-chip-bg)]',
               )}
               style={deleteConfirming ? undefined : { borderColor: 'rgb(244 63 94 / 0.5)', color: '#F43F5E' }}
+              aria-label={tr('mant.eliminar')}
+              title={tr('mant.eliminar')}
             >
               <Trash2 className="h-4 w-4" />
-              {deleteConfirming ? tr('mant.seguro') : tr('mant.eliminar')}
             </button>
           )}
           {task && task.status !== 'finalizada' && (
