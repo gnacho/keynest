@@ -183,7 +183,8 @@ export default function Dashboard() {
       >
         <PropertyAvatar property={p} size={40} />
         <span className="min-w-0 flex-1">
-          {/* Móvil: nombre en pill de color + guests (bandera desde sm, #290) */}
+          {/* Móvil: nombre en pill de color + guests. La bandera va junto al
+              nombre desde sm (horizontal/folds); por debajo, junto al inmueble. */}
           <span className="flex items-center gap-1.5 md:hidden">
             <span
               className="truncate rounded-full px-2 py-0.5 text-sm font-semibold"
@@ -206,8 +207,8 @@ export default function Dashboard() {
               {r.guestsCount}
             </span>
           </span>
-          {/* Desktop: nombre plano + bandera/código + guests muted */}
-          <span className="hidden items-center gap-1.5 sm:flex">
+          {/* Desktop (>= md): nombre plano + bandera/código + guests muted */}
+          <span className="hidden items-center gap-1.5 md:flex">
             <span className="truncate text-sm font-semibold">{r.guest.name}</span>
             {r.guest.flag && (
               <span
