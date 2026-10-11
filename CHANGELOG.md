@@ -12,6 +12,31 @@ y este proyecto se adhiere a [Versionado Semántico](https://semver.org/lang/es/
 > release usar `scripts/release.sh` (calcula la versión y crea el tag con el
 > mensaje correcto).
 
+## [1.5.63] - 2026-10-11
+
+### Added
+
+- **Login persistente en el móvil (#291).** Con "Recuérdame", la aplicación
+  guarda un token de re-autenticación y, si el navegador borra las cookies
+  (algunos navegadores reforzados lo hacen), reconstruye la sesión sola y
+  repite la petición sin que se vea pantalla de login. Al cerrar sesión el
+  token queda invalidado.
+- **Nacionalidad del huésped en el Resumen y en la reserva (#290).** En las
+  entradas y salidas del Resumen, la bandera se muestra junto al inmueble en
+  pantallas estrechas y junto al nombre del huésped cuando hay espacio
+  (móvil en horizontal, fold abierto, escritorio), una sola vez por fila. Al
+  abrir una reserva, el panel de detalle incluye ahora la sección "Huésped"
+  con bandera y país.
+
+### Changed
+
+- **Mantenimiento en móvil: cierra tareas desde la ficha (#290).** Al tocar
+  una tarjeta se abre su ficha, con botón "Finalizar" (o "Reabrir") en el
+  pie; ya no hace falta deslizar. La ficha se organiza en dos pestañas:
+  "Tarea" (título, notas y comprobaciones) y "Detalles" (inmueble,
+  categoría, etiqueta, urgencia, fecha y responsable), con el pie de
+  acciones siempre visible.
+
 ## [1.5.62] - 2026-10-07
 
 ### Fixed
