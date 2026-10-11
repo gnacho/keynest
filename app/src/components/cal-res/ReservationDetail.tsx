@@ -59,6 +59,24 @@ export default function ReservationDetail({ reservation: r }: { reservation: Res
       className="grid gap-4 rounded-xl p-4 lg:grid-cols-3"
       style={{ backgroundColor: 'var(--surface-2)' }}
     >
+      {/* Huésped: mantiene la nacionalidad visible dentro del detalle (#290) */}
+      <div className="flex flex-col gap-1.5">
+        <SectionTitle>{t('res.huesped')}</SectionTitle>
+        <div className="flex flex-col gap-0.5">
+          <p className="truncate text-[13px] font-semibold">{r.guest.name}</p>
+          {r.guest.flag && (
+            <p
+              className="flex items-center gap-1.5 text-xs"
+              style={{ color: 'var(--text-muted)' }}
+              title={r.guest.country}
+            >
+              <span className="text-sm leading-none">{r.guest.flag}</span>
+              <span className="font-medium">{r.guest.countryCode}</span>
+            </p>
+          )}
+        </div>
+      </div>
+
       {/* Detalles — solo la fecha de reserva (noches y huéspedes ya están en la tarjeta; edades y canal se retiraron) */}
       {r.bookedDate && (
         <div className="flex flex-col gap-1.5">
