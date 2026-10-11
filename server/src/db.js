@@ -112,6 +112,18 @@ const MIGRATIONS = [
   //     (guest_user.location, p.ej. "Vilnius, Lithuania" o "FR"). La rellena
   //     el cruce del scraper solo si está vacía (#269).
   `ALTER TABLE reservations ADD COLUMN guest_location TEXT DEFAULT ''`,
+  // 25: tokens de re-autenticación (login persistente ante navegadores que
+  //     purgan cookies, p. ej. forks de Firefox con hardening, #290-related).
+  //     Se guardan hasheados (SHA-256) y rotan en cada uso.
+  `CREATE TABLE IF NOT EXISTS login_tokens (
+     id TEXT PRIMARY KEY,
+     user_id TEXT NOT NULL,
+     token_hash TEXT NOT NULL,
+     created_at INTEGER NOT NULL,
+     expires_at INTEGER NOT NULL,
+     last_used_at INTEGER
+   );
+   CREATE INDEX IF NOT EXISTS idx_login_tokens_user ON login_tokens(user_id)`,
 ]
 
 export function migrate(db) {

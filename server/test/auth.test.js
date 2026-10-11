@@ -2,15 +2,19 @@ import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { createHash } from 'node:crypto';
 import { openDb } from '../src/db.js';
 import {
   changePassword,
   countAdmins,
+  createRestoreToken,
   createUser,
+  destroyRestoreToken,
   deleteUser,
   destroyOtherSessions,
   ensureBootstrapAdmin,
   renewSessionIfDue,
+  restoreFromToken,
   setUserPassword,
   setUserRole,
 } from '../src/auth.js';
@@ -135,5 +139,56 @@ describe('expiración deslizante de sesiones (#267)', () => {
     expect(renewSessionIfDue(db, s)).toBe(false);
     expect(db.prepare('SELECT expires_at FROM sessions WHERE id = ?').get('sess-nopersist').expires_at).toBe(soon);
     deleteUser(db, u.id);
+  });
+});
+
+describe('re-autenticación persistente (#290)', () => {
+  const ctx = () => ({ req: { header: () => 'test-ua' }, header: () => {} });
+  const lauraId = () => db.prepare("SELECT id FROM users WHERE username = 'laura'").get().id;
+
+  it('la migración 25 crea login_tokens', () => {
+    const tables = db.prepare("SELECT name FROM sqlite_master WHERE type = 'table'").all().map((r) => r.name);
+    expect(tables).toContain('login_tokens');
+  });
+
+  it('crea token, restaura sesión y rota (el viejo no se reutiliza)', () => {
+    const before = db.prepare('SELECT COUNT(*) n FROM sessions').get().n;
+    const token = createRestoreToken(db, lauraId());
+    expect(token).toBeTruthy();
+
+    const restored = restoreFromToken(db, ctx(), token);
+    expect(restored.user.username).toBe('laura');
+    expect(restored.newToken).not.toBe(token);
+    expect(db.prepare('SELECT COUNT(*) n FROM sessions').get().n).toBe(before + 1);
+    expect(db.prepare('SELECT remember FROM sessions ORDER BY created_at DESC LIMIT 1').get().remember).toBe(1);
+
+    expect(restoreFromToken(db, ctx(), token)).toBeNull();
+    expect(restoreFromToken(db, ctx(), restored.newToken)?.user.username).toBe('laura');
+  });
+
+  it('token inexistente, vacío o expirado → null', () => {
+    expect(restoreFromToken(db, ctx(), 'token-que-no-existe')).toBeNull();
+    expect(restoreFromToken(db, ctx(), '')).toBeNull();
+    expect(restoreFromToken(db, ctx(), undefined)).toBeNull();
+
+    const token = createRestoreToken(db, lauraId());
+    const hash = createHash('sha256').update(token).digest('hex');
+    db.prepare('UPDATE login_tokens SET expires_at = ? WHERE token_hash = ?').run(Date.now() - 1000, hash);
+    expect(restoreFromToken(db, ctx(), token)).toBeNull();
+  });
+
+  it('logout invalida el token del dispositivo', () => {
+    const token = createRestoreToken(db, lauraId());
+    expect(restoreFromToken(db, ctx(), token)).not.toBeNull();
+    const newToken = db.prepare('SELECT token_hash FROM login_tokens ORDER BY created_at DESC LIMIT 1').get().token_hash;
+    void newToken;
+    destroyRestoreToken(db, token);
+    expect(restoreFromToken(db, ctx(), token)).toBeNull();
+  });
+
+  it('máximo 5 tokens por usuario y purga de expirados', () => {
+    for (let i = 0; i < 8; i++) createRestoreToken(db, lauraId());
+    const n = db.prepare('SELECT COUNT(*) n FROM login_tokens WHERE user_id = ?').get(lauraId()).n;
+    expect(n).toBeLessThanOrEqual(5);
   });
 });

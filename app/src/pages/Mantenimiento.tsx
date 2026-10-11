@@ -441,6 +441,7 @@ export default function Mantenimiento() {
         open={editTask !== null}
         onOpenChange={(o) => !o && setEditTask(null)}
         onCreated={() => push(tr('mant.tareaActualizada'), 'rose')}
+        onFinish={() => push(tr('mant.tareaFinalizada'), 'emerald')}
         task={editTask}
       />
 

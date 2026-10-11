@@ -163,13 +163,13 @@ app.post('/api/auth/login', async (c) => {
   const body = await c.req.json().catch(() => null)
   const parsed = loginSchema.safeParse(body)
   if (!parsed.success) return c.json({ error: 'formato inválido' }, 400)
-  const user = await auth.handleLogin(prodDb, c, parsed.data)
-  if (!user) {
+  const result = await auth.handleLogin(prodDb, c, parsed.data)
+  if (!result) {
     auth.registerLoginFail(prodDb, c)
     return c.json({ error: 'credenciales incorrectas' }, 401)
   }
   auth.loginOk(prodDb, c)
-  return c.json({ ok: true, user })
+  return c.json({ ok: true, user: result.user, restoreToken: result.restoreToken })
 })
 
 /* Login demo (un clic, sin contraseña) + estado público del modo demo */
@@ -181,9 +181,26 @@ app.post('/api/auth/demo', (c) => {
   return c.json({ ok: true, user })
 })
 
-app.post('/api/auth/logout', (c) => {
+app.post('/api/auth/logout', async (c) => {
   auth.handleLogout(prodDb, c)
+  // Invalida también el token de re-autenticación si el cliente lo envía (#290)
+  const body = await c.req.json().catch(() => null)
+  if (typeof body?.token === 'string') auth.destroyRestoreToken(prodDb, body.token)
   return c.json({ ok: true })
+})
+
+/* Re-autenticación persistente (#290): re-crea la sesión cookie a partir del
+ * token de larga duración guardado en el cliente y lo rota. */
+app.post('/api/auth/restore', async (c) => {
+  if (auth.loginRateLimited(prodDb, c)) return c.json({ error: 'demasiados intentos, espera 5 minutos' }, 429)
+  const body = await c.req.json().catch(() => null)
+  const token = typeof body?.token === 'string' ? body.token : ''
+  const restored = auth.restoreFromToken(prodDb, c, token)
+  if (!restored) {
+    auth.registerLoginFail(prodDb, c)
+    return c.json({ error: 'token inválido' }, 401)
+  }
+  return c.json({ ok: true, user: restored.user, restoreToken: restored.newToken })
 })
 
 app.get('/api/auth/me', (c) => {

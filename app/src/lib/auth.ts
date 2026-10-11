@@ -13,6 +13,7 @@ export interface SessionUser {
 }
 
 const USER_KEY = 'keynest-user';
+const RESTORE_KEY = 'keynest-restore';
 
 export function cachedUser(): SessionUser | null {
   try {
@@ -20,6 +21,26 @@ export function cachedUser(): SessionUser | null {
     return raw ? (JSON.parse(raw) as SessionUser) : null;
   } catch {
     return null;
+  }
+}
+
+/** Token de re-autenticación persistente (#290): permite re-crear la sesión
+ *  cookie cuando el navegador la purga (algunos navegadores móviles la tratan
+ *  como de sesión aunque el server emita maxAge 30d). */
+export function getRestoreToken(): string | null {
+  try {
+    return window.localStorage.getItem(RESTORE_KEY);
+  } catch {
+    return null;
+  }
+}
+
+function storeRestoreToken(token: string | null): void {
+  try {
+    if (token) window.localStorage.setItem(RESTORE_KEY, token);
+    else window.localStorage.removeItem(RESTORE_KEY);
+  } catch {
+    /* noop */
   }
 }
 
@@ -44,19 +65,62 @@ export function myPropertyIds(properties: { id: string; ownerId?: string | null 
 }
 
 export async function login(username: string, password: string, remember = true): Promise<SessionUser> {
-  const res = await api<{ user: SessionUser }>('/api/auth/login', {
+  const res = await api<{ user: SessionUser; restoreToken?: string }>('/api/auth/login', {
     method: 'POST',
     body: JSON.stringify({ username, password, remember }),
   });
   storeUser(res.user);
+  if (res.restoreToken) storeRestoreToken(res.restoreToken);
   return res.user;
 }
 
 export async function logout(): Promise<void> {
-  await api('/api/auth/logout', { method: 'POST' }).catch(() => undefined);
+  const token = getRestoreToken();
+  await api('/api/auth/logout', {
+    method: 'POST',
+    body: JSON.stringify({ token }),
+  }).catch(() => undefined);
   storeUser(null);
+  storeRestoreToken(null);
   // Mismo evento que un 401: Root escucha 'keynest-unauthorized' y vuelve a /login
   window.dispatchEvent(new Event('keynest-unauthorized'));
+}
+
+/** Re-crea la sesión cookie a partir del token persistente y lo rota.
+ *  Devuelve false si no hay token o el server lo rechaza (se borra). */
+export async function restoreSession(): Promise<boolean> {
+  const token = getRestoreToken();
+  if (!token) return false;
+  try {
+    const res = await fetch('/api/auth/restore', {
+      method: 'POST',
+      credentials: 'same-origin',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token }),
+    });
+    if (!res.ok) {
+      storeRestoreToken(null);
+      return false;
+    }
+    const data = (await res.json()) as { user: SessionUser; restoreToken: string };
+    storeUser(data.user);
+    storeRestoreToken(data.restoreToken);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/** En curso: evita restauraciones concurrentes desde varios 401 a la vez. */
+let restoring: Promise<boolean> | null = null;
+
+export function tryRestoreSession(): Promise<boolean> {
+  if (!restoring) {
+    restoring = restoreSession().finally(() => {
+      restoring = null;
+    });
+  }
+  return restoring;
 }
 
 export async function demoLogin(): Promise<SessionUser> {
