@@ -1,8 +1,51 @@
 import crypto from 'node:crypto'
 import { decryptSecret, encryptSecret, kvGet, kvSet } from './db.js'
+import type { DB } from './db.js'
+
+export interface TedeeKeypad {
+  name: string
+  battery: number
+  modified: string | null
+}
+
+export interface TedeeLock {
+  id: number
+  name: string
+  battery: number
+  online: boolean
+  rssi: number | null
+  state: number | null
+  jammed: boolean
+  serial: string
+  propertyId: string
+  keypad: TedeeKeypad | null
+}
+
+interface TedeeLockBase {
+  id: number
+  name: string
+  battery: number
+  online: boolean
+  rssi: number | null
+  state: number | null
+  jammed: boolean
+  serial: string
+  propertyId: string
+}
+
+export interface TedeeAccess {
+  id: string
+  at: Date
+  actorName: string
+  actorRole: string
+  type: string
+  propertyId: string
+  lockId: string
+  guestName: string
+}
 
 /** Config Tedee guardada en kv de la BD de producción. */
-export function tedeeConfig(db) {
+export function tedeeConfig(db: DB) {
   const stored = kvGet(db, 'tedee_token') || ''
   let token = decryptSecret(db, stored)
   // Migración de token en claro → cifrado transparente
@@ -15,13 +58,13 @@ export function tedeeConfig(db) {
   }
 }
 
-export function saveTedeeConfig(db, url, token) {
+export function saveTedeeConfig(db: DB, url: string, token: string): void {
   kvSet(db, 'tedee_url', url.replace(/\/+$/, ''))
   if (token) kvSet(db, 'tedee_token', encryptSecret(db, token))
 }
 
 /** Header api_token: hex(sha256(token+ts)) + ts — verificado contra bridge real 31-Jul-2026. */
-function authHeader(token) {
+function authHeader(token: string): string {
   const ts = Date.now().toString()
   const hash = crypto.createHash('sha256').update(token + ts).digest('hex')
   return hash + ts
@@ -29,7 +72,7 @@ function authHeader(token) {
 
 /** ¿API cloud pública (api.tedee.com)? Esquema PAK: Authorization: PersonalKey <PAK>.
  *  Si no, es el bridge LOCAL (api_token: sha256(token+ts)+ts). */
-function isCloudUrl(url) {
+function isCloudUrl(url: string): boolean {
   try {
     return /(^|\.)tedee\.com$/i.test(new URL(url).hostname)
   } catch {
@@ -37,7 +80,7 @@ function isCloudUrl(url) {
   }
 }
 
-export async function tedeeFetch(db, path, cloudPath) {
+export async function tedeeFetch(db: DB, path: string | null, cloudPath: string): Promise<any> {
   const { url, token } = tedeeConfig(db)
   if (!url || !token) throw new Error('not-configured')
   const cloud = isCloudUrl(url)
@@ -56,8 +99,8 @@ export async function tedeeFetch(db, path, cloudPath) {
  *  Solo cloud: el bridge local no expone keypads. Devuelve Map(lockId →
  *  {name, battery, modified}); ante error devuelve Map vacío para que las
  *  cerraduras no dejen de cargarse por el teclado. */
-export async function tecladosPorCerradura(db) {
-  const mapa = new Map()
+export async function tecladosPorCerradura(db: DB): Promise<Map<number, TedeeKeypad>> {
+  const mapa = new Map<number, TedeeKeypad>()
   if (!isCloudUrl(tedeeConfig(db).url)) return mapa
   try {
     const raw = await tedeeFetch(db, null, '/api/v37/my/device/details?IncludeAccessories=true')
@@ -82,17 +125,17 @@ export async function tecladosPorCerradura(db) {
  *  soloAsignadas (#277): devuelve solo las cerraduras asignadas a un inmueble;
  *  el resto es ruido de la cuenta (no se muestra ni se notifica).
  *  keypad (#279): teclado emparejado {name, battery, modified} o null. */
-export async function tedeeLocks(db, { soloAsignadas = false } = {}) {
+export async function tedeeLocks(db: DB, { soloAsignadas = false } = {}): Promise<TedeeLock[]> {
   const cloud = isCloudUrl(tedeeConfig(db).url)
   const raw = await tedeeFetch(db, '/v1.0/lock', '/api/v37/my/lock')
   // lock_id Tedee → property_id de Keynest (para asociar accesos a inmuebles)
-  const propByLock = new Map()
-  for (const p of db.prepare('SELECT id, tedee_lock_id FROM properties WHERE tedee_lock_id IS NOT NULL').all()) {
+  const propByLock = new Map<number, string>()
+  for (const p of db.prepare('SELECT id, tedee_lock_id FROM properties WHERE tedee_lock_id IS NOT NULL').all() as Array<{ id: string; tedee_lock_id: number | null }>) {
     propByLock.set(Number(p.tedee_lock_id), p.id)
   }
-  let todas
+  let todas: TedeeLockBase[]
   if (cloud) {
-    const list = Array.isArray(raw?.result) ? raw.result : []
+    const list: any[] = Array.isArray(raw?.result) ? raw.result : []
     todas = list.map((l) => ({
       id: l.id,
       name: l.name,
@@ -124,29 +167,29 @@ export async function tedeeLocks(db, { soloAsignadas = false } = {}) {
   return todas.map(conTeclado)
 
   /** #279: añade el teclado emparejado (null si no hay o no viene con batería). */
-  function conTeclado(l) {
+  function conTeclado(l: TedeeLockBase): TedeeLock {
     return { ...l, keypad: teclados.get(Number(l.id)) ?? null }
   }
 }
 
 /** Reservas con nombre de huésped agrupadas por inmueble (#277). */
-function reservasConHuesped(db) {
-  const porProp = new Map()
+function reservasConHuesped(db: DB): Map<string, Array<{ property_id: string; guest_name: string; checkin: string; checkout: string }>> {
+  const porProp = new Map<string, Array<{ property_id: string; guest_name: string; checkin: string; checkout: string }>>()
   const filas = db
     .prepare(
       `SELECT property_id, guest_name, checkin, checkout FROM reservations WHERE TRIM(COALESCE(guest_name, '')) != ''`,
     )
-    .all()
+    .all() as Array<{ property_id: string; guest_name: string; checkin: string; checkout: string }>
   for (const r of filas) {
     if (!porProp.has(r.property_id)) porProp.set(r.property_id, [])
-    porProp.get(r.property_id).push(r)
+    porProp.get(r.property_id)!.push(r)
   }
   return porProp
 }
 
 /** Fecha local YYYY-MM-DD de un Date: los checkin/checkout de reservas son fechas
  *  locales del inmueble, no días UTC (un acceso a las 00:30 de Madrid es UTC del día anterior). */
-function fechaLocal(d) {
+function fechaLocal(d: Date): string {
   const m = String(d.getMonth() + 1).padStart(2, '0')
   const dd = String(d.getDate()).padStart(2, '0')
   return `${d.getFullYear()}-${m}-${dd}`
@@ -155,8 +198,8 @@ function fechaLocal(d) {
 /** Inquilino cuya estancia cubre la fecha local del acceso (#277).
  *  Rango inclusivo [checkin, checkout]: cubre tanto la entrada como la salida del mismo huésped.
  *  Empate (checkout de uno y checkin de otro el mismo día): gana el ya alojado (checkin < fecha). */
-function inquilinoEnFecha(reservas, fecha) {
-  let elegida = null
+function inquilinoEnFecha(reservas: Array<{ checkin: string; checkout: string; guest_name: string }> | undefined, fecha: string): string {
+  let elegida: { checkin: string; checkout: string; guest_name: string } | null = null
   for (const r of reservas || []) {
     if (fecha < r.checkin || fecha > r.checkout) continue
     if (!elegida || (r.checkin < fecha && elegida.checkin >= fecha)) elegida = r
@@ -169,7 +212,7 @@ function inquilinoEnFecha(reservas, fecha) {
  *  acciones remotas desde la app → remota. Los eventos de sistema (batería,
  *  calibración, auto-lock sin actor, jammed…) se ignoran.
  *  Fuente: docs oficiales event-type (tedee-tedee-api-doc). */
-const ACCESS_EVENT_TYPE = {
+const ACCESS_EVENT_TYPE: Record<number, string> = {
   32: 'remota', 33: 'remota', 35: 'remota', // lock remoto / unlock remoto/botón
   34: 'salida', // LockedButton: cerrar con el botón del lock
   38: 'salida', // LockedManual: cerrar manualmente
@@ -191,17 +234,17 @@ const ACCESS_EVENT_TYPE = {
  *  además cachea el resultado 10 min en index.js). Con 50 eventos no llegaba
  *  ni a 7 días con huéspedes activos y limpiezas como Flor no salían.
  *  Solo cloud: el bridge local no expone deviceactivity. */
-export async function tedeeAccesses(db, { dias = 90 } = {}) {
+export async function tedeeAccesses(db: DB, { dias = 90 } = {}): Promise<TedeeAccess[]> {
   if (!isCloudUrl(tedeeConfig(db).url)) return []
   // Solo cerraduras asignadas a un inmueble (#277): el resto se oculta.
   const locks = await tedeeLocks(db, { soloAsignadas: true })
   const reservasPorProp = reservasConHuesped(db)
   const rolPorNombre = new Map(
-    db.prepare('SELECT name, role FROM people').all().map((p) => [p.name.trim().toLowerCase(), p.role]),
+    (db.prepare('SELECT name, role FROM people').all() as Array<{ name: string; role: string }>).map((p) => [p.name.trim().toLowerCase(), p.role]),
   )
   const limite = Date.now() - dias * 86400000
-  const vistos = new Set()
-  const out = []
+  const vistos = new Set<string>()
+  const out: TedeeAccess[] = []
   for (const l of locks) {
     // Paginación hacia atrás hasta cubrir la ventana completa (máx. 8 páginas).
     let lastElemDate = null
@@ -230,7 +273,7 @@ export async function tedeeAccesses(db, { dias = 90 } = {}) {
         // PIN o enlace de acceso sin match → huésped. Solo usuario de app →
         // propietario: un cierre con botón/manual o apertura remota no la hace el
         // inquilino. Sin actor, se conserva el cruce de reserva (#277).
-        const norm = (s) => s.trim().toLowerCase()
+        const norm = (s: string): string => s.trim().toLowerCase()
         const rolPersona = pinAlias
           ? rolPorNombre.get(norm(pinAlias))
           : username ? rolPorNombre.get(norm(username)) : undefined

@@ -4,13 +4,14 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { openDb, kvSet } from '../src/db.js'
+import type { DB } from '../src/db.js'
 import { tedeeAccesses, tedeeLocks } from '../src/tedee.js'
 
 const ENC_KEY = crypto.randomBytes(32)
 process.env.ENC_KEY = ENC_KEY.toString('hex')
 
-let dir
-let db
+let dir: string
+let db: DB
 beforeEach(() => {
   dir = mkdtempSync(join(tmpdir(), 'keynest-tedee-test-'))
   db = openDb(dir, 'test.db')
@@ -32,18 +33,18 @@ function tokenCifrado(plain = 'test-token') {
   return `gcm:${iv.toString('hex')}:${tag.toString('hex')}:${ct.toString('hex')}`
 }
 
-function configurarTedeeCloud(db, url = 'https://api.tedee.com') {
+function configurarTedeeCloud(db: DB, url = 'https://api.tedee.com') {
   kvSet(db, 'tedee_url', url)
   kvSet(db, 'tedee_token', tokenCifrado())
 }
 
-function configurarTedeeBridge(db, url = 'http://192.168.1.50') {
+function configurarTedeeBridge(db: DB, url = 'http://192.168.1.50') {
   kvSet(db, 'tedee_url', url)
   kvSet(db, 'tedee_token', tokenCifrado())
 }
 
-function mockResponse(json, status = 200) {
-  fetch.mockResolvedValueOnce({ ok: status >= 200 && status < 300, status, json: async () => json })
+function mockResponse(json: any, status = 200) {
+  (fetch as any).mockResolvedValueOnce({ ok: status >= 200 && status < 300, status, json: async () => json })
 }
 
 const cloudLock = {
@@ -51,7 +52,7 @@ const cloudLock = {
   deviceState: { batteryLevel: 85, state: 2 }, serialNumber: 'SN-001',
 }
 
-function insertarPropiedad(lockId, slug = 'prop') {
+function insertarPropiedad(lockId: number, slug = 'prop'): string {
   const id = crypto.randomUUID()
   db.prepare(
     `INSERT INTO properties (id, slug, name, address, bedrooms, bathrooms, area, photo, checklist, instructions, created_at, tedee_lock_id)
@@ -60,14 +61,14 @@ function insertarPropiedad(lockId, slug = 'prop') {
   return id
 }
 
-function insertarReserva(propertyId, checkin, checkout, guestName) {
+function insertarReserva(propertyId: string, checkin: string, checkout: string, guestName: string) {
   db.prepare(
     `INSERT INTO reservations (id, property_id, uid, checkin, checkout, summary, confirmation_code, phone_last4, guest_name, created_at)
      VALUES (?, ?, ?, ?, ?, 'Reserved', 'CODE', '', ?, ?)`,
   ).run(crypto.randomUUID(), propertyId, `uid-${crypto.randomUUID()}`, checkin, checkout, guestName, Date.now())
 }
 
-function insertarPersona(name, role = 'limpieza') {
+function insertarPersona(name: string, role = 'limpieza') {
   db.prepare(
     `INSERT INTO people (id, name, phone, role, specialty, hourly_rate, created_at)
      VALUES (?, ?, '', ?, '', 10, 0)`,
@@ -236,7 +237,7 @@ describe('tedeeAccesses', () => {
     mockResponse({ result: { keypads: [] } }) // details (#279)
     // Página 1: 200 eventos de 30 min (≈4,2 días, entera dentro de 7 días)
     // → más antiguo NO supera el límite y hay 200 → se pide página 2.
-    const hace = (n) => new Date(Date.now() - n * 3600000).toISOString()
+    const hace = (n: number) => new Date(Date.now() - n * 3600000).toISOString()
     const pagina1 = Array.from({ length: 200 }, (_, i) => ({ id: 1000 + i, event: 61, date: hace(i / 2), pinAlias: 'Ana' }))
     // Página 2 (más antigua): horas 100→200; solo las ≤168h entran en ventana de 7 días
     const pagina2 = Array.from({ length: 200 }, (_, i) => ({ id: 2000 + i, event: 61, date: hace(100 + i / 2), pinAlias: 'Ana' }))

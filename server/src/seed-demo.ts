@@ -1,4 +1,5 @@
 import crypto from 'node:crypto'
+import type { DB } from './db.js'
 
 /**
  * Seed determinista de la BD demo (dataset de muestra, fechas relativas a hoy).
@@ -17,7 +18,7 @@ const PROPS = [
 ]
 
 // [propertyIdx, checkinOffset, checkoutOffset, código, importe €, nombre huésped]
-const RESERVATIONS = [
+const RESERVATIONS: Array<[number, number, number, string, number, string]> = [
   [0, -4, 3, 'HMDEMO1AA2', 420, 'Sofía Müller'],
   [1, -1, 2, 'HMDEMO2BB3', 380, 'James O\'Connor'],
   [2, 0, 5, 'HMDEMO3CC4', 640, 'Chloé Dubois'],
@@ -34,7 +35,7 @@ const RESERVATIONS = [
 ]
 
 // Personas: [name, phone, role, specialty, hourlyRate]
-const PEOPLE = [
+const PEOPLE: Array<[string, string, string, string, number]> = [
   ['María Llopis', '612 345 678', 'limpieza', 'Limpieza general', 14],
   ['Carla Vidal', '655 902 114', 'limpieza', 'Limpieza a fondo', 13],
   ['Andrés Roca', '699 412 887', 'proveedor', 'Electricidad y cerraduras', 18],
@@ -42,7 +43,7 @@ const PEOPLE = [
 ]
 
 // Limpiezas: [propertyIdx, reservationIdx, dateOffset (día de la limpieza), status, [assignee personIdx], estHours, checksDone, photos]
-const CLEANINGS = [
+const CLEANINGS: Array<[number, number, number, string, number[], number, number, string[]]> = [
   [0, 0, 3, 'pendiente', [], 2, 0, []],
   [1, 1, 2, 'en-curso', [0], 2, 3, ['/clean-1.svg']],
   [2, 2, 5, 'asignada', [1], 3, 0, []],
@@ -56,7 +57,7 @@ const CLEANINGS = [
 ]
 
 // Mantenimiento: [propertyIdx, title, category, urgent, status, assignee personIdx, scheduledOffset, cost, notes]
-const MAINTENANCE = [
+const MAINTENANCE: Array<[number, string, string, number, string, number | null, number | null, number | null, string]> = [
   [4, 'Cambiar pilas de la cerradura Tedee', 'cerradura/pilas', 1, 'nueva', null, 2, null, 'Batería al 18 % y cerradura offline. Ir antes de la próxima entrada.'],
   [0, 'Fuga en el sifón del baño', 'fontanería', 1, 'asignada', 3, 2, null, 'Goteo bajo el lavabo. Revisar junta y sifón. Aprovechar día desocupado.'],
   [1, 'Sustituir bombillas fundidas del recibidor', 'electricidad', 0, 'asignada', 2, 4, null, 'Dos bombillas E14. Hay repuesto en el armario del tendedero.'],
@@ -67,17 +68,17 @@ const MAINTENANCE = [
   [1, 'Grifo de cocina gotea', 'fontanería', 0, 'finalizada', 3, null, 24, 'Cambio de cartucho cerámico.'],
 ]
 
-function ymd(d) {
+function ymd(d: Date): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
 }
 
-export function seedDemo(db) {
-  const count = db.prepare('SELECT COUNT(*) n FROM properties').get().n
+export function seedDemo(db: DB): boolean {
+  const count = (db.prepare('SELECT COUNT(*) n FROM properties').get() as { n: number }).n
   if (count > 0) return false
 
   const now = Date.now()
   const today = new Date()
-  const dayAt = (offset) => new Date(today.getFullYear(), today.getMonth(), today.getDate() + offset)
+  const dayAt = (offset: number) => new Date(today.getFullYear(), today.getMonth(), today.getDate() + offset)
 
   const insProp = db.prepare(`INSERT INTO properties (id, slug, name, address, bedrooms, bathrooms, area, photo, ical_url, checklist, instructions, created_at)
     VALUES (?, ?, ?, ?, ?, ?, ?, ?, '', ?, ?, ?)`)
@@ -93,21 +94,21 @@ export function seedDemo(db) {
     VALUES (?, ?, ?, ?, ?, ?, ?, ?)`)
 
   const tx = db.transaction(() => {
-    const propIds = []
+    const propIds: string[] = []
     for (const p of PROPS) {
       const id = crypto.randomUUID()
       propIds.push(id)
       insProp.run(id, p.slug, p.name, p.address, p.bedrooms, p.bathrooms, p.area, p.photo, JSON.stringify(p.checklist), p.instructions, now)
     }
 
-    const resIds = []
+    const resIds: string[] = []
     for (const [pi, ci, co, code, amount, guest] of RESERVATIONS) {
       const id = crypto.randomUUID()
       resIds.push(id)
       insRes.run(id, propIds[pi], `demo-${code}@demo.local`, ymd(dayAt(ci)), ymd(dayAt(co)), code, String(1000 + pi * 1111).slice(-4), guest, amount, '', now)
     }
 
-    const personIds = []
+    const personIds: string[] = []
     for (const [name, phone, role, specialty, rate] of PEOPLE) {
       const id = crypto.randomUUID()
       personIds.push(id)

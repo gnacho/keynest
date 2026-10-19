@@ -4,6 +4,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { openDb } from '../src/db.js';
+import type { DB } from '../src/db.js';
 import { importAirbnb, parseAirbnbCsv } from '../src/import-airbnb.js';
 import { syncAll } from '../src/sync.js';
 
@@ -15,11 +16,11 @@ const CSV = `﻿日期,最晚到账日期,类型,确认码,预订日期,开始�
 07/01/2026,,调解款结算,HMTEST0003,,05/01/2026,05/03/2026,2,Pepe,Casa de prueba Uno,,,EUR,50.00,,,,,0.00,2026
 `;
 
-let dir;
-let db;
+let dir: string;
+let db: DB;
 
-const ymd = (d) => d.toISOString().slice(0, 10);
-const daysFrom = (n) => {
+const ymd = (d: Date) => d.toISOString().slice(0, 10);
+const daysFrom = (n: number) => {
   const d = new Date();
   d.setUTCDate(d.getUTCDate() + n);
   return d;
@@ -47,11 +48,11 @@ describe('parseAirbnbCsv', () => {
     expect(reservations).toHaveLength(2); // HMTEST0001 dedup + HMTEST0002; payout y 调解款结算 fuera
     expect(dupes).toBe(1);
     expect(skipped).toBe(2);
-    const r1 = reservations.find((r) => r.code === 'HMTEST0001');
+    const r1 = reservations.find((r) => r.code === 'HMTEST0001')!;
     expect(r1.amount).toBe(3010.0); // pagos parciales sumados: 1500 + 1510
     expect(r1.checkin).toBe('2026-07-27');
     expect(r1.checkout).toBe('2026-08-03');
-    const r2 = reservations.find((r) => r.code === 'HMTEST0002');
+    const r2 = reservations.find((r) => r.code === 'HMTEST0002')!;
     expect(r2.guest).toBe('Ejemplo, María'); // comillas con coma
     expect(r2.amount).toBe(1234.5); // separador de miles
   });
@@ -71,7 +72,7 @@ describe('importAirbnb', () => {
     expect(out.matched).toBe(1);
     expect(out.inserted).toBe(1);
     expect(out.unmapped).toEqual([]);
-    expect(db.prepare('SELECT COUNT(*) n FROM reservations').get().n).toBe(1); // intacta
+    expect((db.prepare('SELECT COUNT(*) n FROM reservations').get() as { n: number }).n).toBe(1); // intacta
   });
 
   it('dry=false aplica: match actualiza guest+amount, nueva inserta con uid csv-', () => {
@@ -79,11 +80,11 @@ describe('importAirbnb', () => {
     const out = importAirbnb(db, reservations, MAP, false);
     expect(out.matched).toBe(1);
     expect(out.inserted).toBe(1);
-    const r1 = db.prepare('SELECT * FROM reservations WHERE confirmation_code = ?').get('HMTEST0001');
+    const r1 = db.prepare('SELECT * FROM reservations WHERE confirmation_code = ?').get('HMTEST0001') as Record<string, any>;
     expect(r1.guest_name).toBe('John Smith');
     expect(r1.amount).toBe(3010.0);
     expect(r1.uid).toBe('abc@airbnb.com'); // uid iCal conservado
-    const r2 = db.prepare('SELECT * FROM reservations WHERE confirmation_code = ?').get('HMTEST0002');
+    const r2 = db.prepare('SELECT * FROM reservations WHERE confirmation_code = ?').get('HMTEST0002') as Record<string, any>;
     expect(r2.uid).toBe('csv-HMTEST0002');
     expect(r2.guest_name).toBe('Ejemplo, María');
     expect(r2.property_id).toBe('prop-dos');
@@ -94,14 +95,14 @@ describe('importAirbnb', () => {
     const out = importAirbnb(db, reservations, MAP, false);
     expect(out.inserted).toBe(0);
     expect(out.matched).toBe(2);
-    expect(db.prepare('SELECT COUNT(*) n FROM reservations').get().n).toBe(2);
+    expect((db.prepare('SELECT COUNT(*) n FROM reservations').get() as { n: number }).n).toBe(2);
   });
 
   it('listings sin mapear se reportan y no se insertan', () => {
     const { reservations } = parseAirbnbCsv(CSV);
     const out = importAirbnb(db, reservations, {}, false);
     expect(out.unmapped.sort()).toEqual(['Casa de prueba Uno', 'Piso de prueba Dos'].sort());
-    expect(db.prepare('SELECT COUNT(*) n FROM reservations').get().n).toBe(2); // las de antes
+    expect((db.prepare('SELECT COUNT(*) n FROM reservations').get() as { n: number }).n).toBe(2); // las de antes
   });
 });
 
@@ -110,17 +111,17 @@ describe('sync iCal vs reservas CSV', () => {
     // ICS con UNA sola reserva (la otra iCal existente, 'abc@airbnb.com', quedará obsoleta)
     const ics = `BEGIN:VCALENDAR\nBEGIN:VEVENT\nUID:nueva-uid@airbnb.com\nDTSTART;VALUE=DATE:20260810\nDTEND;VALUE=DATE:20260815\nSUMMARY:Reserved\nDESCRIPTION:Reservation URL: https://www.airbnb.com/h/HMNEW12345\\nPhone (Last 4 Digits): 1234\nEND:VEVENT\nEND:VCALENDAR`;
     const server = createServer((req, res) => { res.end(ics) });
-    await new Promise((r) => server.listen(0, '127.0.0.1', r));
+    await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', () => resolve()));
     db.prepare("UPDATE properties SET ical_url = ? WHERE id = 'prop-chalet'")
-      .run(`http://127.0.0.1:${server.address().port}/cal.ics`);
+      .run(`http://127.0.0.1:${(server.address() as { port: number }).port}/cal.ics`);
 
     await syncAll(db);
     server.close();
 
-    const uids = db.prepare("SELECT uid FROM reservations WHERE property_id = 'prop-chalet'").all().map((r) => r.uid);
+    const uids = (db.prepare("SELECT uid FROM reservations WHERE property_id = 'prop-chalet'").all() as Array<{ uid: string }>).map((r) => r.uid);
     expect(uids).toContain('nueva-uid@airbnb.com'); // upsert
     expect(uids).not.toContain('abc@airbnb.com'); // iCal obsoleto borrado
     // la reserva CSV del segundo inmueble sigue intacta
-    expect(db.prepare("SELECT COUNT(*) n FROM reservations WHERE uid = 'csv-HMTEST0002'").get().n).toBe(1);
+    expect((db.prepare("SELECT COUNT(*) n FROM reservations WHERE uid = 'csv-HMTEST0002'").get() as { n: number }).n).toBe(1);
   });
 });

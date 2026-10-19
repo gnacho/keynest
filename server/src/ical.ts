@@ -4,10 +4,18 @@
  * "Phone Number (Last 4 Digits): NNNN").
  * Los eventos "Airbnb (Not available)" (bloqueos manuales) se ignoran de momento.
  */
-export function parseIcs(text) {
+export interface IcsEvent {
+  uid?: string
+  dtstart?: string
+  dtend?: string
+  summary?: string
+  description?: string
+}
+
+export function parseIcs(text: string): IcsEvent[] {
   // Unfold: las líneas que empiezan por espacio/tab son continuación de la anterior
   const rawLines = text.split(/\r?\n/)
-  const lines = []
+  const lines: string[] = []
   for (const l of rawLines) {
     if ((l.startsWith(' ') || l.startsWith('\t')) && lines.length > 0) {
       lines[lines.length - 1] += l.slice(1)
@@ -16,8 +24,8 @@ export function parseIcs(text) {
     }
   }
 
-  const events = []
-  let cur = null
+  const events: IcsEvent[] = []
+  let cur: IcsEvent | null = null
   for (const line of lines) {
     if (line === 'BEGIN:VEVENT') { cur = {}; continue }
     if (line === 'END:VEVENT') { if (cur) events.push(cur); cur = null; continue }
@@ -35,14 +43,23 @@ export function parseIcs(text) {
   return events
 }
 
-function ymd(v) {
+function ymd(v: string): string | null {
   // 20260727 → 2026-07-27
   if (!v || v.length < 8) return null
   return `${v.slice(0, 4)}-${v.slice(4, 6)}-${v.slice(6, 8)}`
 }
 
-export function icsToReservations(events) {
-  const out = []
+export interface IcsReservation {
+  uid: string
+  checkin: string
+  checkout: string
+  summary: string
+  confirmation_code: string
+  phone_last4: string
+}
+
+export function icsToReservations(events: IcsEvent[]): IcsReservation[] {
+  const out: IcsReservation[] = []
   for (const e of events) {
     if (!e.uid || !e.dtstart || !e.dtend) continue
     if ((e.summary || '').toLowerCase().includes('not available')) continue
@@ -62,7 +79,7 @@ export function icsToReservations(events) {
   return out
 }
 
-export async function fetchIcs(url) {
+export async function fetchIcs(url: string): Promise<string> {
   const res = await fetch(url, { redirect: 'follow', signal: AbortSignal.timeout(20000) })
   if (!res.ok) throw new Error(`HTTP ${res.status}`)
   return res.text()

@@ -7,6 +7,7 @@ node_modules/
 
 # Build output
 app/dist/
+server/dist/
 
 # Data / DBs (solo carpetas de datos del servidor, no src/data)
 server/data/

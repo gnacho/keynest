@@ -1,4 +1,5 @@
 import crypto from 'node:crypto'
+import type { DB } from './db.js'
 
 /**
  * Importador del CSV de "Historial de transacciones" de Airbnb.
@@ -26,10 +27,10 @@ const HEADERS = {
 }
 const RESERVATION_TYPES = new Set(['预订', 'Reservation'])
 
-function parseCsv(text) {
-  const rows = []
+function parseCsv(text: string): string[][] {
+  const rows: string[][] = []
   let field = ''
-  let row = []
+  let row: string[] = []
   let inQuotes = false
   const push = () => { row.push(field); field = '' }
   const pushRow = () => { push(); if (row.length > 1 || row[0] !== '') rows.push(row); row = [] }
@@ -48,23 +49,23 @@ function parseCsv(text) {
   return rows
 }
 
-function toIso(mmddyyyy) {
+function toIso(mmddyyyy: string): string | null {
   const m = mmddyyyy.trim().match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/)
   if (!m) return null
   return `${m[3]}-${m[1].padStart(2, '0')}-${m[2].padStart(2, '0')}`
 }
 
-function toNum(s) {
+function toNum(s: string): number {
   const n = parseFloat(String(s || '').replace(/,/g, ''))
   return Number.isFinite(n) ? n : 0
 }
 
 /** Parsea el CSV y devuelve reservas únicas por código (pagos parciales sumados). */
-export function parseAirbnbCsv(text) {
+export function parseAirbnbCsv(text: string) {
   const rows = parseCsv(text.replace(/^﻿/, ''))
   if (rows.length < 2) return { reservations: [], dupes: 0, skipped: 0, error: 'vacío' }
   const header = rows[0].map((h) => h.trim())
-  const idx = {}
+  const idx: Record<string, number> = {}
   for (const [key, names] of Object.entries(HEADERS)) {
     idx[key] = header.findIndex((h) => names.includes(h))
   }
@@ -73,7 +74,7 @@ export function parseAirbnbCsv(text) {
 
   let dupes = 0
   let skipped = 0
-  const byCode = new Map()
+  const byCode = new Map<string, { code: string; bookedDate: string | null; checkin: string | null; checkout: string | null; guest: string; listing: string; amount: number }>()
   for (const r of rows.slice(1)) {
     if (!RESERVATION_TYPES.has((r[idx.type] || '').trim())) { skipped++; continue }
     const code = (r[idx.code] || '').trim()
@@ -82,7 +83,7 @@ export function parseAirbnbCsv(text) {
     if (byCode.has(code)) {
       // Plazo adicional de la misma reserva (mismas fechas): el importe se suma.
       dupes++
-      const prev = byCode.get(code)
+      const prev = byCode.get(code)!
       prev.amount = Math.round((prev.amount + amount) * 100) / 100
       continue
     }
@@ -106,17 +107,27 @@ export function parseAirbnbCsv(text) {
  * dry=true → solo vista previa. dry=false → aplica (update matches, insert nuevas).
  * Idempotente: re-importar solo actualiza guest_name/amount de los matches.
  */
-export function importAirbnb(db, reservations, map, dry = true) {
+interface CsvReservation {
+  code: string
+  bookedDate: string | null
+  checkin: string | null
+  checkout: string | null
+  guest: string
+  listing: string
+  amount: number
+}
+
+export function importAirbnb(db: DB, reservations: CsvReservation[], map: Record<string, string>, dry = true) {
   const out = {
-    matched: 0, inserted: 0, updated: 0, unmapped: [], totalMatched: 0, totalInserted: 0,
-    byProperty: {}, warnings: [],
+    matched: 0, inserted: 0, updated: 0, unmapped: [] as string[], totalMatched: 0, totalInserted: 0,
+    byProperty: {} as Record<string, number>, warnings: [] as string[],
   }
-  const unmappedSet = new Set()
+  const unmappedSet = new Set<string>()
   const tx = db.transaction(() => {
     for (const r of reservations) {
       const propertyId = map[r.listing]
       if (!propertyId) { unmappedSet.add(r.listing); continue }
-      const existing = db.prepare('SELECT id, guest_name, amount FROM reservations WHERE confirmation_code = ?').get(r.code)
+      const existing = db.prepare('SELECT id, guest_name, amount FROM reservations WHERE confirmation_code = ?').get(r.code) as { id: string; guest_name: string; amount: number } | undefined
       if (existing) {
         out.matched++
         out.totalMatched += r.amount
@@ -138,7 +149,7 @@ export function importAirbnb(db, reservations, map, dry = true) {
     }
     if (dry) throw new Error('__dry__') // rollback de la vista previa
   })
-  try { tx() } catch (err) { if (err.message !== '__dry__') throw err }
+  try { tx() } catch (err) { if ((err as Error).message !== '__dry__') throw err }
   out.unmapped = [...unmappedSet]
   return out
 }

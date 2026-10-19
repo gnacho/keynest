@@ -23,8 +23,24 @@
 //
 // notifyFn inyectable para tests (defecto: notifyAll de push.js).
 import { kvGet, kvSet } from './db.js'
+import type { DB } from './db.js'
+import type { IcsReservation } from './ical.js'
 import { tedeeLocks } from './tedee.js'
+import type { TedeeLock } from './tedee.js'
 import { notifyAll } from './push.js'
+
+type NotifData = Record<string, any>
+type NotifyFn = (db: DB, tipo: string, datos: NotifData, opciones?: Record<string, any>) => void
+type NotifyUsersFn = (db: DB, userIds: string[], tipo: string, datos: NotifData, opciones?: Record<string, any>) => void
+
+/** Reserva tal y como llega al motor de alertas (iCal o import; uid/código opcionales). */
+export interface ReservaItem {
+  summary: string
+  checkin: string
+  checkout: string
+  uid?: string
+  confirmation_code?: string
+}
 
 const TICKS_TEDEE_OFFLINE = 3
 const TEDEE_BAT_BAJA = 20
@@ -34,7 +50,7 @@ const TEDEE_KEYPAD_REARME = 30
 const MAX_AVISOS_INDIVIDUALES = 3
 
 // Fecha local YYYY-MM-DD en la zona del negocio (alquileres en España).
-export function hoyLocal() {
+export function hoyLocal(): string {
   return new Intl.DateTimeFormat('en-CA', {
     timeZone: 'Europe/Madrid',
     year: 'numeric',
@@ -44,7 +60,7 @@ export function hoyLocal() {
 }
 
 // ── Check-in / check-out del día ─────────────────────────────────────────────
-export function checkReservasHoy(db, notifyFn = notifyAll) {
+export function checkReservasHoy(db: DB, notifyFn: NotifyFn = notifyAll): number {
   const hoy = hoyLocal()
   const filas = db
     .prepare(
@@ -52,7 +68,7 @@ export function checkReservasHoy(db, notifyFn = notifyAll) {
        FROM reservations r JOIN properties p ON p.id = r.property_id
        WHERE r.checkin = ? OR r.checkout = ?`
     )
-    .all(hoy, hoy)
+    .all(hoy, hoy) as Array<{ id: string; checkin: string; checkout: string; summary: string; propiedad: string }>
   for (const r of filas) {
     if (r.checkin === hoy) {
       notifyFn(db, 'checkin_hoy', { propiedad: r.propiedad, resumen: r.summary }, { severity: 'normal', url: `/reservas?reserva=${r.id}` })
@@ -68,27 +84,27 @@ export function checkReservasHoy(db, notifyFn = notifyAll) {
 // Enriquecido (issue #34): además de inmueble + resumen, se informa del tiempo
 // (checkin → checkout), personas y importe CUANDO existan (vienen del CSV de
 // Airbnb, no del iCal; el iCal solo trae fechas/summary).
-const guestsDisponible = new WeakMap()
-function tieneGuests(db) {
+const guestsDisponible = new WeakMap<object, boolean>()
+function tieneGuests(db: DB): boolean {
   if (!guestsDisponible.has(db)) {
-    const cols = db.prepare('PRAGMA table_info(reservations)').all().map((c) => c.name)
+    const cols = (db.prepare('PRAGMA table_info(reservations)').all() as Array<{ name: string }>).map((c) => c.name)
     guestsDisponible.set(db, cols.includes('guests'))
   }
-  return guestsDisponible.get(db)
+  return guestsDisponible.get(db) ?? false
 }
 
-function detalleReserva(db, item) {
-  const d = { tiempo: `${item.checkin} → ${item.checkout}` }
+function detalleReserva(db: DB, item: ReservaItem): Record<string, any> {
+  const d: Record<string, any> = { tiempo: `${item.checkin} → ${item.checkout}` }
   // El CSV cruza por confirmation_code; si no hay, se busca por uid.
   const fila = item.confirmation_code
-    ? db.prepare('SELECT amount, guest_name FROM reservations WHERE confirmation_code = ?').get(item.confirmation_code)
+    ? db.prepare('SELECT amount, guest_name FROM reservations WHERE confirmation_code = ?').get(item.confirmation_code) as { amount: number; guest_name: string } | undefined
     : null
-  const r = fila || (item.uid ? db.prepare('SELECT amount, guest_name FROM reservations WHERE uid = ?').get(item.uid) : null)
+  const r = fila || (item.uid ? db.prepare('SELECT amount, guest_name FROM reservations WHERE uid = ?').get(item.uid) as { amount: number; guest_name: string } | undefined : null)
   if (!r) return d
   if (tieneGuests(db)) {
     const g = (item.confirmation_code
       ? db.prepare('SELECT guests FROM reservations WHERE confirmation_code = ?').get(item.confirmation_code)
-      : item.uid ? db.prepare('SELECT guests FROM reservations WHERE uid = ?').get(item.uid) : null)
+      : item.uid ? db.prepare('SELECT guests FROM reservations WHERE uid = ?').get(item.uid) : null) as { guests: number | null } | undefined
     if (g?.guests) d.personas = g.guests
   }
   if (r.amount > 0) d.importe = r.amount
@@ -96,7 +112,7 @@ function detalleReserva(db, item) {
   return d
 }
 
-export function notifyReservasNuevas(db, propiedad, items, notifyFn = notifyAll) {
+export function notifyReservasNuevas(db: DB, propiedad: string, items: ReservaItem[], notifyFn: NotifyFn = notifyAll): void {
   if (!items || items.length === 0) return
   if (items.length > MAX_AVISOS_INDIVIDUALES) {
     // Import grande (p. ej. alta de inmueble o temporada): UN aviso agrupado.
@@ -108,7 +124,7 @@ export function notifyReservasNuevas(db, propiedad, items, notifyFn = notifyAll)
     // se busca por uid o confirmation_code para llevar la reserva concreta.
     const fila = db
       .prepare('SELECT id FROM reservations WHERE uid = ? OR (confirmation_code IS NOT NULL AND confirmation_code = ?)')
-      .get(i.uid ?? '', i.confirmation_code ?? '')
+      .get(i.uid ?? '', i.confirmation_code ?? '') as { id: string } | undefined
     const url = fila?.id ? `/reservas?reserva=${fila.id}` : '/reservas'
     notifyFn(
       db,
@@ -125,7 +141,7 @@ export function notifyReservasNuevas(db, propiedad, items, notifyFn = notifyAll)
 // un aviso por reserva (nunca más, aunque el job se repita).
 // Solo al dueño del inmueble (properties.owner_id, "Mis inmuebles" #223); si
 // la propiedad no tiene dueño asignado, nadie recibe el aviso.
-export function checkTransacciones(db, notifyUsersFn) {
+export function checkTransacciones(db: DB, notifyUsersFn: NotifyUsersFn): number {
   const ayer = new Intl.DateTimeFormat('en-CA', {
     timeZone: 'Europe/Madrid',
     year: 'numeric', month: '2-digit', day: '2-digit',
@@ -137,7 +153,7 @@ export function checkTransacciones(db, notifyUsersFn) {
        FROM reservations r JOIN properties p ON p.id = r.property_id
        WHERE r.checkin = ? AND r.amount > 0`
     )
-    .all(ayer)
+    .all(ayer) as Array<{ id: string; checkin: string; checkout: string; summary: string; amount: number; guest_name: string; property_id: string; propiedad: string; owner_id: string | null }>
   let avisos = 0
   for (const f of filas) {
     const key = `push_tx_${f.id}`
@@ -157,12 +173,32 @@ export function checkTransacciones(db, notifyUsersFn) {
 }
 
 // ── Tedee: offline (3 ticks) y batería baja ──────────────────────────────────
-export function createTedeeChecker({ db, notifyFn = notifyAll, locksFn = tedeeLocks }) {
+interface EstadoLock {
+  id: string
+  nombre: string
+  propertyId: string
+  mal: number
+  alertadoOff: boolean
+  alertadoBat: boolean
+  alertadoKeypad: boolean
+}
+
+/** Cerradura tal y como la consume el checker (los tests pasan mocks parciales). */
+interface TedeeLockLike {
+  id: number
+  name: string
+  online: boolean
+  battery: number
+  propertyId: string
+  keypad?: { name: string; battery: number } | null
+}
+
+export function createTedeeChecker({ db, notifyFn = notifyAll, locksFn = tedeeLocks }: { db: DB; notifyFn?: NotifyFn; locksFn?: (db: DB) => Promise<TedeeLockLike[]> }) {
   // Por cerradura (id): ticks offline seguidos + flancos ya alertados.
-  const estado = new Map()
+  const estado = new Map<number, EstadoLock>()
   let vioCerraduras = false
 
-  function estadoDe(id) {
+  function estadoDe(id: number): EstadoLock {
     let e = estado.get(id)
     if (!e) {
       e = { id: String(id), nombre: String(id), propertyId: '', mal: 0, alertadoOff: false, alertadoBat: false, alertadoKeypad: false }
@@ -172,16 +208,16 @@ export function createTedeeChecker({ db, notifyFn = notifyAll, locksFn = tedeeLo
   }
 
   // #277: solo se vigilan (y notifican) las cerraduras asignadas a un inmueble.
-  function asignadas(locks) {
+  function asignadas(locks: TedeeLockLike[]): TedeeLockLike[] {
     return locks.filter((l) => String(l.propertyId || '') !== '')
   }
 
-  async function check() {
-    let locks
+  async function check(): Promise<void> {
+    let locks: TedeeLockLike[]
     try {
       locks = asignadas(await locksFn(db))
     } catch (err) {
-      if (err?.message === 'not-configured') return // sin config Tedee: nada que vigilar
+      if ((err as Error)?.message === 'not-configured') return // sin config Tedee: nada que vigilar
       // Bridge/API caído: las cerraduras conocidas cuentan tick offline (si
       // nunca hubo un fetch bueno, no hay nada que alertar: sin falsos +).
       // Solo las asignadas (#277): cerraduras sin inmueble no notifican.
@@ -239,7 +275,7 @@ export function createTedeeChecker({ db, notifyFn = notifyAll, locksFn = tedeeLo
 }
 
 // ── Limpiezas pendientes (dedupe: 1 aviso por limpieza y día) ────────────────
-export function checkLimpiezas(db, notifyFn = notifyAll) {
+export function checkLimpiezas(db: DB, notifyFn: NotifyFn = notifyAll): number {
   const hoy = hoyLocal()
   const filas = db
     .prepare(
@@ -247,7 +283,7 @@ export function checkLimpiezas(db, notifyFn = notifyAll) {
        FROM cleanings c JOIN properties p ON p.id = c.property_id
        WHERE c.status = 'pendiente' AND c.date <= ?`
     )
-    .all(hoy)
+    .all(hoy) as Array<{ id: string; date: string; propiedad: string }>
   let avisos = 0
   for (const f of filas) {
     const key = `push_clean_${f.id}`
@@ -263,7 +299,7 @@ export function checkLimpiezas(db, notifyFn = notifyAll) {
 // Tareas con fecha prevista mañana u hoy, asignadas a un USUARIO de la app
 // (no proveedor externo). Un aviso el día antes y otro el mismo día como
 // recordatorio. Dedupe por kv por tarea+día.
-export function checkMantenimientoRecordatorios(db, notifyUsersFn) {
+export function checkMantenimientoRecordatorios(db: DB, notifyUsersFn: NotifyUsersFn): number {
   const hoy = hoyLocal()
   const manana = new Intl.DateTimeFormat('en-CA', {
     timeZone: 'Europe/Madrid',
@@ -279,7 +315,7 @@ export function checkMantenimientoRecordatorios(db, notifyUsersFn) {
          AND m.assigned_user_id IS NOT NULL
          AND (m.scheduled_date = ? OR m.scheduled_date = ?)`
     )
-    .all(hoy, manana)
+    .all(hoy, manana) as Array<{ id: string; title: string; scheduled_date: string; assigned_user_id: string; propiedad: string }>
   let avisos = 0
   for (const f of filas) {
     const cuando = f.scheduled_date === hoy ? 'hoy' : 'manana'
@@ -296,7 +332,7 @@ export function checkMantenimientoRecordatorios(db, notifyUsersFn) {
 }
 
 // ── Scheduler diario a hora fija local (patrón scheduleNightly de Helios) ────
-export function scheduleDaily(hora, fn, nombre) {
+export function scheduleDaily(hora: number, fn: () => unknown | Promise<unknown>, nombre: string): void {
   const now = new Date()
   const next = new Date(now)
   next.setHours(hora, 0, 0, 0)
@@ -306,7 +342,7 @@ export function scheduleDaily(hora, fn, nombre) {
       await fn()
       console.log(`[keynest] job diario ${nombre} ejecutado`)
     } catch (err) {
-      console.error(`[keynest] job diario ${nombre} error:`, err.message)
+      console.error(`[keynest] job diario ${nombre} error:`, (err as Error).message)
     }
     scheduleDaily(hora, fn, nombre)
   }, next.getTime() - now.getTime()).unref()

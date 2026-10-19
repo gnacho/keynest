@@ -2,10 +2,11 @@ import { execSync } from 'node:child_process'
 import { existsSync, mkdirSync, readdirSync, unlinkSync, statSync, copyFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { kvGet, kvSet } from './db.js'
+import type { DB } from './db.js'
 
 const BACKUP_DIR_NAME = 'backups'
 
-export function getBackupConfig(db) {
+export function getBackupConfig(db: DB) {
   return {
     enabled: kvGet(db, 'backup_enabled') === '1',
     retentionDays: Number(kvGet(db, 'backup_retention_days') || 7),
@@ -13,13 +14,13 @@ export function getBackupConfig(db) {
   }
 }
 
-export function setBackupConfig(db, { enabled, retentionDays }) {
+export function setBackupConfig(db: DB, { enabled, retentionDays }: { enabled?: boolean; retentionDays?: number }) {
   if (enabled !== undefined) kvSet(db, 'backup_enabled', enabled ? '1' : '0')
   if (retentionDays !== undefined) kvSet(db, 'backup_retention_days', String(Math.max(1, Math.min(90, retentionDays))))
   return getBackupConfig(db)
 }
 
-export function runBackup(db, dataDir, dbName = 'keynest.db') {
+export function runBackup(db: DB, dataDir: string, dbName = 'keynest.db') {
   const dbPath = join(dataDir, dbName)
   if (!existsSync(dbPath)) return { error: 'bd-no-encontrada' }
 
@@ -39,7 +40,7 @@ export function runBackup(db, dataDir, dbName = 'keynest.db') {
   return { ok: true, path: backupPath }
 }
 
-export function cleanOldBackups(dataDir, dbName = 'keynest.db', retentionDays = 7) {
+export function cleanOldBackups(dataDir: string, dbName = 'keynest.db', retentionDays = 7) {
   const backupDir = join(dataDir, BACKUP_DIR_NAME)
   if (!existsSync(backupDir)) return { cleaned: 0 }
 

@@ -18,6 +18,7 @@
 import fs from 'node:fs'
 import path from 'node:path'
 import { kvGet, kvSet } from './db.js'
+import type { DB } from './db.js'
 import { notifyAll } from './push.js'
 
 const DEF_DIR = '/opt/airbnb-scraper/data'
@@ -27,7 +28,7 @@ const CLAVE_PAIRING = 'airbnb_pairing'
 const PAIRING_TTL_MS = 10 * 60 * 1000
 const PAIRING_ALPHABET = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789'
 
-function leerJSON(ruta) {
+function leerJSON(ruta: string): any {
   try {
     return JSON.parse(fs.readFileSync(ruta, 'utf-8'))
   } catch {
@@ -35,16 +36,16 @@ function leerJSON(ruta) {
   }
 }
 
-export function airbnbDataDir() {
+export function airbnbDataDir(): string {
   return process.env.AIRBNB_DATA_DIR || DEF_DIR
 }
 
-export function airbnbSessionPath() {
+export function airbnbSessionPath(): string {
   return process.env.AIRBNB_SESSION_PATH || DEF_SESION
 }
 
 /** Código de emparejamiento vigente para subir una sesión nueva, o null. */
-export function pairingVigente(db, ahora = Date.now()) {
+export function pairingVigente(db: DB, ahora = Date.now()): { code: string; expira: number } | null {
   try {
     const p = JSON.parse(kvGet(db, CLAVE_PAIRING) || 'null')
     if (!p || !p.code || p.expira <= ahora) return null
@@ -56,7 +57,7 @@ export function pairingVigente(db, ahora = Date.now()) {
 
 /** Genera un código de un solo uso (6 chars, caducidad 10 min) para que el
  *  capturador local pueda subir la sesión nueva a la webapp. */
-export function crearPairing(db, ahora = Date.now()) {
+export function crearPairing(db: DB, ahora = Date.now()): { code: string; expira: number } {
   let code = ''
   for (let i = 0; i < 6; i++) code += PAIRING_ALPHABET[Math.floor(Math.random() * PAIRING_ALPHABET.length)]
   const expira = ahora + PAIRING_TTL_MS
@@ -65,7 +66,7 @@ export function crearPairing(db, ahora = Date.now()) {
 }
 
 /** Consume el código si es el vigente (single-use). Devuelve false si no. */
-export function consumirPairing(db, code, ahora = Date.now()) {
+export function consumirPairing(db: DB, code: string, ahora = Date.now()): boolean {
   const vigente = pairingVigente(db, ahora)
   if (!vigente || vigente.code !== code) return false
   kvSet(db, CLAVE_PAIRING, '')
@@ -75,7 +76,7 @@ export function consumirPairing(db, code, ahora = Date.now()) {
 /** Escribe el storage_state del capturador como sesión del scraper (mode 600,
  *  escritura atómica tmp+rename). Los datos viajan en memoria, nunca en texto
  *  de salida del server. */
-export function guardarSesion(session) {
+export function guardarSesion(session: unknown): string {
   const ruta = airbnbSessionPath()
   fs.mkdirSync(path.dirname(ruta), { recursive: true })
   const tmp = `${ruta}.tmp-${process.pid}-${Date.now()}`
@@ -89,7 +90,7 @@ export function guardarSesion(session) {
  * Devuelve el estado de la sesión de Airbnb para la UI (ribbon).
  * El ribbon es descartable; el frontend decide cuándo reaparece (24h).
  */
-export function airbnbStatus(db) {
+export function airbnbStatus(db: DB) {
   const s = leerJSON(path.join(airbnbDataDir(), 'airbnb_sesion.json'))
   let prev = {}
   try { prev = JSON.parse(kvGet(db, CLAVE_ESTADO) || '{}') } catch { /* noop */ }
@@ -106,7 +107,7 @@ export function airbnbStatus(db) {
  * El push de sesión muerta es FUERA de aquí (lo lanza el job con la BD real)
  * porque notifyAll necesita la BD; aquí no hay BD propia.
  */
-export function aplicarCruce(db) {
+export function aplicarCruce(db: DB) {
   const dir = airbnbDataDir()
   const reservas = leerJSON(path.join(dir, 'airbnb_reservas.json'))
   const sesion = leerJSON(path.join(dir, 'airbnb_sesion.json'))
@@ -128,7 +129,7 @@ export function aplicarCruce(db) {
     const tx = db.transaction(() => {
       for (const r of reservas.reservas) {
         if (!r || !r.confirmation_code) continue
-        const fila = stmtGet.get(r.confirmation_code)
+        const fila = stmtGet.get(r.confirmation_code) as { id: string } | undefined
         if (!fila) { sinMatch++; continue }
         stmtUpd.run(r.guests ?? null, r.amount ?? null, r.guest_name ?? null, r.booked_date ?? null, r.guest_location ?? null, fila.id)
         cruzadas++
@@ -152,7 +153,7 @@ export function aplicarCruce(db) {
  * Solo lanza el push en el flanco (viva→muerta) para no spamear; el ribbon
  * de la UI se alimenta del estado guardado por aplicarCruce.
  */
-export async function syncAirbnb(db) {
+export async function syncAirbnb(db: DB) {
   const dir = airbnbDataDir()
   const sesion = leerJSON(path.join(dir, 'airbnb_sesion.json'))
   const anterior = (() => { try { return JSON.parse(kvGet(db, CLAVE_ESTADO) || '{}') } catch { return {} } })()
@@ -180,7 +181,7 @@ export async function syncAirbnb(db) {
  * scraper sin duplicar el aviso (el flanco ya queda consumido).
  * Devuelve true si el estado anterior era de sesión muerta.
  */
-export function marcarSesionRestaurada(db) {
+export function marcarSesionRestaurada(db: DB): boolean {
   const anterior = (() => { try { return JSON.parse(kvGet(db, CLAVE_ESTADO) || '{}') } catch { return {} } })()
   kvSet(db, CLAVE_ESTADO, JSON.stringify({
     viva: true,

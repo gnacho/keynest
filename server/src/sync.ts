@@ -1,6 +1,8 @@
 import crypto from 'node:crypto'
 import { fetchIcs, icsToReservations, parseIcs } from './ical.js'
 import { kvGet, kvSet } from './db.js'
+import type { DB } from './db.js'
+import type { IcsReservation } from './ical.js'
 import { hoyLocal } from './alerts.js'
 
 /**
@@ -11,9 +13,9 @@ import { hoyLocal } from './alerts.js'
  * NUNCA se llama en el primer sync OK del inmueble (import inicial = todo
  * "nuevo" → anti-spam; se detecta por el kv sync_<id> con ok previo).
  */
-export async function syncAll(db, { onNews } = {}) {
-  const props = db.prepare("SELECT id, name, ical_url FROM properties WHERE ical_url != ''").all()
-  const results = []
+export async function syncAll(db: DB, { onNews } = {} as { onNews?: (name: string, items: IcsReservation[]) => void }) {
+  const props = db.prepare("SELECT id, name, ical_url FROM properties WHERE ical_url != ''").all() as Array<{ id: string; name: string; ical_url: string }>
+  const results: Array<Record<string, unknown>> = []
   for (const p of props) {
     const key = `sync_${p.id}`
     let prevOk = false
@@ -26,7 +28,7 @@ export async function syncAll(db, { onNews } = {}) {
       const items = icsToReservations(events)
       const now = Date.now()
       const seen = new Set(items.map((i) => i.uid))
-      const prevUids = new Set(db.prepare('SELECT uid FROM reservations WHERE property_id = ?').all(p.id).map((r) => r.uid))
+      const prevUids = new Set((db.prepare('SELECT uid FROM reservations WHERE property_id = ?').all(p.id) as Array<{ uid: string }>).map((r) => r.uid))
 
       const upsert = db.prepare(`
         INSERT INTO reservations (id, property_id, uid, checkin, checkout, summary, confirmation_code, phone_last4, created_at)
@@ -50,7 +52,7 @@ export async function syncAll(db, { onNews } = {}) {
         // que termina desaparece del iCal y el reemplazo completo la borraría
         // (perdiendo histórico y las cuentas de Rentabilidad). Solo se borran
         // las reservas pendientes/futuras que ya no vienen (cancelaciones).
-        const existing = db.prepare("SELECT uid FROM reservations WHERE property_id = ? AND uid LIKE '%@airbnb.com' AND checkout >= ?").all(p.id, hoyLocal())
+        const existing = db.prepare("SELECT uid FROM reservations WHERE property_id = ? AND uid LIKE '%@airbnb.com' AND checkout >= ?").all(p.id, hoyLocal()) as Array<{ uid: string }>
         const del = db.prepare('DELETE FROM reservations WHERE uid = ?')
         for (const row of existing) {
           if (!seen.has(row.uid)) del.run(row.uid)
@@ -66,18 +68,18 @@ export async function syncAll(db, { onNews } = {}) {
       results.push({ propertyId: p.id, name: p.name, ...status })
       console.log(`[sync] ${p.name}: ${items.length} reservas`)
     } catch (err) {
-      const status = { ok: false, at: Date.now(), error: err.message }
+      const status = { ok: false, at: Date.now(), error: (err as Error).message }
       kvSet(db, key, JSON.stringify(status))
       results.push({ propertyId: p.id, name: p.name, ...status })
-      console.error(`[sync] ${p.name}: ERROR ${err.message}`)
+      console.error(`[sync] ${p.name}: ERROR ${(err as Error).message}`)
     }
   }
   return results
 }
 
-export function syncStatus(db) {
-  const rows = db.prepare("SELECT key, value FROM kv WHERE key LIKE 'sync_%'").all()
-  const out = {}
+export function syncStatus(db: DB): Record<string, unknown> {
+  const rows = db.prepare("SELECT key, value FROM kv WHERE key LIKE 'sync_%'").all() as Array<{ key: string; value: string }>
+  const out: Record<string, unknown> = {}
   for (const r of rows) {
     try { out[r.key.slice(5)] = JSON.parse(r.value) } catch { /* noop */ }
   }

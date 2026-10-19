@@ -7,8 +7,10 @@
 // cliente refetchea el bootstrap vía REST al recibirlos (y hace refetch total
 // inmediato con 'sync.resync' si perdió eventos al reconectar).
 
+import type { SSEStreamingApi } from 'hono/streaming'
+
 // Dominio singular para el nombre del evento (entity plural del dominio).
-const DOMAIN = {
+const DOMAIN: Record<string, string> = {
   properties: 'property',
   reservations: 'reservation',
   cleanings: 'cleaning',
@@ -19,15 +21,15 @@ const DOMAIN = {
   expenses: 'expense',
 }
 
-export function eventName(entity) {
+export function eventName(entity: string): string {
   return `${DOMAIN[entity] ?? entity}.changed`
 }
 
 export function createHub(maxClients = 20) {
-  const clients = new Set()
+  const clients = new Set<SSEStreamingApi>()
   let seq = 0 // id monótono de eventos SSE (en memoria; ver contrato)
 
-  function send(stream, event, data) {
+  function send(stream: SSEStreamingApi, event: string, data: unknown): Promise<void> {
     seq += 1
     return stream.writeSSE({ id: String(seq), event, data: JSON.stringify(data) })
   }
@@ -36,25 +38,25 @@ export function createHub(maxClients = 20) {
     maxClients,
     size: () => clients.size,
     seq: () => seq,
-    add(stream) {
+    add(stream: SSEStreamingApi) {
       clients.add(stream)
     },
-    remove(stream) {
+    remove(stream: SSEStreamingApi) {
       clients.delete(stream)
     },
-    hello(stream) {
+    hello(stream: SSEStreamingApi) {
       return send(stream, 'hello', { ok: true }).catch(() => {})
     },
     // Tras una reconexión con Last-Event-ID, si se perdieron eventos se manda
     // UN 'sync.resync' y el cliente refetchea todo vía REST (los eventos no
     // llevan datos, así que no hay histórico que reenviar).
-    resync(stream, lastEventId) {
+    resync(stream: SSEStreamingApi, lastEventId: string) {
       const last = parseInt(lastEventId || '', 10)
       if (Number.isFinite(last) && last < seq) {
         return send(stream, 'sync.resync', { type: 'changed', entity: '*' }).catch(() => {})
       }
     },
-    broadcast(entity) {
+    broadcast(entity: string) {
       const event = eventName(entity)
       const data = JSON.stringify({ type: 'changed', entity })
       seq += 1

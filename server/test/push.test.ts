@@ -7,6 +7,7 @@ import { join } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import webpush from 'web-push'
 import { openDb } from '../src/db.js'
+import type { DB } from '../src/db.js'
 import { configurePush, notifyUsers, flushNotificationQueue, _setSendFn, _resetForTests } from '../src/push.js'
 import {
   checkReservasHoy,
@@ -32,8 +33,8 @@ function configura() {
   configurePush({ publicKey: KEYS.publicKey, privateKey: KEYS.privateKey, subject: 'mailto:test@example.com' })
 }
 
-let dir
-let db
+let dir: string
+let db: DB
 beforeEach(() => {
   _resetForTests()
   dir = mkdtempSync(join(tmpdir(), 'keynest-push-test-'))
@@ -45,7 +46,7 @@ afterEach(() => {
   rmSync(dir, { recursive: true, force: true })
 })
 
-function insertUser(username, language = 'es') {
+function insertUser(username: string, language = 'es') {
   const id = crypto.randomUUID()
   db.prepare("INSERT INTO users (id, username, password_hash, language, role, created_at) VALUES (?, ?, 'x', ?, 'user', ?)").run(
     id,
@@ -56,7 +57,7 @@ function insertUser(username, language = 'es') {
   return id
 }
 
-function insertSub(userId, endpoint = `https://push.example.com/${crypto.randomUUID()}`) {
+function insertSub(userId: string, endpoint = `https://push.example.com/${crypto.randomUUID()}`) {
   const now = Date.now()
   db.prepare(
     'INSERT INTO push_subscriptions (id, user_id, endpoint, p256dh, auth, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)'
@@ -64,7 +65,7 @@ function insertSub(userId, endpoint = `https://push.example.com/${crypto.randomU
   return endpoint
 }
 
-function insertProperty(name = 'Carmen', ownerId = null) {
+function insertProperty(name = 'Carmen', ownerId: string | null = null) {
   const id = crypto.randomUUID()
   db.prepare(
     "INSERT INTO properties (id, slug, name, owner_id, created_at) VALUES (?, ?, ?, ?, ?)"
@@ -72,20 +73,20 @@ function insertProperty(name = 'Carmen', ownerId = null) {
   return id
 }
 
-function insertReservation(propertyId, { uid = crypto.randomUUID(), checkin, checkout, summary = 'Airbnb (AB12)' }) {
+function insertReservation(propertyId: string, { uid = crypto.randomUUID(), checkin, checkout, summary = 'Airbnb (AB12)' }: { uid?: string; checkin: string; checkout: string; summary?: string }) {
   db.prepare(
     'INSERT INTO reservations (id, property_id, uid, checkin, checkout, summary, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)'
   ).run(crypto.randomUUID(), propertyId, uid, checkin, checkout, summary, Date.now())
 }
 
 function captura() {
-  const llamadas = []
-  return { llamadas, notifyFn: (db, tipo, datos, opciones) => llamadas.push({ tipo, datos, opciones }) }
+  const llamadas: Array<Record<string, any>> = []
+  return { llamadas, notifyFn: (db: any, tipo: string, datos: any, opciones: any) => llamadas.push({ tipo, datos, opciones }) }
 }
 
 describe('schema', () => {
   it('crea las tablas push sin tocar las existentes', () => {
-    const tables = db.prepare("SELECT name FROM sqlite_master WHERE type='table'").all().map((r) => r.name)
+    const tables = (db.prepare("SELECT name FROM sqlite_master WHERE type='table'").all() as Array<{ name: string }>).map((r) => r.name)
     for (const t of ['push_subscriptions', 'notification_preferences', 'notification_quiet_hours', 'notification_queue']) {
       expect(tables).toContain(t)
     }
@@ -100,10 +101,10 @@ describe('motor notifyUsers', () => {
     const u2 = insertUser('bob', 'en')
     insertSub(u1, 'https://push.example.com/ana')
     insertSub(u2, 'https://push.example.com/bob')
-    const enviados = []
+    const enviados: Array<Record<string, any>> = []
     _setSendFn(async (sub, payload) => {
       if (sub.endpoint.includes('bob')) {
-        const err = new Error('Gone')
+        const err = new Error('Gone') as Error & { statusCode: number }
         err.statusCode = 410
         throw err
       }
@@ -153,7 +154,7 @@ describe('motor notifyUsers', () => {
     await flushNotificationQueue(db)
     expect(db.prepare('SELECT * FROM notification_queue').all()).toHaveLength(1) // sigue en ventana
     db.prepare('DELETE FROM notification_quiet_hours').run()
-    const enviados = []
+    const enviados: Array<Record<string, any>> = []
     _setSendFn(async (sub, payload) => {
       enviados.push(JSON.parse(payload))
     })
@@ -197,8 +198,8 @@ describe('alertas: check-in / check-out', () => {
     const tipos = llamadas.map((l) => l.tipo)
     expect(tipos).toContain('checkin_hoy')
     expect(tipos).toContain('checkout_hoy')
-    expect(llamadas.find((l) => l.tipo === 'checkin_hoy').datos).toEqual({ propiedad: 'Ruzafa', resumen: 'Airbnb (HMK3)' })
-    expect(llamadas.find((l) => l.tipo === 'checkout_hoy').datos.resumen).toBe('Booking (9912)')
+    expect(llamadas.find((l) => l.tipo === 'checkin_hoy')!.datos).toEqual({ propiedad: 'Ruzafa', resumen: 'Airbnb (HMK3)' })
+    expect(llamadas.find((l) => l.tipo === 'checkout_hoy')!.datos.resumen).toBe('Booking (9912)')
     expect(llamadas.every((l) => l.opciones.url.startsWith('/reservas?reserva='))).toBe(true)
   })
 })
@@ -270,11 +271,11 @@ describe('alertas: transacción abonada (24h post check-in)', () => {
   }
 
   function capturaUsers() {
-    const llamadas = []
-    return { llamadas, notifyUsersFn: (db, userIds, tipo, datos, opciones) => llamadas.push({ userIds, tipo, datos, opciones }) }
+    const llamadas: Array<Record<string, any>> = []
+    return { llamadas, notifyUsersFn: (db: any, userIds: string[], tipo: string, datos: any, opciones: any) => llamadas.push({ userIds, tipo, datos, opciones }) }
   }
 
-  function insertReservaConImporte(propertyId, { amount, guestName = null, uid = crypto.randomUUID() } = {}) {
+  function insertReservaConImporte(propertyId: string, { amount, guestName = null, uid = crypto.randomUUID() }: { amount: number; guestName?: string | null; uid?: string } = { amount: 0 }) {
     const ayer = ayerLocal()
     const manana = new Intl.DateTimeFormat('en-CA', {
       timeZone: 'Europe/Madrid', year: 'numeric', month: '2-digit', day: '2-digit',
@@ -503,18 +504,20 @@ describe('sync iCal → reservas nuevas', () => {
     const p = insertProperty('Benimaclet')
     db.prepare("UPDATE properties SET ical_url = 'https://x' WHERE id = ?").run(p)
 
-    const news = []
-    const onNews = (prop, its) => news.push(...its.map((i) => ({ prop, ...i })))
+    const news: any[] = []
+    const onNews = (prop: string, its: any[]): void => {
+      for (const i of its) news.push({ prop, ...i })
+    }
 
     // Primer sync (sin OK previo): NO avisa aunque todo sea "nuevo"
-    ical.icsToReservations.mockReturnValue([
+    (ical.icsToReservations as any).mockReturnValue([
       { uid: 'a@airbnb.com', checkin: '2026-08-10', checkout: '2026-08-12', summary: 'A', confirmation_code: '', phone_last4: '' },
     ])
-    await syncAll(db, { onNews })
-    expect(news).toHaveLength(0)
+    await syncAll(db, { onNews });
+    expect(news).toHaveLength(0);
 
     // Segundo sync con una reserva NUEVA: avisa solo de la nueva
-    ical.icsToReservations.mockReturnValue([
+    (ical.icsToReservations as any).mockReturnValue([
       { uid: 'a@airbnb.com', checkin: '2026-08-10', checkout: '2026-08-12', summary: 'A', confirmation_code: '', phone_last4: '' },
       { uid: 'b@airbnb.com', checkin: '2026-09-01', checkout: '2026-09-03', summary: 'B', confirmation_code: '', phone_last4: '' },
     ])

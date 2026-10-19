@@ -9,6 +9,7 @@ import { bodyLimit } from 'hono/body-limit'
 import { Hono } from 'hono'
 import { z } from 'zod'
 import * as auth from './auth.js'
+import type { AppEnv } from './auth.js'
 import { audit, openDb, kvGet, kvSet, encryptSecret, decryptSecret, hydrateCleaning, cleaningCostOf, syncCleaningExpense, removeCleaningExpense } from './db.js'
 import { syncAll, syncStatus } from './sync.js'
 import { fetchIcs, icsToReservations, parseIcs } from './ical.js'
@@ -22,6 +23,11 @@ import { registerPushRoutes } from './routes-push.js'
 import * as alerts from './alerts.js'
 import { getBackupConfig, setBackupConfig, runBackup, cleanOldBackups } from './backup.js'
 import { createHub } from './sse.js'
+import type { DB, CleaningRow, PropertyRow } from './db.js'
+import type { TedeeLock, TedeeAccess } from './tedee.js'
+import type { IcsReservation } from './ical.js'
+
+type Row = Record<string, any>
 
 const DEFAULT_CATEGORIES = [
   { key: 'cerradura/pilas', label: 'Cerradura/pilas', icon: 'lock' },
@@ -49,7 +55,7 @@ const envSchema = z
   })
   .superRefine((env, ctx) => {
     const MARKERS = ['cambia', 'changeme', 'change-me', 'example', 'placeholder', 'your-secret', 'replace_me', 'xxx']
-    for (const [key, val] of [['AUTH_PASS', env.AUTH_PASS], ['SESSION_SECRET', env.SESSION_SECRET], ['ENC_KEY', env.ENC_KEY]]) {
+    for (const [key, val] of [['AUTH_PASS', env.AUTH_PASS], ['SESSION_SECRET', env.SESSION_SECRET], ['ENC_KEY', env.ENC_KEY]] as Array<[string, string | undefined]>) {
       if (val && MARKERS.some((m) => val.toLowerCase().includes(m))) {
         ctx.addIssue({ code: 'custom', path: [key], message: `${key} contiene un valor de ejemplo del .env.example; genera un secreto real` })
       }
@@ -76,7 +82,7 @@ configurePush({
   subject: process.env.VAPID_SUBJECT,
 })
 
-const app = new Hono()
+const app = new Hono<AppEnv>()
 
 /* ---------------------------------------------------------- headers seguridad */
 // GC_ORIGIN (solo demo pública, issue #224): origen extra permitido en CSP
@@ -322,21 +328,21 @@ app.put('/api/users/:id/password', auth.requireAdmin(prodDb, demoDb), async (c) 
   const body = await c.req.json().catch(() => null)
   const parsed = resetPwdSchema.safeParse(body)
   if (!parsed.success) return c.json({ error: 'formato inválido', code: 'format' }, 400)
-  const ok = await auth.setUserPassword(prodDb, c.req.param('id'), parsed.data.password)
+  const ok = await auth.setUserPassword(prodDb, c.req.param('id')!, parsed.data.password)
   if (!ok) return c.json({ error: 'usuario no encontrado' }, 404)
-  aud(c, 'update', 'user', c.req.param('id'), 'password reset')
+  aud(c, 'update', 'user', c.req.param('id')!, 'password reset')
   return c.json({ ok: true })
 })
 
 /* Cambio de rol (admin): prohibido sobre uno mismo, protege el último admin */
 const roleSchema = z.object({ role: z.enum(['user', 'admin']) })
 app.put('/api/users/:id/role', auth.requireAdmin(prodDb, demoDb), async (c) => {
-  const targetId = c.req.param('id')
+  const targetId = c.req.param('id')!
   if (targetId === c.get('user').id) return c.json({ error: 'no puedes cambiar tu propio rol', code: 'self' }, 403)
   const body = await c.req.json().catch(() => null)
   const parsed = roleSchema.safeParse(body)
   if (!parsed.success) return c.json({ error: 'formato inválido', code: 'format' }, 400)
-  const target = prodDb.prepare('SELECT id, role FROM users WHERE id = ?').get(targetId)
+  const target = prodDb.prepare('SELECT id, role FROM users WHERE id = ?').get(targetId) as { id: string; role: string } | undefined
   if (!target) return c.json({ error: 'usuario no encontrado' }, 404)
   if (target.role === 'admin' && parsed.data.role === 'user' && auth.countAdmins(prodDb) <= 1) {
     return c.json({ error: 'debe quedar al menos un administrador', code: 'last-admin' }, 409)
@@ -352,16 +358,16 @@ app.put('/api/users/:id/language', auth.requireAdmin(prodDb, demoDb), async (c) 
   const body = await c.req.json().catch(() => null)
   const parsed = userLangSchema.safeParse(body)
   if (!parsed.success) return c.json({ error: 'formato inválido', code: 'format' }, 400)
-  const user = auth.updateLanguage(prodDb, c.req.param('id'), parsed.data.language)
+  const user = auth.updateLanguage(prodDb, c.req.param('id')!, parsed.data.language)
   if (!user) return c.json({ error: 'usuario no encontrado' }, 404)
   return c.json({ ok: true, user })
 })
 
 /* Borrado de usuario (admin): prohibido sobre uno mismo, protege el último admin, borra sus sesiones */
 app.delete('/api/users/:id', auth.requireAdmin(prodDb, demoDb), (c) => {
-  const targetId = c.req.param('id')
+  const targetId = c.req.param('id')!
   if (targetId === c.get('user').id) return c.json({ error: 'no puedes eliminarte a ti mismo', code: 'self' }, 403)
-  const target = prodDb.prepare('SELECT id, username, role FROM users WHERE id = ?').get(targetId)
+  const target = prodDb.prepare('SELECT id, username, role FROM users WHERE id = ?').get(targetId) as { id: string; username: string; role: string } | undefined
   if (!target) return c.json({ error: 'usuario no encontrado' }, 404)
   if (target.role === 'admin' && auth.countAdmins(prodDb) <= 1) {
     return c.json({ error: 'debe quedar al menos un administrador', code: 'last-admin' }, 409)
@@ -419,7 +425,7 @@ app.post('/api/airbnb/session', async (c) => {
   try {
     ruta = guardarSesion(parsed.data.session)
   } catch (e) {
-    console.error('[airbnb] no se pudo guardar la sesión subida:', e.message)
+    console.error('[airbnb] no se pudo guardar la sesión subida:', (e as Error).message)
     return c.json({ error: 'no se pudo escribir la sesión en disco', code: 'write' }, 500)
   }
   consumirPairing(prodDb, parsed.data.code)
@@ -449,7 +455,7 @@ app.get('/api/tedee/test', auth.requireAuth(prodDb, demoDb), async (c) => {
     const locks = await tedeeLocks(prodDb)
     return c.json({ ok: true, locks })
   } catch (err) {
-    const code = err.message === 'not-configured' ? 'not-configured' : err.message.startsWith('http-') ? err.message : 'fetch'
+    const code = (err as Error).message === 'not-configured' ? 'not-configured' : (err as Error).message.startsWith('http-') ? (err as Error).message : 'fetch'
     return c.json({ ok: false, code })
   }
 })
@@ -465,7 +471,7 @@ app.put('/api/config/demo', auth.requireAdmin(prodDb, demoDb), async (c) => {
 })
 
 /* ------------------------------------------------------------------ data API */
-const guarded = new Hono()
+const guarded = new Hono<AppEnv>()
 guarded.use('*', auth.requireAuth(prodDb, demoDb))
 registerPushRoutes(guarded)
 
@@ -481,11 +487,11 @@ guarded.get('/events', (c) => {
     await hub.hello(stream)
     // Resync: si el navegador reconecta con Last-Event-ID y perdió eventos,
     // UN 'sync.resync' le dice que refetchee todo vía REST.
-    await hub.resync(stream, c.req.header('last-event-id'))
+    await hub.resync(stream, c.req.header('last-event-id') ?? '')
     const heartbeat = setInterval(() => {
       stream.write(': ping\n\n').catch(() => {})
     }, 20000)
-    await new Promise((resolve) => {
+    await new Promise<void>((resolve) => {
       stream.onAbort(() => {
         clearInterval(heartbeat)
         hub.remove(stream)
@@ -498,8 +504,8 @@ guarded.get('/events', (c) => {
 /* Accesos Tedee con caché en caliente (10 min): la ventana de 90 días puede
    paginar hasta 8 páginas por cerradura; sin caché cada bootstrap del front
    repetiría todo el barrido contra la API de Tedee. */
-const accesosCache = { at: 0, datos: [] }
-async function accesosConCache(db) {
+const accesosCache = { at: 0, datos: [] as import('./tedee.js').TedeeAccess[] }
+async function accesosConCache(db: import('./db.js').DB) {
   if (Date.now() - accesosCache.at < 10 * 60 * 1000 && accesosCache.datos.length) return accesosCache.datos
   const datos = await tedeeAccesses(db)
   accesosCache.at = Date.now()
@@ -509,14 +515,14 @@ async function accesosConCache(db) {
 
 guarded.get('/bootstrap', async (c) => {
   const db = c.get('db')
-  const properties = db.prepare('SELECT * FROM properties ORDER BY created_at').all()
+  const properties = (db.prepare('SELECT * FROM properties ORDER BY created_at').all() as Row[])
     .map((p) => ({ ...p, checklist: JSON.parse(p.checklist || '[]') }))
-  const reservations = db.prepare('SELECT * FROM reservations ORDER BY checkin').all()
-  const cleanings = db.prepare('SELECT * FROM cleanings ORDER BY date').all()
-    .map((cl) => hydrateCleaning(cl, properties))
-  const maintenance = db.prepare('SELECT * FROM maintenance_tasks ORDER BY created_at DESC').all()
+  const reservations = db.prepare('SELECT * FROM reservations ORDER BY checkin').all() as Row[]
+  const cleanings = (db.prepare('SELECT * FROM cleanings ORDER BY date').all() as Row[])
+    .map((cl) => hydrateCleaning(cl as CleaningRow, properties as PropertyRow[]))
+  const maintenance = (db.prepare('SELECT * FROM maintenance_tasks ORDER BY created_at DESC').all() as Row[])
     .map((t) => ({ ...t, has_token: Boolean(t.token_hash), token_hash: undefined }))
-  const people = db.prepare('SELECT id, name, phone, role, specialty, hourly_rate, token_hash, created_at FROM people ORDER BY created_at').all()
+  const people = (db.prepare('SELECT id, name, phone, role, specialty, hourly_rate, token_hash, created_at FROM people ORDER BY created_at').all() as Row[])
     .map((p) => ({ ...p, has_token: Boolean(p.token_hash), token_hash: undefined }))
   const expenses = db.prepare('SELECT * FROM expenses ORDER BY year DESC, month DESC, created_at DESC').all()
   let categories = kvGet(db, 'maint_categories')
@@ -537,8 +543,8 @@ guarded.get('/bootstrap', async (c) => {
   // Tedee (best-effort): cerraduras asignadas a inmuebles (#277: el resto se
   // oculta) + accesos reales desde la cloud; si falla o no está configurado,
   // arrays vacíos (la página Tedee muestra vacío).
-  let locks = []
-  let accesses = []
+  let locks: TedeeLock[] = []
+  let accesses: TedeeAccess[] = []
   try {
     const [lk, ac] = await Promise.all([tedeeLocks(db, { soloAsignadas: true }), accesosConCache(db)])
     locks = lk
@@ -561,12 +567,12 @@ const propertySchema = z.object({
   ownerId: z.string().nullable().optional(), // frontend envía camelCase
 }).transform((d) => ({ ...d, owner_id: d.ownerId ?? d.owner_id }))
 
-function slugify(name) {
+function slugify(name: string): string {
   return name.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase()
     .replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') || 'inmueble'
 }
 
-const aud = (c, action, entity, entityId, detail = '') => audit(c.get('db'), c.get('user')?.id, action, entity, entityId, detail)
+const aud = (c: import('hono').Context<AppEnv>, action: string, entity: string, entityId: string, detail = '') => audit(c.get('db'), c.get('user')?.id, action, entity, entityId, detail)
 
 guarded.post('/properties', async (c) => {
   const body = await c.req.json().catch(() => null)
@@ -581,14 +587,14 @@ guarded.post('/properties', async (c) => {
   c.get('db').prepare(`INSERT INTO properties (id, slug, name, address, bedrooms, bathrooms, area, photo, ical_url, checklist, instructions, owner_id, created_at)
               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`)
     .run(id, slug, d.name, d.address, d.bedrooms, d.bathrooms, d.area, d.photo, d.icalUrl, JSON.stringify(d.checklist), d.instructions, d.owner_id, Date.now())
-  const property = db.prepare('SELECT * FROM properties WHERE id = ?').get(id)
+  const property = db.prepare('SELECT * FROM properties WHERE id = ?').get(id) as Row
   aud(c, 'create', 'property', id, d.name)
   return c.json({ ok: true, property: { ...property, checklist: JSON.parse(property.checklist) } }, 201)
 })
 
 guarded.put('/properties/:id', async (c) => {
   const db = c.get('db')
-  const existing = db.prepare('SELECT * FROM properties WHERE id = ?').get(c.req.param('id'))
+  const existing = db.prepare('SELECT * FROM properties WHERE id = ?').get(c.req.param('id')) as Row | undefined
   if (!existing) return c.json({ error: 'no encontrado' }, 404)
   const body = await c.req.json().catch(() => null)
   const parsed = propertySchema.safeParse(body)
@@ -596,7 +602,7 @@ guarded.put('/properties/:id', async (c) => {
   const d = parsed.data
   db.prepare(`UPDATE properties SET name=?, address=?, bedrooms=?, bathrooms=?, area=?, photo=?, ical_url=?, checklist=?, instructions=?, owner_id=? WHERE id=?`)
     .run(d.name, d.address, d.bedrooms, d.bathrooms, d.area, d.photo, d.icalUrl, JSON.stringify(d.checklist), d.instructions, d.owner_id, existing.id)
-  const property = db.prepare('SELECT * FROM properties WHERE id = ?').get(existing.id)
+  const property = db.prepare('SELECT * FROM properties WHERE id = ?').get(existing.id) as Row
   aud(c, 'update', 'property', existing.id, d.name)
   return c.json({ ok: true, property: { ...property, checklist: JSON.parse(property.checklist) } })
 })
@@ -670,7 +676,7 @@ guarded.post('/cleanings', async (c) => {
   const parsed = cleaningSchema.safeParse(body)
   if (!parsed.success) return c.json({ error: 'formato inválido' }, 400)
   const d = parsed.data
-  const property = db.prepare('SELECT * FROM properties WHERE id = ?').get(d.propertyId)
+  const property = db.prepare('SELECT * FROM properties WHERE id = ?').get(d.propertyId) as Row | undefined
   if (!property) return c.json({ error: 'inmueble no encontrado' }, 404)
 
   if (d.reservationId) {
@@ -686,7 +692,7 @@ guarded.post('/cleanings', async (c) => {
   ).get(d.propertyId, d.date, d.date)
   if (occupied && !d.force) return c.json({ error: 'fecha ocupada', code: 'occupied' }, 409)
 
-  const checklist = JSON.parse(property.checklist || '[]')
+  const checklist = JSON.parse(property.checklist || '[]') as string[]
   const checks = checklist.map((label, i) => ({ id: `chk-${i}`, label, done: false }))
   // Snapshot de instrucciones heredado del inmueble; a partir de aquí la limpieza
   // es dueña de su copia (editable sin tocar el maestro).
@@ -712,12 +718,12 @@ const resUpdateSchema = z.object({
   checkout: z.string().optional(),
   guests: z.coerce.number().int().min(1).max(16).optional(),
 })
-function isManualReservation(row) {
+function isManualReservation(row: Row): boolean {
   return typeof row.uid === 'string' && row.uid.startsWith('manual-')
 }
 guarded.put('/reservations/:id', async (c) => {
   const db = c.get('db')
-  const existing = db.prepare('SELECT * FROM reservations WHERE id = ?').get(c.req.param('id'))
+  const existing = db.prepare('SELECT * FROM reservations WHERE id = ?').get(c.req.param('id')) as Row | undefined
   if (!existing) return c.json({ error: 'no encontrada' }, 404)
   const body = await c.req.json().catch(() => null)
   const parsed = resUpdateSchema.safeParse(body)
@@ -742,7 +748,7 @@ guarded.put('/reservations/:id', async (c) => {
    No borra limpiezas asociadas: se dejan sin tocar como en la creación. (#165) */
 guarded.delete('/reservations/:id', async (c) => {
   const db = c.get('db')
-  const existing = db.prepare('SELECT * FROM reservations WHERE id = ?').get(c.req.param('id'))
+  const existing = db.prepare('SELECT * FROM reservations WHERE id = ?').get(c.req.param('id')) as Row | undefined
   if (!existing) return c.json({ error: 'no encontrada' }, 404)
   if (!isManualReservation(existing)) return c.json({ error: 'solo reservas manuales', code: 'not-manual' }, 409)
   db.prepare('DELETE FROM reservations WHERE id = ?').run(existing.id)
@@ -793,7 +799,7 @@ const maintUpdateSchema = z.object({
 })
 guarded.put('/maintenance/:id', async (c) => {
   const db = c.get('db')
-  const existing = db.prepare('SELECT id FROM maintenance_tasks WHERE id = ?').get(c.req.param('id'))
+  const existing = db.prepare('SELECT id FROM maintenance_tasks WHERE id = ?').get(c.req.param('id')) as Row | undefined
   if (!existing) return c.json({ error: 'no encontrada' }, 404)
   const body = await c.req.json().catch(() => null)
   const parsed = maintUpdateSchema.safeParse(body)
@@ -854,7 +860,7 @@ guarded.put('/maintenance/:id', async (c) => {
    para poder recuperarlo con GET sin regenerar. */
 guarded.post('/maintenance/:id/token', (c) => {
   const db = c.get('db')
-  const task = db.prepare('SELECT * FROM maintenance_tasks WHERE id = ?').get(c.req.param('id'))
+  const task = db.prepare('SELECT * FROM maintenance_tasks WHERE id = ?').get(c.req.param('id')) as Row | undefined
   if (!task) return c.json({ error: 'no encontrada' }, 404)
   const alphabet = 'abcdefghijklmnopqrstuvwxyz0123456789'
   const rand = Array.from(crypto.randomBytes(16), (b) => alphabet[b % alphabet.length]).join('')
@@ -868,7 +874,7 @@ guarded.post('/maintenance/:id/token', (c) => {
 /* Recupera el enlace activo de la orden sin regenerarlo. */
 guarded.get('/maintenance/:id/token', (c) => {
   const db = c.get('db')
-  const task = db.prepare('SELECT token_hash, token_cipher FROM maintenance_tasks WHERE id = ?').get(c.req.param('id'))
+  const task = db.prepare('SELECT token_hash, token_cipher FROM maintenance_tasks WHERE id = ?').get(c.req.param('id')) as Row | undefined
   if (!task) return c.json({ error: 'no encontrada' }, 404)
   if (!task.token_hash) return c.json({ path: null })
   const token = decryptSecret(db, task.token_cipher)
@@ -885,7 +891,7 @@ guarded.delete('/maintenance/:id/token', (c) => {
 /* Eliminar tarea de mantenimiento no finalizada */
 guarded.delete('/maintenance/:id', (c) => {
   const db = c.get('db')
-  const existing = db.prepare('SELECT * FROM maintenance_tasks WHERE id = ?').get(c.req.param('id'))
+  const existing = db.prepare('SELECT * FROM maintenance_tasks WHERE id = ?').get(c.req.param('id')) as Row | undefined
   if (!existing) return c.json({ error: 'no encontrada' }, 404)
   if (existing.status === 'finalizada') return c.json({ error: 'no se puede eliminar una tarea finalizada', code: 'not-deletable' }, 409)
   db.prepare('DELETE FROM maintenance_tasks WHERE id = ?').run(existing.id)
@@ -922,7 +928,7 @@ guarded.post('/expenses', async (c) => {
 
 guarded.put('/expenses/:id', async (c) => {
   const db = c.get('db')
-  const existing = db.prepare('SELECT * FROM expenses WHERE id = ?').get(c.req.param('id'))
+  const existing = db.prepare('SELECT * FROM expenses WHERE id = ?').get(c.req.param('id')) as Row | undefined
   if (!existing) return c.json({ error: 'no encontrado' }, 404)
   const body = await c.req.json().catch(() => null)
   const parsed = expenseSchema.partial().safeParse(body)
@@ -944,7 +950,7 @@ guarded.put('/expenses/:id', async (c) => {
 
 guarded.delete('/expenses/:id', (c) => {
   const db = c.get('db')
-  const existing = db.prepare('SELECT * FROM expenses WHERE id = ?').get(c.req.param('id'))
+  const existing = db.prepare('SELECT * FROM expenses WHERE id = ?').get(c.req.param('id')) as Row | undefined
   if (!existing) return c.json({ error: 'no encontrado' }, 404)
   db.prepare('DELETE FROM expenses WHERE id = ?').run(existing.id)
   aud(c, 'delete', 'expense', existing.id, `${existing.label} ${existing.amount}€ ${existing.month + 1}/${existing.year}`)
@@ -969,14 +975,14 @@ guarded.post('/people', async (c) => {
   const id = crypto.randomUUID()
   db.prepare('INSERT INTO people (id, name, phone, role, specialty, hourly_rate, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)')
     .run(id, d.name, d.phone, d.role, d.specialty, d.hourlyRate, Date.now())
-  const person = db.prepare('SELECT id, name, phone, role, specialty, hourly_rate, created_at FROM people WHERE id = ?').get(id)
+  const person = db.prepare('SELECT id, name, phone, role, specialty, hourly_rate, created_at FROM people WHERE id = ?').get(id) as Row
   aud(c, 'create', 'person', id, d.name)
   return c.json({ ok: true, person: { ...person, has_token: false } }, 201)
 })
 
 guarded.put('/people/:id', async (c) => {
   const db = c.get('db')
-  const existing = db.prepare('SELECT id FROM people WHERE id = ?').get(c.req.param('id'))
+  const existing = db.prepare('SELECT id FROM people WHERE id = ?').get(c.req.param('id')) as Row | undefined
   if (!existing) return c.json({ error: 'no encontrada' }, 404)
   const body = await c.req.json().catch(() => null)
   const parsed = personSchema.safeParse(body)
@@ -984,7 +990,7 @@ guarded.put('/people/:id', async (c) => {
   const d = parsed.data
   db.prepare('UPDATE people SET name=?, phone=?, role=?, specialty=?, hourly_rate=? WHERE id=?')
     .run(d.name, d.phone, d.role, d.specialty, d.hourlyRate, existing.id)
-  const person = db.prepare('SELECT id, name, phone, role, specialty, hourly_rate, token_hash, created_at FROM people WHERE id = ?').get(existing.id)
+  const person = db.prepare('SELECT id, name, phone, role, specialty, hourly_rate, token_hash, created_at FROM people WHERE id = ?').get(existing.id) as Row
   aud(c, 'update', 'person', existing.id, d.name)
   return c.json({ ok: true, person: { ...person, has_token: Boolean(person.token_hash), token_hash: undefined } })
 })
@@ -1002,7 +1008,7 @@ guarded.delete('/people/:id', (c) => {
    para poder recuperarlo y volver a copiarlo (GET) sin regenerar el enlace. */
 guarded.post('/people/:id/token', (c) => {
   const db = c.get('db')
-  const person = db.prepare('SELECT * FROM people WHERE id = ?').get(c.req.param('id'))
+  const person = db.prepare('SELECT * FROM people WHERE id = ?').get(c.req.param('id')) as Row | undefined
   if (!person) return c.json({ error: 'no encontrada' }, 404)
   if (person.role !== 'limpieza') return c.json({ error: 'solo limpieza tiene enlace por persona', code: 'not-limpieza' }, 409)
   const slug = person.name.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().split(/\s+/)[0].replace(/[^a-z]/g, '') || 'user'
@@ -1018,7 +1024,7 @@ guarded.post('/people/:id/token', (c) => {
 /* Recupera el enlace activo sin regenerarlo (token en claro cifrado en BD). */
 guarded.get('/people/:id/token', (c) => {
   const db = c.get('db')
-  const person = db.prepare('SELECT token_hash, token_cipher FROM people WHERE id = ?').get(c.req.param('id'))
+  const person = db.prepare('SELECT token_hash, token_cipher FROM people WHERE id = ?').get(c.req.param('id')) as Row | undefined
   if (!person) return c.json({ error: 'no encontrada' }, 404)
   if (!person.token_hash) return c.json({ path: null })
   const token = decryptSecret(db, person.token_cipher)
@@ -1045,7 +1051,7 @@ const cleaningUpdateSchema = z.object({
 })
 guarded.put('/cleanings/:id', async (c) => {
   const db = c.get('db')
-  const existing = db.prepare('SELECT * FROM cleanings WHERE id = ?').get(c.req.param('id'))
+  const existing = db.prepare('SELECT * FROM cleanings WHERE id = ?').get(c.req.param('id')) as Row | undefined
   if (!existing) return c.json({ error: 'no encontrada' }, 404)
   const body = await c.req.json().catch(() => null)
   const parsed = cleaningUpdateSchema.safeParse(body)
@@ -1075,7 +1081,7 @@ guarded.put('/cleanings/:id', async (c) => {
       materials ?? null,
       existing.id,
     )
-  const cleaning = db.prepare('SELECT * FROM cleanings WHERE id = ?').get(existing.id)
+  const cleaning = db.prepare('SELECT * FROM cleanings WHERE id = ?').get(existing.id) as CleaningRow
   if (cleaning.status === 'archivada') syncCleaningExpense(db, cleaning)
   else removeCleaningExpense(db, cleaning.id)
   aud(c, 'update', 'cleaning', existing.id, JSON.stringify(Object.keys(d)))
@@ -1087,7 +1093,7 @@ guarded.put('/cleanings/:id', async (c) => {
    gasto de limpieza vinculado (#209). No toca la reserva de origen. */
 guarded.delete('/cleanings/:id', (c) => {
   const db = c.get('db')
-  const existing = db.prepare('SELECT * FROM cleanings WHERE id = ?').get(c.req.param('id'))
+  const existing = db.prepare('SELECT * FROM cleanings WHERE id = ?').get(c.req.param('id')) as Row | undefined
   if (!existing) return c.json({ error: 'no encontrada' }, 404)
   removeCleaningExpense(db, existing.id)
   db.prepare('DELETE FROM cleanings WHERE id = ?').run(existing.id)
@@ -1132,28 +1138,28 @@ guarded.put('/config/categories', async (c) => {
 })
 
 /* ------------------------------------------- API pública por token (personal) */
-function personByToken(db, token) {
+function personByToken(db: DB, token: string): Row | undefined {
   const hash = crypto.createHash('sha256').update(token).digest('hex')
-  return db.prepare('SELECT id, name, phone, role, specialty, hourly_rate FROM people WHERE token_hash = ?').get(hash)
+  return db.prepare('SELECT id, name, phone, role, specialty, hourly_rate FROM people WHERE token_hash = ?').get(hash) as Row | undefined
 }
 
-function taskByToken(db, token) {
+function taskByToken(db: DB, token: string): Row | undefined {
   const hash = crypto.createHash('sha256').update(token).digest('hex')
-  return db.prepare('SELECT * FROM maintenance_tasks WHERE token_hash = ?').get(hash)
+  return db.prepare('SELECT * FROM maintenance_tasks WHERE token_hash = ?').get(hash) as Row | undefined
 }
 
 app.get('/api/t/:token', (c) => {
   const person = personByToken(prodDb, c.req.param('token'))
   if (person) {
-    const props = prodDb.prepare('SELECT * FROM properties').all()
+    const props = (prodDb.prepare('SELECT * FROM properties').all() as Row[])
       .map((p) => ({ id: p.id, name: p.name, address: p.address, photo: p.photo, instructions: p.instructions, checklist: JSON.parse(p.checklist || '[]') }))
-    const cleanings = prodDb.prepare(
+    const cleanings = (prodDb.prepare(
       `SELECT * FROM cleanings
        WHERE status != 'archivada'
           AND EXISTS (SELECT 1 FROM json_each(assignee_ids) WHERE value = ?)
        ORDER BY date`,
-    ).all(person.id)
-      .map((cl) => hydrateCleaning(cl, props))
+    ).all(person.id) as Row[])
+      .map((cl) => hydrateCleaning(cl as CleaningRow, props))
     return c.json({ type: 'person', person, cleanings, properties: props })
   }
   // Token POR ORDEN de trabajo (proveedor): la orden + su inmueble + su asignado
@@ -1186,18 +1192,18 @@ app.post('/api/t/:token/task', async (c) => {
   if (!parsed.success) return c.json({ error: 'formato inválido' }, 400)
   const d = parsed.data
   if (d.action === 'toggle-check') {
-    const checks = JSON.parse(task.checks || '[]')
+    const checks = JSON.parse(task.checks || '[]') as Array<{ id: string; done: boolean }>
     const k = checks.find((x) => x.id === d.checkId)
     if (k) k.done = !k.done
     prodDb.prepare('UPDATE maintenance_tasks SET checks = ? WHERE id = ?').run(JSON.stringify(checks), task.id)
   } else if (d.action === 'complete') {
-    const checks = JSON.parse(task.checks || '[]').map((k) => ({ ...k, done: true }))
+    const checks = (JSON.parse(task.checks || '[]') as Array<{ id: string; done: boolean }>).map((k) => ({ ...k, done: true }))
     prodDb.prepare("UPDATE maintenance_tasks SET status = 'finalizada', cost = COALESCE(?, cost), notes = COALESCE(?, notes), checks = ? WHERE id = ?")
       .run(d.cost ?? null, d.notes ?? null, JSON.stringify(checks), task.id)
   } else if (d.action === 'reopen') {
     prodDb.prepare("UPDATE maintenance_tasks SET status = 'asignada' WHERE id = ?").run(task.id)
   }
-  const updated = prodDb.prepare('SELECT * FROM maintenance_tasks WHERE id = ?').get(task.id)
+  const updated = prodDb.prepare('SELECT * FROM maintenance_tasks WHERE id = ?').get(task.id) as Row
   return c.json({ ok: true, task: { ...updated, checks: JSON.parse(updated.checks || '[]'), photos: JSON.parse(updated.photos || '[]'), token_hash: undefined } })
 })
 
@@ -1220,7 +1226,7 @@ app.post('/api/t/:token/task/photo', async (c) => {
   const photos = JSON.parse(task.photos || '[]')
   photos.push(`/photos/${filename}`)
   prodDb.prepare('UPDATE maintenance_tasks SET photos = ? WHERE id = ?').run(JSON.stringify(photos), task.id)
-  const updated = prodDb.prepare('SELECT * FROM maintenance_tasks WHERE id = ?').get(task.id)
+  const updated = prodDb.prepare('SELECT * FROM maintenance_tasks WHERE id = ?').get(task.id) as Row
   return c.json({ ok: true, task: { ...updated, checks: JSON.parse(updated.checks || '[]'), photos: JSON.parse(updated.photos || '[]'), token_hash: undefined } })
 })
 
@@ -1228,7 +1234,7 @@ app.post('/api/t/:token/cleanings/:id/photo', async (c) => {
   if (auth.rateLimitAction(prodDb, 'photo:token', c, 20)) return c.json({ error: 'demasiadas subidas, espera 1 minuto' }, 429)
   const person = personByToken(prodDb, c.req.param('token'))
   if (!person) return c.json({ error: 'enlace no válido' }, 404)
-  const cl = prodDb.prepare('SELECT * FROM cleanings WHERE id = ?').get(c.req.param('id'))
+  const cl = prodDb.prepare('SELECT * FROM cleanings WHERE id = ?').get(c.req.param('id')) as Row | undefined
   if (!cl) return c.json({ error: 'no encontrada' }, 404)
   const assigned = prodDb.prepare(
     'SELECT 1 ok FROM json_each((SELECT assignee_ids FROM cleanings WHERE id = ?)) WHERE value = ?',
@@ -1251,7 +1257,7 @@ const tokenActionSchema = z.object({
 app.post('/api/t/:token/cleanings/:id', async (c) => {
   const person = personByToken(prodDb, c.req.param('token'))
   if (!person) return c.json({ error: 'enlace no válido' }, 404)
-  const cl = prodDb.prepare('SELECT * FROM cleanings WHERE id = ?').get(c.req.param('id'))
+  const cl = prodDb.prepare('SELECT * FROM cleanings WHERE id = ?').get(c.req.param('id')) as Row | undefined
   if (!cl) return c.json({ error: 'no encontrada' }, 404)
   if (!JSON.parse(cl.assignee_ids || '[]').includes(person.id)) return c.json({ error: 'no asignada' }, 403)
   const body = await c.req.json().catch(() => null)
@@ -1260,11 +1266,11 @@ app.post('/api/t/:token/cleanings/:id', async (c) => {
   const d = parsed.data
 
   if (d.action === 'toggle-check') {
-    let checks = JSON.parse(cl.checks || '[]')
+    let checks: Array<{ id: string; done: boolean }> = JSON.parse(cl.checks || '[]')
     // Limpiezas antiguas con checks vacíos: hidratar del checklist del inmueble ANTES de tocar
     if (checks.length === 0) {
-      const prop = prodDb.prepare('SELECT checklist FROM properties WHERE id = ?').get(cl.property_id)
-      checks = JSON.parse(prop?.checklist || '[]').map((label, i) => ({ id: `chk-${i}`, label, done: false }))
+      const prop = prodDb.prepare('SELECT checklist FROM properties WHERE id = ?').get(cl.property_id) as { checklist: string } | undefined
+      checks = (JSON.parse(prop?.checklist || '[]') as string[]).map((label, i) => ({ id: `chk-${i}`, label, done: false }))
     }
     const k = checks.find((x) => x.id === d.checkId)
     if (k) k.done = !k.done
@@ -1272,24 +1278,24 @@ app.post('/api/t/:token/cleanings/:id', async (c) => {
   } else if (d.action === 'complete') {
     const supplies = d.supplies ?? []
     const materials = supplies.reduce((a, s) => a + s.amount, 0)
-    const checks = JSON.parse(cl.checks || '[]').map((k) => ({ ...k, done: true }))
+    const checks = (JSON.parse(cl.checks || '[]') as Array<{ id: string; done: boolean }>).map((k) => ({ ...k, done: true }))
     prodDb.prepare("UPDATE cleanings SET status = 'archivada', work_log = ?, supplies = ?, materials = ?, checks = ? WHERE id = ?")
       .run(JSON.stringify(d.workLog ?? []), JSON.stringify(supplies), materials, JSON.stringify(checks), cl.id)
-    syncCleaningExpense(prodDb, prodDb.prepare('SELECT * FROM cleanings WHERE id = ?').get(cl.id))
+    syncCleaningExpense(prodDb, prodDb.prepare('SELECT * FROM cleanings WHERE id = ?').get(cl.id) as CleaningRow)
   }
   const updated = prodDb.prepare('SELECT * FROM cleanings WHERE id = ?').get(cl.id)
   return c.json({ ok: true, cleaning: updated })
 })
 
-const PHOTO_MIME = { 'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'webp' }
+const PHOTO_MIME: Record<string, string> = { 'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'webp' }
 
 /* Valida magic bytes del contenido real (no confía solo en file.type) */
-const PHOTO_MAGIC = {
+const PHOTO_MAGIC: Record<string, (b: Buffer) => boolean> = {
   jpg: (b) => b[0] === 0xFF && b[1] === 0xD8 && b[2] === 0xFF,
   png: (b) => b[0] === 0x89 && b[1] === 0x50 && b[2] === 0x4E && b[3] === 0x47,
   webp: (b) => b[0] === 0x52 && b[1] === 0x49 && b[2] === 0x46 && b[3] === 0x46 && b[8] === 0x57 && b[9] === 0x45 && b[10] === 0x42 && b[11] === 0x50,
 }
-function validatePhotoMagic(buffer, ext) {
+function validatePhotoMagic(buffer: Buffer, ext: string): boolean {
   const check = PHOTO_MAGIC[ext]
   if (!check) return false
   if (buffer.length < 12) return false
@@ -1297,8 +1303,8 @@ function validatePhotoMagic(buffer, ext) {
 }
 
 /* Subida de foto de limpieza: guarda fichero y lo añade a cleaning.photos */
-async function saveCleaningPhoto(db, cleaningId, file) {
-  const cl = db.prepare('SELECT * FROM cleanings WHERE id = ?').get(cleaningId)
+async function saveCleaningPhoto(db: DB, cleaningId: string, file: File): Promise<{ error?: string; status?: 400 | 404; cleaning?: Row }> {
+  const cl = db.prepare('SELECT * FROM cleanings WHERE id = ?').get(cleaningId) as Row | undefined
   if (!cl) return { error: 'no encontrada', status: 404 }
   const ext = PHOTO_MIME[file.type]
   if (!ext) return { error: 'formato', status: 400 }
@@ -1312,7 +1318,7 @@ async function saveCleaningPhoto(db, cleaningId, file) {
   const photos = JSON.parse(cl.photos || '[]')
   photos.push(`/photos/${filename}`)
   db.prepare('UPDATE cleanings SET photos = ? WHERE id = ?').run(JSON.stringify(photos), cleaningId)
-  return { cleaning: db.prepare('SELECT * FROM cleanings WHERE id = ?').get(cleaningId) }
+  return { cleaning: db.prepare('SELECT * FROM cleanings WHERE id = ?').get(cleaningId) as Row }
 }
 
 /* Subida de avatar de perfil (multipart, campo 'avatar', máx 2 MB, crop 1:1) */
@@ -1358,7 +1364,7 @@ guarded.post('/cleanings/:id/photo', async (c) => {
 guarded.post('/properties/:id/photo', async (c) => {
   if (auth.rateLimitAction(c.get('db'), 'photo:property', c, 20)) return c.json({ error: 'demasiadas subidas, espera 1 minuto' }, 429)
   const db = c.get('db')
-  const existing = db.prepare('SELECT * FROM properties WHERE id = ?').get(c.req.param('id'))
+  const existing = db.prepare('SELECT * FROM properties WHERE id = ?').get(c.req.param('id')) as Row | undefined
   if (!existing) return c.json({ error: 'no encontrado' }, 404)
   const body = await c.req.parseBody().catch(() => null)
   const file = body?.photo
@@ -1380,13 +1386,13 @@ guarded.post('/properties/:id/photo', async (c) => {
   }
   const photoPath = `/photos/${filename}`
   db.prepare('UPDATE properties SET photo = ? WHERE id = ?').run(photoPath, existing.id)
-  const property = db.prepare('SELECT * FROM properties WHERE id = ?').get(existing.id)
+  const property = db.prepare('SELECT * FROM properties WHERE id = ?').get(existing.id) as Row
   aud(c, 'update', 'property', existing.id, existing.name)
   return c.json({ ok: true, property: { ...property, checklist: JSON.parse(property.checklist) } })
 })
 
 let syncing = false
-const onSyncNews = (prop, items) => alerts.notifyReservasNuevas(prodDb, prop, items)
+const onSyncNews = (prop: string, items: IcsReservation[]) => alerts.notifyReservasNuevas(prodDb, prop, items)
 guarded.post('/sync', async (c) => {
   if (c.get('user').is_demo) return c.json({ ok: true, results: [] })
   if (auth.rateLimitAction(prodDb, 'sync', c, 5)) return c.json({ error: 'demasiadas sincronizaciones, espera 1 minuto' }, 429)
@@ -1448,11 +1454,11 @@ app.get('/api/version', (c) =>
 app.put('/api/notifications/dismiss', auth.requireAuth(prodDb, demoDb), async (c) => {
   const body = await c.req.json().catch(() => null)
   if (!body || !Array.isArray(body.ids)) return c.json({ error: 'ids requerido (array)' }, 400)
-  const ids = body.ids.filter((x) => typeof x === 'string')
+  const ids = (body.ids as unknown[]).filter((x): x is string => typeof x === 'string')
   if (ids.length === 0) return c.json({ ok: true, count: 0 })
   const db = c.get('db')
   const user = c.get('user')
-  const current = db.prepare('SELECT dismissed_notifs FROM users WHERE id = ?').get(user.id)
+  const current = db.prepare('SELECT dismissed_notifs FROM users WHERE id = ?').get(user.id) as { dismissed_notifs: string } | undefined
   const existing = new Set(current?.dismissed_notifs ? JSON.parse(current.dismissed_notifs) : [])
   for (const id of ids) existing.add(id)
   const merged = JSON.stringify([...existing])
@@ -1520,7 +1526,7 @@ app.get('*', (c) => {
 /* Borrado de fotos de limpieza expiradas (> 1 mes desde la fecha de limpieza).
  * Las fotos se conservan 1 mes como indica la UI; tras ese plazo se borran
  * los ficheros de disco y se limpia el array photos en la BD. */
-function purgeExpiredPhotos(db, dataDir) {
+function purgeExpiredPhotos(db: DB, dataDir: string) {
   const photosDir = join(dataDir, 'photos')
   const now = new Date()
   const cutoff = new Date(now)
@@ -1529,7 +1535,7 @@ function purgeExpiredPhotos(db, dataDir) {
 
   const expired = db.prepare(
     "SELECT id, photos FROM cleanings WHERE date < ? AND photos != '[]'"
-  ).all(cutoffStr)
+  ).all(cutoffStr) as Row[]
 
   let deleted = 0
   for (const c of expired) {
@@ -1555,7 +1561,7 @@ setInterval(() => { auth.cleanExpiredSessions(prodDb); auth.cleanExpiredLoginAtt
 setInterval(() => {
   try { prodDb.pragma('wal_checkpoint(TRUNCATE)'); demoDb.pragma('wal_checkpoint(TRUNCATE)') } catch { /* noop */ }
   flushNotificationQueue(prodDb).catch((err) => console.error('[keynest] flush cola push error:', err.message))
-  try { purgeExpiredPhotos(prodDb, config.dataDir) } catch (err) { console.error('[keynest] purge photos error:', err.message) }
+  try { purgeExpiredPhotos(prodDb, config.dataDir) } catch (err) { console.error('[keynest] purge photos error:', (err as Error).message) }
 }, 3600 * 1000)
 
 /* Alertas push: Tedee cada 5 min (anti-rebote 3 ticks), reservas del día a
