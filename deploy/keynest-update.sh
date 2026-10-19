@@ -141,15 +141,15 @@ else
   mkdir -p "$OPT_DIR/public"
   cp -a "$TMP_DIR/pkg/dist/." "$OPT_DIR/public/"
   mkdir -p "$OPT_DIR/server"
-  rm -rf "$OPT_DIR/server/src"
-  cp -a "$TMP_DIR/pkg/server/src" "$OPT_DIR/server/src"
+  rm -rf "$OPT_DIR/server/src" "$OPT_DIR/server/dist"
+  cp -a "$TMP_DIR/pkg/server/dist" "$OPT_DIR/server/dist"
   if [ -d "$TMP_DIR/pkg/server/node_modules" ]; then
     rm -rf "$OPT_DIR/server/node_modules"
     cp -a "$TMP_DIR/pkg/server/node_modules" "$OPT_DIR/server/node_modules"
   fi
   cp "$TMP_DIR/pkg/server/package.json" "$OPT_DIR/server/package.json"
   # El .env NO se toca (queda en server/.env). chown solo sobre lo nuevo.
-  chown -R "$APP:$APP" "$OPT_DIR/public" "$OPT_DIR/server/src" \
+  chown -R "$APP:$APP" "$OPT_DIR/public" "$OPT_DIR/server/dist" \
     "$OPT_DIR/server/node_modules" "$OPT_DIR/server/package.json" 2>/dev/null || true
 fi
 # Datos NUNCA se tocan: SQLite y uploads viven en $DATA_DIR (fuera de server/).

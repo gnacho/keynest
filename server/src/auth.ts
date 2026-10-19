@@ -1,7 +1,24 @@
 import crypto from 'node:crypto'
 import bcrypt from 'bcryptjs'
 import { getCookie, setCookie, deleteCookie } from 'hono/cookie'
+import type { Context, Next } from 'hono'
 import { kvGet, kvSet } from './db.js'
+import type { DB, UserRow } from './db.js'
+
+export interface AppEnv {
+  Bindings: { incoming?: { socket?: { remoteAddress?: string } } }
+  Variables: { db: DB; user: UserRow }
+}
+
+interface SessionRow {
+  id: string
+  user_id: string
+  created_at: number
+  expires_at: number
+  ua: string | null
+  is_demo: number
+  remember: number
+}
 
 const COOKIE_NAME = 'keynest_session'
 const SESSION_TTL_MS = 30 * 24 * 3600 * 1000 // 30d
@@ -9,13 +26,13 @@ const SESSION_TTL_MS = 30 * 24 * 3600 * 1000 // 30d
 // expires_at y se re-emite la cookie (solo sesiones persistentes, #267).
 const SESSION_RENEW_THRESHOLD_MS = SESSION_TTL_MS / 2
 
-function hmac(secret, data) {
+function hmac(secret: string, data: string): string {
   return crypto.createHmac('sha256', secret).update(data).digest('hex')
 }
 
 /* session_secret: lee de SESSION_SECRET en entorno; fallback a kv con warning */
 let _sessionSecretWarned = false
-function sessionSecret(db) {
+function sessionSecret(db: DB): string {
   const envSecret = process.env.SESSION_SECRET
   if (envSecret && envSecret.length >= 32) return envSecret
   if (!_sessionSecretWarned) {
@@ -30,9 +47,9 @@ function sessionSecret(db) {
   return s
 }
 
-export async function ensureBootstrapAdmin(db, config) {
+export async function ensureBootstrapAdmin(db: DB, config: { authUser?: string; authPass?: string }): Promise<void> {
   if (!config.authUser || !config.authPass) return
-  const existing = db.prepare('SELECT id FROM users WHERE username = ?').get(config.authUser)
+  const existing = db.prepare('SELECT id FROM users WHERE username = ?').get(config.authUser) as { id: string } | undefined
   if (existing) return
   const hash = await bcrypt.hash(config.authPass, 10)
   db.prepare('INSERT INTO users (id, username, password_hash, language, role, created_at) VALUES (?, ?, ?, ?, ?, ?)')
@@ -43,8 +60,8 @@ export async function ensureBootstrapAdmin(db, config) {
 /* IP del cliente: socket real por defecto; XFF solo si TRUST_PROXY=true (detrás de proxy inverso).
  *  Fallback: si no hay socket, usa XFF aunque TRUST_PROXY no esté seteado (evita
  *  que todas las IPs compartan la clave "unknown" en rate limits). */
-function clientIp(c) {
-  const req = c.req.raw
+function clientIp(c: Context<AppEnv>): string {
+  const req = c.req.raw as unknown as { socket?: { remoteAddress?: string }; connection?: { remoteAddress?: string } }
   const socket = req?.socket || req?.connection
   const ip = socket?.remoteAddress
   if (ip && ip !== '::1' && ip !== '127.0.0.1') return ip
@@ -55,12 +72,12 @@ function clientIp(c) {
 
 /* Rate limit general para acciones costosas (sync, uploads).
  * Tabla separada: action + ip, con ventana de 1 minuto y límite configurable. */
-export function rateLimitAction(db, action, c, maxPerMinute = 10) {
+export function rateLimitAction(db: DB, action: string, c: Context<AppEnv>, maxPerMinute = 10): boolean {
   const ip = clientIp(c)
   const key = `${action}:${ip}`
   const now = Date.now()
   const windowMs = 60 * 1000
-  const row = db.prepare('SELECT * FROM rate_limits WHERE key = ?').get(key)
+  const row = db.prepare('SELECT * FROM rate_limits WHERE key = ?').get(key) as { window_end: number; count: number } | undefined
   if (!row || row.window_end < now) {
     db.prepare('INSERT INTO rate_limits (key, count, window_end) VALUES (?, 1, ?) ON CONFLICT(key) DO UPDATE SET count = 1, window_end = excluded.window_end')
       .run(key, now + windowMs)
@@ -71,12 +88,12 @@ export function rateLimitAction(db, action, c, maxPerMinute = 10) {
   return false
 }
 
-export function loginRateLimited(db, c) {
-  const row = db.prepare('SELECT * FROM login_attempts WHERE ip = ?').get(clientIp(c))
+export function loginRateLimited(db: DB, c: Context<AppEnv>): boolean {
+  const row = db.prepare('SELECT * FROM login_attempts WHERE ip = ?').get(clientIp(c)) as { locked_until: number } | undefined
   return Boolean(row && row.locked_until > Date.now())
 }
 
-export function registerLoginFail(db, c) {
+export function registerLoginFail(db: DB, c: Context<AppEnv>): void {
   const ip = clientIp(c)
   db.prepare(`
     INSERT INTO login_attempts (ip, attempts, locked_until) VALUES (?, 1, 0)
@@ -86,11 +103,11 @@ export function registerLoginFail(db, c) {
   `).run(ip, Date.now() + 5 * 60 * 1000)
 }
 
-export function loginOk(db, c) {
+export function loginOk(db: DB, c: Context<AppEnv>): void {
   db.prepare('DELETE FROM login_attempts WHERE ip = ?').run(clientIp(c))
 }
 
-function createSession(db, userId, ua, isDemo = false, remember = false) {
+function createSession(db: DB, userId: string, ua: string | null | undefined, isDemo = false, remember = false): string {
   const id = crypto.randomUUID()
   db.prepare('INSERT INTO sessions (id, user_id, created_at, expires_at, ua, is_demo, remember) VALUES (?, ?, ?, ?, ?, ?, ?)')
     .run(id, userId, Date.now(), Date.now() + SESSION_TTL_MS, ua || '', isDemo ? 1 : 0, remember ? 1 : 0)
@@ -101,7 +118,7 @@ function createSession(db, userId, ua, isDemo = false, remember = false) {
  * umbral (expiración deslizante, #267). Las sesiones "no recuérdame" (cookie
  * de sesión) nunca se renuevan. Devuelve true si renovó (el caller re-emite
  * la cookie con maxAge fresco). */
-export function renewSessionIfDue(db, s) {
+export function renewSessionIfDue(db: DB, s: SessionRow | null): boolean {
   if (!s || !s.remember) return false
   const now = Date.now()
   if (s.expires_at - now >= SESSION_RENEW_THRESHOLD_MS) return false
@@ -110,7 +127,7 @@ export function renewSessionIfDue(db, s) {
   return true
 }
 
-function renewCookie(db, s, c) {
+function renewCookie(db: DB, s: SessionRow, c: Context<AppEnv>): void {
   setCookie(c, COOKIE_NAME, `${s.id}.${hmac(sessionSecret(db), s.id)}`, {
     httpOnly: true,
     sameSite: 'Lax',
@@ -120,33 +137,33 @@ function renewCookie(db, s, c) {
   })
 }
 
-export function sessionFromCookie(db, c) {
+export function sessionFromCookie(db: DB, c: Context<AppEnv>): SessionRow | null {
   const raw = getCookie(c)[COOKIE_NAME]
   if (!raw) return null
   const [id, mac] = raw.split('.')
   if (!id || !mac) return null
   const expected = hmac(sessionSecret(db), id)
   if (!crypto.timingSafeEqual(Buffer.from(mac), Buffer.from(expected))) return null
-  const s = db.prepare('SELECT * FROM sessions WHERE id = ?').get(id)
+  const s = db.prepare('SELECT * FROM sessions WHERE id = ?').get(id) as SessionRow | undefined
   if (!s || s.expires_at < Date.now()) return null
   return s
 }
 
 /** Usuario de la sesión; las sesiones viven en prodDb y el flag is_demo decide la BD de datos. */
-export function currentUser(prodDb, demoDb, c, s = sessionFromCookie(prodDb, c)) {
+export function currentUser(prodDb: DB, demoDb: DB, c: Context<AppEnv>, s: SessionRow | null = sessionFromCookie(prodDb, c)): UserRow | null {
   if (!s) return null
   const dataDb = s.is_demo ? demoDb : prodDb
-  const user = dataDb.prepare('SELECT id, username, email, phone, language, role, lookahead_days, display_name, avatar, dismissed_notifs, created_at FROM users WHERE id = ?').get(s.user_id) || null
+  const user = dataDb.prepare('SELECT id, username, email, phone, language, role, lookahead_days, display_name, avatar, dismissed_notifs, created_at FROM users WHERE id = ?').get(s.user_id) as UserRow | undefined
   if (!user) return null
   return { ...user, is_demo: Boolean(s.is_demo) }
 }
 
-export function requireAuth(prodDb, demoDb) {
-  return async (c, next) => {
+export function requireAuth(prodDb: DB, demoDb: DB): (c: Context<AppEnv>, next: Next) => Promise<Response | void> {
+  return async (c: Context<AppEnv>, next: Next) => {
     const s = sessionFromCookie(prodDb, c)
     const user = currentUser(prodDb, demoDb, c, s)
     if (!user) return c.json({ error: 'no autorizado' }, 401)
-    if (renewSessionIfDue(prodDb, s)) renewCookie(prodDb, s, c)
+    if (s && renewSessionIfDue(prodDb, s)) renewCookie(prodDb, s, c)
     c.set('user', user)
     c.set('db', user.is_demo ? demoDb : prodDb)
     await next()
@@ -154,13 +171,13 @@ export function requireAuth(prodDb, demoDb) {
 }
 
 /** requireAuth + rol admin (factorizado: antes se repetía el check en ~11 endpoints). */
-export function requireAdmin(prodDb, demoDb) {
-  return async (c, next) => {
+export function requireAdmin(prodDb: DB, demoDb: DB): (c: Context<AppEnv>, next: Next) => Promise<Response | void> {
+  return async (c: Context<AppEnv>, next: Next) => {
     const s = sessionFromCookie(prodDb, c)
     const user = currentUser(prodDb, demoDb, c, s)
     if (!user) return c.json({ error: 'no autorizado' }, 401)
     if (user.role !== 'admin') return c.json({ error: 'solo admin' }, 403)
-    if (renewSessionIfDue(prodDb, s)) renewCookie(prodDb, s, c)
+    if (s && renewSessionIfDue(prodDb, s)) renewCookie(prodDb, s, c)
     c.set('user', user)
     c.set('db', user.is_demo ? demoDb : prodDb)
     await next()
@@ -168,11 +185,11 @@ export function requireAdmin(prodDb, demoDb) {
 }
 
 /** Login demo sin contraseña (un clic). Solo si demo_enabled (kv de prod). */
-export function demoEnabled(prodDb) {
+export function demoEnabled(prodDb: DB): boolean {
   return kvGet(prodDb, 'demo_enabled') !== '0'
 }
 
-export function handleDemoLogin(prodDb, c) {
+export function handleDemoLogin(prodDb: DB, c: Context<AppEnv>): UserRow | null {
   if (!demoEnabled(prodDb)) return null
   const id = createSession(prodDb, 'demo-user', c.req.header('user-agent'), true, true)
   const mac = hmac(sessionSecret(prodDb), id)
@@ -188,8 +205,8 @@ export function handleDemoLogin(prodDb, c) {
 
 const DUMMY_HASH = '$2b$10$abcdefghijklmnopqrstuuABCDEFGHIJKLMNOPQRSTUVWXYZ012'
 
-export async function handleLogin(db, c, { username, password, remember }) {
-  const user = db.prepare('SELECT * FROM users WHERE username = ?').get(username || '')
+export async function handleLogin(db: DB, c: Context<AppEnv>, { username, password, remember }: { username?: string; password?: string; remember?: boolean }): Promise<{ user: UserRow; restoreToken?: string } | null> {
+  const user = db.prepare('SELECT * FROM users WHERE username = ?').get(username || '') as (UserRow & { password_hash: string }) | undefined
   if (!user) {
     await bcrypt.compare(password || '', DUMMY_HASH)
     return null
@@ -213,7 +230,7 @@ export async function handleLogin(db, c, { username, password, remember }) {
   return { user: pub, restoreToken }
 }
 
-export function handleLogout(db, c) {
+export function handleLogout(db: DB, c: Context<AppEnv>): void {
   const s = sessionFromCookie(db, c)
   if (s) db.prepare('DELETE FROM sessions WHERE id = ?').run(s.id)
   deleteCookie(c, COOKIE_NAME, { path: '/' })
@@ -228,17 +245,17 @@ export function handleLogout(db, c) {
 const RESTORE_TTL_MS = 90 * 24 * 3600 * 1000 // 90 días
 const RESTORE_MAX_PER_USER = 5
 
-function restoreTokenHash(token) {
+function restoreTokenHash(token: string): string {
   return crypto.createHash('sha256').update(token).digest('hex')
 }
 
 /** Crea un token de restauración para el usuario (solo en login con recuerdame). */
-export function createRestoreToken(db, userId) {
+export function createRestoreToken(db: DB, userId: string): string {
   const token = crypto.randomBytes(32).toString('base64url')
   db.prepare('INSERT INTO login_tokens (id, user_id, token_hash, created_at, expires_at) VALUES (?, ?, ?, ?, ?)')
     .run(crypto.randomUUID(), userId, restoreTokenHash(token), Date.now(), Date.now() + RESTORE_TTL_MS)
   db.prepare('DELETE FROM login_tokens WHERE expires_at < ?').run(Date.now())
-  for (const old of db.prepare('SELECT id FROM login_tokens WHERE user_id = ? ORDER BY created_at DESC LIMIT -1 OFFSET ?').all(userId, RESTORE_MAX_PER_USER)) {
+  for (const old of db.prepare('SELECT id FROM login_tokens WHERE user_id = ? ORDER BY created_at DESC LIMIT -1 OFFSET ?').all(userId, RESTORE_MAX_PER_USER) as Array<{ id: string }>) {
     db.prepare('DELETE FROM login_tokens WHERE id = ?').run(old.id)
   }
   return token
@@ -246,11 +263,11 @@ export function createRestoreToken(db, userId) {
 
 /** Valida el token, crea sesión persistente nueva (cookie) y rota el token.
  *  Devuelve { user, newToken } o null si el token no es válido/expiró. */
-export function restoreFromToken(db, c, token) {
+export function restoreFromToken(db: DB, c: Context<AppEnv>, token: string | undefined): { user: UserRow; newToken: string } | null {
   if (!token) return null
-  const row = db.prepare('SELECT * FROM login_tokens WHERE token_hash = ?').get(restoreTokenHash(token))
+  const row = db.prepare('SELECT * FROM login_tokens WHERE token_hash = ?').get(restoreTokenHash(token)) as { id: string; user_id: string; expires_at: number } | undefined
   if (!row || row.expires_at < Date.now()) return null
-  const user = db.prepare('SELECT id, username, email, phone, language, role, lookahead_days, display_name, avatar, dismissed_notifs, created_at FROM users WHERE id = ?').get(row.user_id)
+  const user = db.prepare('SELECT id, username, email, phone, language, role, lookahead_days, display_name, avatar, dismissed_notifs, created_at FROM users WHERE id = ?').get(row.user_id) as UserRow | undefined
   if (!user) return null
   const id = createSession(db, user.id, c.req.header('user-agent'), false, true)
   const mac = hmac(sessionSecret(db), id)
@@ -268,14 +285,14 @@ export function restoreFromToken(db, c, token) {
 }
 
 /** Invalida el token de restauración de un dispositivo (logout). */
-export function destroyRestoreToken(db, token) {
+export function destroyRestoreToken(db: DB, token: string): void {
   if (!token) return
   db.prepare('DELETE FROM login_tokens WHERE token_hash = ?').run(restoreTokenHash(token))
 }
 
 /** Cambio de contraseña: verifica la actual con bcrypt antes de re-hashear. */
-export async function changePassword(db, userId, current, next) {
-  const user = db.prepare('SELECT * FROM users WHERE id = ?').get(userId)
+export async function changePassword(db: DB, userId: string, current: string, next: string): Promise<'error' | 'wrong-current' | 'ok'> {
+  const user = db.prepare('SELECT * FROM users WHERE id = ?').get(userId) as { password_hash: string } | undefined
   if (!user) return 'error'
   const ok = await bcrypt.compare(current, user.password_hash)
   if (!ok) return 'wrong-current'
@@ -285,35 +302,35 @@ export async function changePassword(db, userId, current, next) {
 }
 
 /** Destruye las sesiones de un usuario salvo la actual (cambio de contraseña). */
-export function destroyOtherSessions(db, userId, currentToken) {
+export function destroyOtherSessions(db: DB, userId: string, currentToken: string): void {
   db.prepare('DELETE FROM sessions WHERE user_id = ? AND id <> ?').run(userId, currentToken)
 }
 
 /** Alta de usuario (admin): password inicial obligatoria (≥6 en la ruta). */
-export async function createUser(db, { username, password, phone, role }) {
-  const existing = db.prepare('SELECT id FROM users WHERE username = ?').get(username)
+export async function createUser(db: DB, { username, password, phone, role }: { username: string; password: string; phone?: string | null; role?: string }): Promise<UserRow | null> {
+  const existing = db.prepare('SELECT id FROM users WHERE username = ?').get(username) as { id: string } | undefined
   if (existing) return null
   const hash = await bcrypt.hash(password, 10)
   const id = crypto.randomUUID()
   db.prepare('INSERT INTO users (id, username, password_hash, phone, language, role, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)')
     .run(id, username, hash, phone || null, 'auto', role || 'user', Date.now())
-  return db.prepare('SELECT id, username, email, phone, language, role, lookahead_days, display_name, avatar, created_at FROM users WHERE id = ?').get(id)
+  return db.prepare('SELECT id, username, email, phone, language, role, lookahead_days, display_name, avatar, created_at FROM users WHERE id = ?').get(id) as UserRow
 }
 
-export function updateLanguage(db, userId, language) {
+export function updateLanguage(db: DB, userId: string, language: string): UserRow {
   db.prepare('UPDATE users SET language = ? WHERE id = ?').run(language, userId)
-  return db.prepare('SELECT id, username, email, phone, language, role, lookahead_days, display_name, avatar, created_at FROM users WHERE id = ?').get(userId)
+  return db.prepare('SELECT id, username, email, phone, language, role, lookahead_days, display_name, avatar, created_at FROM users WHERE id = ?').get(userId) as UserRow
 }
 
 /** Días de aviso del panel por usuario (1-30; 0 = defecto global). */
-export function updateLookaheadDays(db, userId, days) {
+export function updateLookaheadDays(db: DB, userId: string, days: number): UserRow {
   db.prepare('UPDATE users SET lookahead_days = ? WHERE id = ?').run(days, userId)
-  return db.prepare('SELECT id, username, email, phone, language, role, lookahead_days, display_name, avatar, created_at FROM users WHERE id = ?').get(userId)
+  return db.prepare('SELECT id, username, email, phone, language, role, lookahead_days, display_name, avatar, created_at FROM users WHERE id = ?').get(userId) as UserRow
 }
 
 /** Reset de contraseña por un admin: re-hashea y destruye las sesiones del usuario. */
-export async function setUserPassword(db, userId, password) {
-  const user = db.prepare('SELECT id FROM users WHERE id = ?').get(userId)
+export async function setUserPassword(db: DB, userId: string, password: string): Promise<boolean> {
+  const user = db.prepare('SELECT id FROM users WHERE id = ?').get(userId) as { id: string } | undefined
   if (!user) return false
   const hash = await bcrypt.hash(password, 10)
   db.prepare('UPDATE users SET password_hash = ? WHERE id = ?').run(hash, userId)
@@ -321,25 +338,25 @@ export async function setUserPassword(db, userId, password) {
   return true
 }
 
-export function setUserRole(db, userId, role) {
+export function setUserRole(db: DB, userId: string, role: string): UserRow {
   db.prepare('UPDATE users SET role = ? WHERE id = ?').run(role, userId)
-  return db.prepare('SELECT id, username, email, phone, language, role, lookahead_days, display_name, avatar, created_at FROM users WHERE id = ?').get(userId)
+  return db.prepare('SELECT id, username, email, phone, language, role, lookahead_days, display_name, avatar, created_at FROM users WHERE id = ?').get(userId) as UserRow
 }
 
-export function countAdmins(db) {
-  return db.prepare("SELECT COUNT(*) n FROM users WHERE role = 'admin'").get().n
+export function countAdmins(db: DB): number {
+  return (db.prepare("SELECT COUNT(*) n FROM users WHERE role = 'admin'").get() as { n: number }).n
 }
 
-export function deleteUser(db, userId) {
+export function deleteUser(db: DB, userId: string): boolean {
   db.prepare('DELETE FROM sessions WHERE user_id = ?').run(userId)
   return db.prepare('DELETE FROM users WHERE id = ?').run(userId).changes > 0
 }
 
-export function cleanExpiredSessions(db) {
+export function cleanExpiredSessions(db: DB): void {
   db.prepare('DELETE FROM sessions WHERE expires_at < ?').run(Date.now())
 }
 
-export function cleanExpiredLoginAttempts(db) {
+export function cleanExpiredLoginAttempts(db: DB): void {
   const oneHourAgo = Date.now() - 3600 * 1000
   db.prepare('DELETE FROM login_attempts WHERE locked_until > 0 AND locked_until < ?').run(oneHourAgo)
 }

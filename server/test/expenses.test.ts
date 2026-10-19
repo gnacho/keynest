@@ -3,9 +3,10 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { openDb } from '../src/db.js';
+import type { DB } from '../src/db.js';
 
-let dir;
-let db;
+let dir: string;
+let db: DB;
 
 beforeAll(() => {
   dir = mkdtempSync(join(tmpdir(), 'keynest-expenses-'));
@@ -17,14 +18,14 @@ afterAll(() => {
   rmSync(dir, { recursive: true, force: true });
 });
 
-function insertProperty(id) {
+function insertProperty(id: string) {
   db.prepare(
     `INSERT INTO properties (id, slug, name, checklist, instructions, created_at)
      VALUES (?, ?, ?, '[]', '', 0)`,
   ).run(id, id, id);
 }
 
-function insertExpense(id, propertyId, over = {}) {
+function insertExpense(id: string, propertyId: string, over: Record<string, any> = {}) {
   db.prepare(
     `INSERT INTO expenses (id, property_id, type, label, amount, month, year, created_at)
      VALUES (?, ?, ?, ?, ?, ?, ?, 0)`,
@@ -41,9 +42,9 @@ function insertExpense(id, propertyId, over = {}) {
 
 describe('issue #207 — gastos persistidos en BD', () => {
   it('la migración 21 crea la tabla expenses', () => {
-    const tables = db.prepare("SELECT name FROM sqlite_master WHERE type='table'").all().map((r) => r.name);
+    const tables = (db.prepare("SELECT name FROM sqlite_master WHERE type='table'").all() as Array<{ name: string }>).map((r) => r.name);
     expect(tables).toContain('expenses');
-    const cols = db.prepare('PRAGMA table_info(expenses)').all().map((c) => c.name);
+    const cols = (db.prepare('PRAGMA table_info(expenses)').all() as Array<{ name: string }>).map((c) => c.name);
     expect(cols).toEqual(
       expect.arrayContaining(['id', 'property_id', 'type', 'label', 'amount', 'month', 'year', 'created_at']),
     );
@@ -61,11 +62,11 @@ describe('issue #207 — gastos persistidos en BD', () => {
     db2.close();
     // Reabrir: ahora current=20 → aplica solo la 21
     db2 = openDb(dir2);
-    const hasExp = db2.prepare("SELECT COUNT(*) n FROM sqlite_master WHERE type='table' AND name='expenses'").get().n;
+    const hasExp = (db2.prepare("SELECT COUNT(*) n FROM sqlite_master WHERE type='table' AND name='expenses'").get() as { n: number }).n;
     expect(hasExp).toBe(1);
-    const maxV = db2.prepare('SELECT MAX(version) v FROM schema_version').get().v;
+    const maxV = (db2.prepare('SELECT MAX(version) v FROM schema_version').get() as { v: number | null }).v;
     expect(maxV).toBe(25);
-    const versions = db2.prepare('SELECT version FROM schema_version ORDER BY version').all().map((r) => r.version);
+    const versions = (db2.prepare('SELECT version FROM schema_version ORDER BY version').all() as Array<{ version: number }>).map((r) => r.version);
     expect(versions).toContain(20);
     db2.close();
     rmSync(dir2, { recursive: true, force: true });

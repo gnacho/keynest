@@ -3,26 +3,27 @@ import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { openDb } from '../src/db.js';
+import type { DB } from '../src/db.js';
 import { hoyLocal } from '../src/alerts.js';
 
 vi.mock('../src/ical.js', async (importOriginal) => {
-  const actual = await importOriginal();
+  const actual = await importOriginal() as Record<string, any>;
   return { ...actual, fetchIcs: vi.fn() };
 });
 import { fetchIcs } from '../src/ical.js';
 import { syncAll } from '../src/sync.js';
 
-const ymd = (d) => d.toISOString().slice(0, 10);
-const daysFrom = (n) => {
+const ymd = (d: Date) => d.toISOString().slice(0, 10);
+const daysFrom = (n: number) => {
   const d = new Date();
   d.setUTCDate(d.getUTCDate() + n);
   return d;
 };
-const icsDT = (d) => d.toISOString().slice(0, 10).replace(/-/g, '');
+const icsDT = (d: Date) => d.toISOString().slice(0, 10).replace(/-/g, '');
 
 // Feed con SOLO una reserva futura. La pasada ya no viene (Airbnb solo lista
 // actuales/futuras), y una futura cancelada tampoco.
-function feedWith(events) {
+function feedWith(events: string[]) {
   return `BEGIN:VCALENDAR
 VERSION:2.0
 ${events.join('\n')}
@@ -30,7 +31,7 @@ END:VCALENDAR`;
 }
 
 describe('syncAll — conservación de reservas finalizadas (issue #21)', () => {
-  let dir, db;
+  let dir: string, db: DB;
 
   beforeAll(() => {
     dir = mkdtempSync(join(tmpdir(), 'keynest-sync-'));
@@ -50,7 +51,7 @@ describe('syncAll — conservación de reservas finalizadas (issue #21)', () => 
     db.prepare("INSERT INTO reservations (id, property_id, uid, checkin, checkout, summary, created_at) VALUES ('r-pasada','p1','past@airbnb.com',?,?,'Reserved',0)").run(pasado, pasado);
     db.prepare("INSERT INTO reservations (id, property_id, uid, checkin, checkout, summary, created_at) VALUES ('r-futura','p1','future@airbnb.com',?,?,'Reserved',0)").run(futuro, futuro);
 
-    fetchIcs.mockResolvedValue(feedWith([
+    (fetchIcs as any).mockResolvedValue(feedWith([
       `BEGIN:VEVENT
 DTSTART;VALUE=DATE:${icsDT(daysFrom(10))}
 DTEND;VALUE=DATE:${icsDT(daysFrom(20))}
@@ -61,7 +62,7 @@ END:VEVENT`,
 
     await syncAll(db);
 
-    const uids = db.prepare('SELECT uid FROM reservations').all().map((r) => r.uid).sort();
+    const uids = (db.prepare('SELECT uid FROM reservations').all() as Array<{ uid: string }>).map((r) => r.uid).sort();
     expect(uids).toContain('past@airbnb.com'); // NO se borra la pasada
     expect(uids).toContain('future@airbnb.com'); // la futura sigue
   });
@@ -71,11 +72,11 @@ END:VEVENT`,
     const futuro = ymd(daysFrom(5));
     db.prepare("INSERT INTO reservations (id, property_id, uid, checkin, checkout, summary, created_at) VALUES ('r-cancelada','p1','cancelled@airbnb.com',?,?,'Reserved',0)").run(futuro, futuro);
 
-    fetchIcs.mockResolvedValue(feedWith([])); // feed vacío
+    (fetchIcs as any).mockResolvedValue(feedWith([])); // feed vacío
 
     await syncAll(db);
 
-    const uids = db.prepare('SELECT uid FROM reservations').all().map((r) => r.uid);
+    const uids = (db.prepare('SELECT uid FROM reservations').all() as Array<{ uid: string }>).map((r) => r.uid);
     expect(uids).not.toContain('cancelled@airbnb.com');
   });
 
@@ -84,11 +85,11 @@ END:VEVENT`,
     const pasado = ymd(daysFrom(-3));
     db.prepare("INSERT INTO reservations (id, property_id, uid, checkin, checkout, summary, created_at) VALUES ('r-csv','p1','csv-ABC123',?,?,'CSV Airbnb',0)").run(pasado, pasado);
 
-    fetchIcs.mockResolvedValue(feedWith([]));
+    (fetchIcs as any).mockResolvedValue(feedWith([]));
 
     await syncAll(db);
 
-    const uids = db.prepare('SELECT uid FROM reservations').all().map((r) => r.uid);
+    const uids = (db.prepare('SELECT uid FROM reservations').all() as Array<{ uid: string }>).map((r) => r.uid);
     expect(uids).toContain('csv-ABC123');
   });
 
@@ -102,7 +103,7 @@ END:VEVENT`,
     const futuro = ymd(daysFrom(10));
     // p1 ya tiene la reserva con ese UID (misma reserva compartida en el feed de p2)
     db.prepare("INSERT INTO reservations (id, property_id, uid, checkin, checkout, summary, created_at) VALUES ('r-p1','p1','shared@airbnb.com',?,?,'Reserved',0)").run(futuro, futuro);
-    fetchIcs.mockResolvedValue(feedWith([
+    (fetchIcs as any).mockResolvedValue(feedWith([
       'BEGIN:VEVENT',
       `DTSTART;VALUE=DATE:${icsDT(daysFrom(10))}`,
       `DTEND;VALUE=DATE:${icsDT(daysFrom(13))}`,
@@ -112,7 +113,7 @@ END:VEVENT`,
     ]));
     // El feed de p2 contiene el mismo UID → no debe mover la reserva a p2
     await syncAll(db);
-    const row = db.prepare("SELECT property_id FROM reservations WHERE uid = 'shared@airbnb.com'").get();
+    const row = db.prepare("SELECT property_id FROM reservations WHERE uid = 'shared@airbnb.com'").get() as { property_id: string };
     expect(row.property_id).toBe('p1');
   });
 });

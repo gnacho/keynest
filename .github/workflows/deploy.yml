@@ -18,11 +18,13 @@ jobs:
         with:
           node-version: 24
 
-      # 1) Backend: deps + tests (Vitest)
-      - name: Server — install & test
+      # 1) Backend: deps + typecheck + build + tests (Vitest)
+      - name: Server — install, typecheck, build & test
         working-directory: server
         run: |
           npm ci
+          npm run typecheck
+          npm run build
           npx vitest run
 
       # 2) Frontend: lint + build
@@ -40,7 +42,7 @@ jobs:
       - name: Package
         run: |
           tar czf keynest-dist.tar.gz -C app dist
-          tar czf keynest-server.tar.gz -C server src package.json package-lock.json
+          tar czf keynest-server.tar.gz -C server dist package.json package-lock.json
 
       # 4) Release "latest" (repo público → el CT la descarga sin auth)
       - name: Publish release

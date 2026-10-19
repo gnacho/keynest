@@ -13,12 +13,25 @@
 //   a TODOS los usuarios; las preferencias por tipo filtran por usuario.
 import crypto from 'node:crypto'
 import webpush from 'web-push'
+import type { PushSubscription, RequestOptions, SendResult } from 'web-push'
+import type { Statement } from 'better-sqlite3'
+import type { DB } from './db.js'
+
+type NotifData = Record<string, any>
+
+interface SubRow {
+  id: string
+  endpoint: string
+  p256dh: string
+  auth: string
+}
 
 let vapidOk = false
-let sendFn = (sub, payload, opts) => webpush.sendNotification(sub, payload, opts)
+type SendFn = (sub: PushSubscription, payload: string, opts?: RequestOptions) => Promise<any>
+let sendFn: SendFn = (sub, payload, opts) => webpush.sendNotification(sub, payload, opts)
 
 // Configura VAPID una vez al arrancar. Devuelve true si el push queda activo.
-export function configurePush({ publicKey, privateKey, subject } = {}) {
+export function configurePush({ publicKey, privateKey, subject } = {} as { publicKey?: string; privateKey?: string; subject?: string }): boolean {
   if (!publicKey || !privateKey || !subject) {
     vapidOk = false
     console.warn('[push] sin VAPID_PUBLIC_KEY/PRIVATE_KEY/SUBJECT: notificaciones push desactivadas')
@@ -30,26 +43,30 @@ export function configurePush({ publicKey, privateKey, subject } = {}) {
   return true
 }
 
-export function isPushConfigured() {
+export function isPushConfigured(): boolean {
   return vapidOk
 }
 
-export function pushPublicKey() {
-  return vapidOk ? process.env.VAPID_PUBLIC_KEY : null
+export function pushPublicKey(): string | null {
+  return vapidOk ? (process.env.VAPID_PUBLIC_KEY ?? null) : null
 }
 
 // --- Tests: inyectar un sender falso y resetear estado ----------------------
-export function _setSendFn(fn) {
+export function _setSendFn(fn: SendFn | null): void {
   sendFn = fn || ((sub, payload, opts) => webpush.sendNotification(sub, payload, opts))
 }
-export function _resetForTests() {
+export function _resetForTests(): void {
   vapidOk = false
   _setSendFn(null)
-  stmtCache = new WeakMap()
+  stmtCache = new WeakMap<object, Stmts>()
 }
 
 // --- Catálogo i18n (texto FINAL compuesto en servidor; el SW no traduce) ----
-const CATALOGO = {
+interface CatalogoEntrada {
+  titulo: string
+  cuerpo: (d: NotifData) => string
+}
+const CATALOGO: Record<string, Record<string, CatalogoEntrada>> = {
   es: {
     checkin_hoy: { titulo: 'Check-in hoy', cuerpo: (d) => `${d.propiedad}: entra «${d.resumen}»` },
     checkout_hoy: { titulo: 'Check-out hoy', cuerpo: (d) => `${d.propiedad}: sale «${d.resumen}»` },
@@ -108,13 +125,23 @@ export const TIPOS_ALERTA = [
   'limpieza_pendiente',
   'transaccion',
   'mantenimiento_recordatorio',
-]
+] as const
 
 const SEVERIDADES = ['normal', 'high', 'critical']
 
 // --- Statements cacheados por BD (WeakMap: prod y demo comparten código) ----
-let stmtCache = new WeakMap()
-function stmts(db) {
+interface Stmts {
+  subsPorUsuario: Statement
+  idioma: Statement
+  pref: Statement
+  quiet: Statement
+  borrarPorEndpoint: Statement
+  encolar: Statement
+  colaAgrupada: Statement
+  todosUsuarios: Statement
+}
+let stmtCache = new WeakMap<object, Stmts>()
+function stmts(db: DB): Stmts {
   let s = stmtCache.get(db)
   if (!s) {
     s = {
@@ -135,14 +162,14 @@ function stmts(db) {
   return s
 }
 
-function idiomaDe(db, userId) {
-  const lang = stmts(db).idioma.get(userId)?.language
+function idiomaDe(db: DB, userId: string): string {
+  const lang = (stmts(db).idioma.get(userId) as { language: string } | undefined)?.language
   return lang === 'en' ? 'en' : 'es' // 'auto' y desconocidos → es (defecto de la casa)
 }
 
 // Quiet hours en la zona horaria del usuario (Intl, sin dependencias).
-function enQuietHours(db, userId) {
-  const q = stmts(db).quiet.get(userId)
+function enQuietHours(db: DB, userId: string): boolean {
+  const q = stmts(db).quiet.get(userId) as { quiet_start: number | null; quiet_end: number | null; tz: string } | undefined
   if (!q || q.quiet_start === null || q.quiet_end === null) return false
   const hora = Number(
     new Intl.DateTimeFormat('en-GB', { hour: '2-digit', hour12: false, timeZone: q.tz }).format(new Date())
@@ -151,7 +178,7 @@ function enQuietHours(db, userId) {
   return hora >= q.quiet_start || hora < q.quiet_end // cruza medianoche
 }
 
-function componerPayload(lang, tipo, datos, url) {
+function componerPayload(lang: string, tipo: string, datos: NotifData, url: string): string {
   const entrada = CATALOGO[lang][tipo] || CATALOGO[lang].resumen
   const title = entrada.titulo
   const body = entrada.cuerpo(datos)
@@ -169,14 +196,15 @@ function componerPayload(lang, tipo, datos, url) {
 
 // Envío a UNA suscripción: 404/410 = muerta (borrar); 429/5xx = reintentar
 // con backoff + jitter (máx 3); otros status = bug nuestro (log sin endpoint).
-async function enviarAUna(db, sub, json, opciones) {
-  const destino = { endpoint: sub.endpoint, keys: { p256dh: sub.p256dh, auth: sub.auth } }
+async function enviarAUna(db: DB, sub: SubRow, json: string, opciones: RequestOptions): Promise<'ok' | 'borrada' | 'fallido'> {
+  const destino: PushSubscription = { endpoint: sub.endpoint, keys: { p256dh: sub.p256dh, auth: sub.auth } }
   for (let intento = 1; intento <= 3; intento++) {
     try {
       await sendFn(destino, json, { ...opciones, contentEncoding: 'aes128gcm' })
       return 'ok'
     } catch (err) {
-      const status = err?.statusCode
+      const e = err as { statusCode?: number; message?: string }
+      const status = e.statusCode
       if (status === 404 || status === 410) {
         stmts(db).borrarPorEndpoint.run(sub.endpoint)
         return 'borrada'
@@ -188,7 +216,7 @@ async function enviarAUna(db, sub, json, opciones) {
         }
         return 'fallido'
       }
-      console.error(`[push] error status=${status} sub=${sub.id}: ${err?.message}`)
+      console.error(`[push] error status=${status} sub=${sub.id}: ${e.message}`)
       return 'fallido'
     }
   }
@@ -200,13 +228,21 @@ async function enviarAUna(db, sub, json, opciones) {
  * por la propia UI). Respeta preferencias y quiet hours; en demo solo registra.
  * db = la BD objetivo (prod o demo). Devuelve contadores.
  */
-export async function notifyUsers(db, userIds, tipo, datos = {}, opciones = {}) {
+interface NotifOptions {
+  demo?: boolean
+  severity?: string
+  url?: string
+  ttl?: number
+  forzar?: boolean
+}
+
+export async function notifyUsers(db: DB, userIds: string[], tipo: string, datos: NotifData = {}, opciones: NotifOptions = {}): Promise<{ enviados: number; borrados: number; fallidos: number; pospuestos: number; omitidos: number }> {
   const { demo = false, severity = 'normal', url = '/', ttl = severity === 'critical' ? 3600 : 21600, forzar = false } = opciones
   const res = { enviados: 0, borrados: 0, fallidos: 0, pospuestos: 0, omitidos: 0 }
   const s = stmts(db)
 
   for (const userId of [...new Set(userIds)]) {
-    const pref = s.pref.get(userId, tipo)
+    const pref = s.pref.get(userId, tipo) as { enabled: number; min_severity: string } | undefined
     if (!forzar && pref) {
       if (!pref.enabled || SEVERIDADES.indexOf(severity) < SEVERIDADES.indexOf(pref.min_severity)) {
         res.omitidos++
@@ -229,7 +265,7 @@ export async function notifyUsers(db, userIds, tipo, datos = {}, opciones = {}) 
       res.omitidos++
       continue
     }
-    const subs = s.subsPorUsuario.all(userId)
+    const subs = s.subsPorUsuario.all(userId) as SubRow[]
     if (subs.length === 0) {
       res.omitidos++
       continue
@@ -247,17 +283,17 @@ export async function notifyUsers(db, userIds, tipo, datos = {}, opciones = {}) 
 
 // Atajo para alertas operativas: avisa a TODOS los usuarios de la BD dada.
 // Fire-and-forget desde el motor (nunca bloquea el tick del motor).
-export function notifyAll(db, tipo, datos, opciones = {}) {
-  const ids = stmts(db).todosUsuarios.all().map((r) => r.id)
+export function notifyAll(db: DB, tipo: string, datos: NotifData, opciones: NotifOptions = {}): void {
+  const ids = (stmts(db).todosUsuarios.all() as Array<{ id: string }>).map((r) => r.id)
   if (ids.length === 0) return
   notifyUsers(db, ids, tipo, datos, opciones).catch((err) => console.error('[push] error en notifyAll:', err))
 }
 
 // Mantenimiento horario: consolida la cola de quiet hours en UN resumen por
 // usuario+tipo y vacía la cola. Llamado desde el intervalo horario de index.js.
-export async function flushNotificationQueue(db, demo = false) {
+export async function flushNotificationQueue(db: DB, demo = false): Promise<void> {
   const s = stmts(db)
-  const grupos = s.colaAgrupada.all()
+  const grupos = s.colaAgrupada.all() as Array<{ user_id: string; tipo: string; severity: string; total: number }>
   if (grupos.length === 0) return
   for (const g of grupos) {
     // Fuera de quiet hours ya: se entrega el resumen. Si sigue en ventana, se

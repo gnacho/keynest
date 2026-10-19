@@ -7,7 +7,9 @@
     "node": ">=24 <25"
   },
   "scripts": {
-    "start": "node src/index.js",
+    "start": "node dist/index.js",
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc --noEmit",
     "test": "vitest run"
   },
   "dependencies": {
@@ -22,6 +24,10 @@
     "better-sqlite3@13.0.3": true
   },
   "devDependencies": {
+    "@types/better-sqlite3": "^9.6.0",
+    "@types/node": "^26.6.5",
+    "@types/web-push": "^3.6.4",
+    "typescript": "^7.0.2",
     "vitest": "^5.0.3"
   }
 }

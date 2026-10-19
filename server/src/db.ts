@@ -3,6 +3,43 @@ import crypto from 'node:crypto'
 import { mkdirSync } from 'node:fs'
 import { join } from 'node:path'
 
+export type DB = Database.Database
+
+/** Fila de cleanings tal y como la devuelve la BD (JSON sin parsear). */
+export interface CleaningRow {
+  id: string
+  property_id: string
+  date: string
+  status: string
+  checks: string
+  instructions?: string
+  work_log?: string
+  materials?: number | null
+}
+
+/** properties con `checklist` ya parseado (array de strings). */
+export interface PropertyRow {
+  id: string
+  checklist: string[]
+  instructions: string | null
+}
+
+/** Fila de users tal y como la expone la API (sin password_hash). */
+export interface UserRow {
+  id: string
+  username: string
+  email: string | null
+  phone: string | null
+  language: string
+  role: string
+  lookahead_days?: number
+  display_name?: string
+  avatar?: string
+  dismissed_notifs?: string
+  created_at?: number
+  is_demo?: boolean
+}
+
 /**
  * Migraciones versionadas (patrón skill references/sqlite.md):
  * una versión por entrada, en transacción, registrada en schema_version.
@@ -126,14 +163,14 @@ const MIGRATIONS = [
    CREATE INDEX IF NOT EXISTS idx_login_tokens_user ON login_tokens(user_id)`,
 ]
 
-export function migrate(db) {
+export function migrate(db: DB) {
   // Compat: BDs que ya tenían migraciones ad-hoc aplicadas (pre-versionado)
   db.exec('CREATE TABLE IF NOT EXISTS schema_version (version INTEGER PRIMARY KEY, applied_at INTEGER)')
-  let current = db.prepare('SELECT MAX(version) v FROM schema_version').get().v ?? 0
+  let current = (db.prepare('SELECT MAX(version) v FROM schema_version').get() as { v: number | null }).v ?? 0
   if (current === 0) {
     // Detectar qué migraciones ya estaban aplicadas por el sistema antiguo
-    const has = (table, col) =>
-      db.prepare('PRAGMA table_info(' + table + ')').all().some((c) => c.name === col)
+    const has = (table: string, col: string): boolean =>
+      (db.prepare('PRAGMA table_info(' + table + ')').all() as Array<{ name: string }>).some((c) => c.name === col)
     if (has('properties', 'bathrooms')) current = Math.max(current, 1)
     if (has('sessions', 'is_demo')) current = Math.max(current, 2)
     if (has('cleanings', 'work_log')) current = Math.max(current, 3)
@@ -157,7 +194,7 @@ export function migrate(db) {
         // a mano en el CT). Si la columna está presente, la migración se da por aplicada.
         const m = MIGRATIONS[i].match(/ALTER TABLE (\w+) ADD COLUMN (\w+)/)
         if (!m) throw err
-        const has = db.prepare('PRAGMA table_info(' + m[1] + ')').all().some((c) => c.name === m[2])
+        const has = (db.prepare('PRAGMA table_info(' + m[1] + ')').all() as Array<{ name: string }>).some((c) => c.name === m[2])
         if (!has) throw err
         console.log(`[db] migración ${i + 1} ya aplicada (columna ${m[2]} presente)`)
       }
@@ -168,7 +205,7 @@ export function migrate(db) {
   }
 }
 
-export function openDb(dataDir, filename = 'keynest.db') {
+export function openDb(dataDir: string, filename = 'keynest.db'): DB {
   mkdirSync(dataDir, { recursive: true })
   const db = new Database(join(dataDir, filename))
   db.pragma('journal_mode = WAL')
@@ -320,18 +357,18 @@ export function openDb(dataDir, filename = 'keynest.db') {
   return db
 }
 
-export function kvGet(db, key) {
-  return db.prepare('SELECT value FROM kv WHERE key = ?').get(key)?.value
+export function kvGet(db: DB, key: string): string | undefined {
+  return (db.prepare('SELECT value FROM kv WHERE key = ?').get(key) as { value: string } | undefined)?.value
 }
 
-export function kvSet(db, key, value) {
+export function kvSet(db: DB, key: string, value: string): void {
   db.prepare('INSERT INTO kv (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value').run(key, value)
 }
 
 /* ---- Secrets cifrados: AES-256-GCM, clave desde entorno (ENC_KEY) ---- */
 /* Si ENC_KEY no existe, fallback a kv (legacy) con warning. Migración: generar ENC_KEY y reiniciar. */
 let _encKeyWarned = false
-function encKey(db) {
+function encKey(db: DB): Buffer {
   const envKey = process.env.ENC_KEY
   if (envKey) {
     if (envKey.length < 32) {
@@ -352,7 +389,7 @@ function encKey(db) {
   return Buffer.from(k, 'hex')
 }
 
-export function encryptSecret(db, plaintext) {
+export function encryptSecret(db: DB, plaintext: string): string {
   if (!plaintext) return ''
   const key = encKey(db)
   const iv = crypto.randomBytes(12)
@@ -362,7 +399,7 @@ export function encryptSecret(db, plaintext) {
   return `gcm:${iv.toString('hex')}:${tag.toString('hex')}:${enc.toString('hex')}`
 }
 
-export function decryptSecret(db, stored) {
+export function decryptSecret(db: DB, stored: string): string {
   if (!stored) return ''
   if (!stored.startsWith('gcm:')) return stored // legado en claro → se re-cifra al guardar
   const [, iv, tag, data] = stored.split(':')
@@ -372,7 +409,7 @@ export function decryptSecret(db, stored) {
 }
 
 /* ---- Audit log (lección skill #25) ---- */
-export function audit(db, userId, action, entity, entityId, detail = '') {
+export function audit(db: DB, userId: string | null, action: string, entity: string, entityId: string | null, detail = ''): void {
   db.prepare('INSERT INTO audit_log (user_id, action, entity, entity_id, detail, at) VALUES (?, ?, ?, ?, ?, ?)')
     .run(userId || '', action, entity, entityId || '', String(detail).slice(0, 500), Date.now())
 }
@@ -382,8 +419,8 @@ export function audit(db, userId, action, entity, entityId, detail = '') {
  * hidratan en caliente el checklist y las instrucciones del inmueble. En cuanto
  * se editan, fijan su propia copia y dejan de depender del maestro.
  * `properties` debe traer `checklist` ya parseado (array) e `instructions` (string). */
-export function hydrateCleaning(cl, properties) {
-  if (JSON.parse(cl.checks || '[]').length === 0) {
+export function hydrateCleaning(cl: CleaningRow, properties: PropertyRow[]): CleaningRow {
+  if ((JSON.parse(cl.checks || '[]') as unknown[]).length === 0) {
     const prop = properties.find((p) => p.id === cl.property_id)
     if (prop) cl.checks = JSON.stringify(prop.checklist.map((label, i) => ({ id: `chk-${i}`, label, done: false })))
   }
@@ -400,20 +437,20 @@ export function hydrateCleaning(cl, properties) {
  * Σ(horas reales × €/h de la persona) + materiales. Solo si el coste > 0;
  * una limpieza sin horas ni productos no genera gasto. El vínculo permite
  * recalcularlo al volver a guardar la limpieza o borrarlo con ella. */
-export function cleaningCostOf(db, cl) {
-  const rates = new Map(db.prepare('SELECT id, hourly_rate FROM people').all().map((p) => [p.id, p.hourly_rate ?? 0]))
-  const labor = JSON.parse(cl.work_log || '[]').reduce((acc, w) => acc + w.hours * (rates.get(w.personId) ?? 0), 0)
+export function cleaningCostOf(db: DB, cl: { work_log?: string; materials?: number | null }): number {
+  const rates = new Map((db.prepare('SELECT id, hourly_rate FROM people').all() as Array<{ id: string; hourly_rate: number | null }>).map((p) => [p.id, p.hourly_rate ?? 0] as const))
+  const labor = (JSON.parse(cl.work_log || '[]') as Array<{ hours: number; personId: string }>).reduce((acc, w) => acc + w.hours * (rates.get(w.personId) ?? 0), 0)
   return Math.round((labor + (cl.materials ?? 0)) * 100) / 100
 }
 
-export function syncCleaningExpense(db, cl) {
+export function syncCleaningExpense(db: DB, cl: CleaningRow): string | null {
   const amount = cleaningCostOf(db, cl)
   if (amount <= 0) {
     removeCleaningExpense(db, cl.id)
     return null
   }
   const [y, m] = cl.date.split('-').map(Number)
-  const existing = db.prepare('SELECT id FROM expenses WHERE source_cleaning_id = ?').get(cl.id)
+  const existing = db.prepare('SELECT id FROM expenses WHERE source_cleaning_id = ?').get(cl.id) as { id: string } | undefined
   if (existing) {
     db.prepare('UPDATE expenses SET amount = ?, month = ?, year = ?, property_id = ? WHERE id = ?')
       .run(amount, m - 1, y, cl.property_id, existing.id)
@@ -426,6 +463,6 @@ export function syncCleaningExpense(db, cl) {
   return id
 }
 
-export function removeCleaningExpense(db, cleaningId) {
+export function removeCleaningExpense(db: DB, cleaningId: string): void {
   db.prepare('DELETE FROM expenses WHERE source_cleaning_id = ?').run(cleaningId)
 }

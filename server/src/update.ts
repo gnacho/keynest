@@ -14,6 +14,7 @@ import { join } from 'node:path'
 import { statSync, accessSync, constants } from 'node:fs'
 import { randomUUID } from 'node:crypto'
 import { kvGet, kvSet } from './db.js'
+import type { DB } from './db.js'
 
 const REPO = process.env.GITHUB_REPO || 'gnacho/keynest'
 const MARKER = process.env.RELEASE_MARKER || '/opt/keynest/.release-id'
@@ -25,7 +26,7 @@ const UPDATE_FLAG = '.update-requested'
 const ROLLBACK_FLAG = '.rollback-requested'
 
 // Versión semver instalada (marker lo escribe keynest-update.sh tras cada deploy).
-export function currentId() {
+export function currentId(): string {
   try {
     return readFileSync(MARKER, 'utf8').trim()
   } catch {
@@ -39,18 +40,25 @@ export function currentId() {
 // Anti rate-limit (#265): peticiones condicionales con ETag (los 304 no
 // consumen cuota), GITHUB_TOKEN opcional y degradación a last-known-good
 // (≤24h) cuando GitHub falla, en vez de descartar el dato.
-async function latestInfo(prodDb) {
-  let cached = null
+interface ReleaseCache {
+  id: string
+  body?: string
+  etag?: string
+  at: number
+}
+
+async function latestInfo(prodDb: DB): Promise<{ id: string; body: string; stale: boolean } | null> {
+  let cached: ReleaseCache | null = null
   const raw = kvGet(prodDb, CACHE_KEY)
   if (raw) {
     try {
-      cached = JSON.parse(raw)
+      cached = JSON.parse(raw) as ReleaseCache
     } catch { /* noop */ }
   }
   if (cached && Date.now() - cached.at < CACHE_TTL) {
     return { id: cached.id, body: cached.body ?? '', stale: false }
   }
-  const headers = { 'User-Agent': 'keynest-updater', Accept: 'application/vnd.github+json' }
+  const headers: Record<string, string> = { 'User-Agent': 'keynest-updater', Accept: 'application/vnd.github+json' }
   if (cached?.etag) headers['If-None-Match'] = cached.etag
   if (process.env.GITHUB_TOKEN) headers.Authorization = `Bearer ${process.env.GITHUB_TOKEN}`
   try {
@@ -64,7 +72,7 @@ async function latestInfo(prodDb) {
       return { id: cached.id, body: cached.body ?? '', stale: false }
     }
     if (res.ok) {
-      const data = await res.json()
+      const data = await res.json() as any
       const id = String(data.tag_name ?? '').replace(/^v/, '')
       const body = typeof data.body === 'string' ? data.body : ''
       const etag = res.headers.get('etag') ?? ''
@@ -89,7 +97,7 @@ async function latestInfo(prodDb) {
 }
 
 // Comparación semver numérica: '1.10.0' > '1.9.0'; prefijos 'v' y pre-release ignorados.
-function compareSemver(a, b) {
+function compareSemver(a: string, b: string): number {
   const pa = String(a).replace(/^v/, '').split('.').map((n) => parseInt(n, 10) || 0)
   const pb = String(b).replace(/^v/, '').split('.').map((n) => parseInt(n, 10) || 0)
   for (let i = 0; i < 3; i++) {
@@ -98,7 +106,7 @@ function compareSemver(a, b) {
   return 0
 }
 
-export async function updateStatus(prodDb, dataDir) {
+export async function updateStatus(prodDb: DB, dataDir: string) {
   const current = currentId()
   const latest = await latestInfo(prodDb).catch(() => null)
   const available = Boolean(latest && current && compareSemver(latest.id, current) > 0)
@@ -123,7 +131,7 @@ export async function updateStatus(prodDb, dataDir) {
 const PROGRESS_TTL = 15 * 60 * 1000
 const PROGRESS_FILE = 'update-progress.json'
 
-export function updateProgress(dataDir) {
+export function updateProgress(dataDir: string): { step: string; pct: number; ts: number } | null {
   try {
     const raw = readFileSync(join(dataDir, PROGRESS_FILE), 'utf8')
     const p = JSON.parse(raw)
@@ -137,7 +145,7 @@ export function updateProgress(dataDir) {
 // Readiness checks pre-apply (#155): espacio en disco, permisos de escritura,
 // update concurrente en curso y asset de la release alcanzable. Cada check
 // devuelve { ok, detail } para mostrarse en la UI antes de habilitar el botón.
-export async function readinessChecks(prodDb, dataDir, latest) {
+export async function readinessChecks(prodDb: DB, dataDir: string, latest: string | null) {
   const results = {
     disk: { ok: true, detail: '' },
     writable: { ok: true, detail: '' },
@@ -207,7 +215,7 @@ export async function readinessChecks(prodDb, dataDir, latest) {
 // Rollback (#154): registra la entrada y escribe el flag que el .path de systemd
 // detecta para lanzar keynest-update.service (que restaura el backup). Devuelve
 // true si el flag se escribió.
-export function requestRollback(prodDb, userId, dataDir) {
+export function requestRollback(prodDb: DB, userId: string, dataDir: string): boolean {
   const cur = currentId()
   recordUpdate(prodDb, userId, cur, cur, Date.now())
   try {
@@ -222,7 +230,7 @@ export function requestRollback(prodDb, userId, dataDir) {
 // Registra una entrada en update_history antes de ejecutar el apply.
 // Se escribe ANTES de lanzar el script para que quede constancia aunque
 // el proceso muera durante el deploy.
-function recordUpdate(db, userId, fromVer, toVer, startTime) {
+function recordUpdate(db: DB, userId: string, fromVer: string, toVer: string, startTime: number): void {
   try {
     db.prepare(`INSERT INTO update_history
       (event_id, timestamp, action, channel, version_from, version_to, initiated_by, status, duration_ms)
@@ -232,9 +240,9 @@ function recordUpdate(db, userId, fromVer, toVer, startTime) {
 }
 
 // GET /api/updates/history — últimas 30 entradas.
-export function getUpdateHistory(db) {
+export function getUpdateHistory(db: DB): Array<Record<string, unknown>> {
   try {
-    return db.prepare('SELECT * FROM update_history ORDER BY timestamp DESC LIMIT 30').all()
+    return db.prepare('SELECT * FROM update_history ORDER BY timestamp DESC LIMIT 30').all() as Array<Record<string, unknown>>
   } catch { return [] }
 }
 
@@ -242,11 +250,11 @@ export function getUpdateHistory(db) {
 // versión actual ya cambió, lo marca como 'applied' y devuelve los datos
 // para mostrar un toast de confirmación. Si la versión NO cambió (falló),
 // actualiza a 'failed' y devuelve null.
-export function consumePendingUpdate(db) {
+export function consumePendingUpdate(db: DB): { from: string; to: string } | null {
   try {
     const pending = db.prepare(
       "SELECT * FROM update_history WHERE status = 'started' AND action = 'update' ORDER BY timestamp DESC LIMIT 1"
-    ).get()
+    ).get() as { event_id: string; version_from: string } | undefined
     if (!pending) return null
     const cur = currentId()
     if (cur && cur !== pending.version_from) {
@@ -267,7 +275,7 @@ export function consumePendingUpdate(db) {
 // y lanza keynest-update.service (root, oneshot) on-demand. Tras el deploy, el
 // server reinicia y consumePendingUpdate() (en /api/version) marca el registro
 // como 'applied' cuando el marker cambia. Devuelve true si el flag se escribió.
-export function requestUpdate(prodDb, userId, dataDir) {
+export function requestUpdate(prodDb: DB, userId: string, dataDir: string): boolean {
   recordUpdate(prodDb, userId, currentId(), 'pending', Date.now())
   const flag = join(dataDir, '.update-requested')
   try {

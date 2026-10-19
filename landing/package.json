@@ -1,0 +1,11 @@
+{
+  "name": "keynest-landing",
+  "private": true,
+  "version": "1.5.63",
+  "scripts": {
+    "build": "tsc -p tsconfig.json"
+  },
+  "devDependencies": {
+    "typescript": "^5.9.3"
+  }
+}

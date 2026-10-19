@@ -5,18 +5,19 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { openDb } from '../src/db.js'
+import type { DB } from '../src/db.js'
 import { aplicarCruce, syncAirbnb, crearPairing, pairingVigente, consumirPairing, guardarSesion, marcarSesionRestaurada } from '../src/airbnb-sync.js'
 
 // notifyAll de push.js se mockea para capturar los avisos de sesión.
 vi.mock('../src/push.js', async (importOriginal) => {
-  const actual = await importOriginal()
+  const actual = await importOriginal() as Record<string, any>
   return { ...actual, notifyAll: vi.fn(() => Promise.resolve()) }
 })
 import { notifyAll } from '../src/push.js'
 
-let dir
-let dataDir
-let db
+let dir: string
+let dataDir: string
+let db: DB
 beforeEach(() => {
   dir = mkdtempSync(join(tmpdir(), 'keynest-airbnb-test-'))
   dataDir = join(dir, 'data')
@@ -33,13 +34,13 @@ afterEach(() => {
   vi.clearAllMocks()
 })
 
-function escribeReservas(reservas) {
+function escribeReservas(reservas: Array<Record<string, any>>) {
   writeFileSync(join(dataDir, 'airbnb_reservas.json'), JSON.stringify({ extraido: new Date().toISOString(), reservas }))
 }
-function escribeSesion(viva, detalle) {
+function escribeSesion(viva: boolean, detalle: string | null = null) {
   writeFileSync(join(dataDir, 'airbnb_sesion.json'), JSON.stringify({ viva, detalle: detalle ?? null }))
 }
-function insertaReserva(id, code, extra = {}) {
+function insertaReserva(id: string, code: string, extra: Record<string, any> = {}) {
   db.prepare(
     `INSERT INTO reservations (id, property_id, uid, checkin, checkout, summary, confirmation_code, guest_name, booked_date, created_at)
      VALUES (?, 'p1', ?, '2026-08-10', '2026-08-12', 'A', ?, ?, ?, ?)`,
@@ -56,7 +57,7 @@ describe('aplicarCruce', () => {
     const res = aplicarCruce(db)
     expect(res.cruzadas).toBe(1)
     expect(res.sinMatch).toBe(1)
-    const fila = db.prepare('SELECT guests, amount FROM reservations WHERE id = ?').get('res-1')
+    const fila = db.prepare('SELECT guests, amount FROM reservations WHERE id = ?').get('res-1') as { guests: number; amount: number }
     expect(fila.guests).toBe(3)
     expect(fila.amount).toBe(220.5)
   })
@@ -67,7 +68,7 @@ describe('aplicarCruce', () => {
       { confirmation_code: 'HM2', guests: 4, amount: 300, guest_name: 'Laith Kawar', booked_date: '2026-05-01' },
     ])
     aplicarCruce(db)
-    const fila = db.prepare('SELECT guest_name, booked_date FROM reservations WHERE id = ?').get('res-2')
+    const fila = db.prepare('SELECT guest_name, booked_date FROM reservations WHERE id = ?').get('res-2') as { guest_name: string; booked_date: string }
     expect(fila.guest_name).toBe('Laith Kawar')
     expect(fila.booked_date).toBe('2026-05-01')
   })
@@ -78,7 +79,7 @@ describe('aplicarCruce', () => {
       { confirmation_code: 'HM3', guests: 2, amount: 100, guest_name: 'Nombre Scraper', booked_date: '2026-06-01' },
     ])
     aplicarCruce(db)
-    const fila = db.prepare('SELECT guest_name, booked_date FROM reservations WHERE id = ?').get('res-3')
+    const fila = db.prepare('SELECT guest_name, booked_date FROM reservations WHERE id = ?').get('res-3') as { guest_name: string; booked_date: string }
     expect(fila.guest_name).toBe('Nombre Manual')
     expect(fila.booked_date).toBe('2026-01-01')
   })
@@ -87,7 +88,7 @@ describe('aplicarCruce', () => {
     insertaReserva('res-4', 'HM4', { guest_name: 'Nombre Previo' })
     escribeReservas([{ confirmation_code: 'HM4', guests: 1, amount: 50 }])
     aplicarCruce(db)
-    const fila = db.prepare('SELECT guest_name FROM reservations WHERE id = ?').get('res-4')
+    const fila = db.prepare('SELECT guest_name FROM reservations WHERE id = ?').get('res-4') as { guest_name: string }
     expect(fila.guest_name).toBe('Nombre Previo')
   })
 
@@ -97,7 +98,7 @@ describe('aplicarCruce', () => {
       { confirmation_code: 'HM5', guests: 2, amount: 100, guest_location: 'Vilnius, Lithuania' },
     ])
     aplicarCruce(db)
-    const fila = db.prepare('SELECT guest_location FROM reservations WHERE id = ?').get('res-5')
+    const fila = db.prepare('SELECT guest_location FROM reservations WHERE id = ?').get('res-5') as { guest_location: string }
     expect(fila.guest_location).toBe('Vilnius, Lithuania')
   })
 
@@ -110,9 +111,9 @@ describe('aplicarCruce', () => {
     ])
     insertaReserva('res-7', 'HM7')
     aplicarCruce(db)
-    const f6 = db.prepare('SELECT guest_location FROM reservations WHERE id = ?').get('res-6')
+    const f6 = db.prepare('SELECT guest_location FROM reservations WHERE id = ?').get('res-6') as { guest_location: string }
     expect(f6.guest_location).toBe('Berlin, Germany')
-    const f7 = db.prepare('SELECT guest_location FROM reservations WHERE id = ?').get('res-7')
+    const f7 = db.prepare('SELECT guest_location FROM reservations WHERE id = ?').get('res-7') as { guest_location: string }
     expect(f7.guest_location).toBe('')
   })
 })
@@ -152,7 +153,7 @@ describe('marcarSesionRestaurada', () => {
     db.prepare(`INSERT INTO kv (key, value) VALUES ('airbnb_sesion', ?)`).run(JSON.stringify({ viva: false }))
     const flanco = marcarSesionRestaurada(db)
     expect(flanco).toBe(true)
-    const estado = JSON.parse(db.prepare(`SELECT value FROM kv WHERE key = 'airbnb_sesion'`).get().value)
+    const estado = JSON.parse((db.prepare(`SELECT value FROM kv WHERE key = 'airbnb_sesion'`).get() as { value: string }).value)
     expect(estado.viva).toBe(true)
     expect(notifyAll).toHaveBeenCalledWith(
       expect.anything(),
@@ -167,7 +168,7 @@ describe('marcarSesionRestaurada', () => {
     const flanco = marcarSesionRestaurada(db)
     expect(flanco).toBe(false)
     expect(notifyAll).not.toHaveBeenCalled()
-    const estado = JSON.parse(db.prepare(`SELECT value FROM kv WHERE key = 'airbnb_sesion'`).get().value)
+    const estado = JSON.parse((db.prepare(`SELECT value FROM kv WHERE key = 'airbnb_sesion'`).get() as { value: string }).value)
     expect(estado.viva).toBe(true)
   })
 
@@ -184,7 +185,7 @@ describe('pairing + guardarSesion', () => {
     expect(p.code).toMatch(/^[A-Z2-9]{6}$/)
     expect(p.expira).toBeGreaterThan(Date.now())
     const vigente = pairingVigente(db)
-    expect(vigente.code).toBe(p.code)
+    expect(vigente!.code).toBe(p.code)
   })
 
   it('pairingVigente devuelve null si está caducado', () => {

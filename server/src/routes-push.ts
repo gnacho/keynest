@@ -5,7 +5,14 @@
 // SECRETA: nunca se loguea. En demo NO hay push real (ni suscripciones).
 import crypto from 'node:crypto'
 import { z } from 'zod'
+import type { Hono } from 'hono'
 import { isPushConfigured, pushPublicKey, TIPOS_ALERTA } from './push.js'
+import type { DB, UserRow } from './db.js'
+
+interface PushEnv {
+  Bindings: { incoming?: { socket?: { remoteAddress?: string } } }
+  Variables: { db: DB; user: UserRow }
+}
 
 const subscribeSchema = z.object({
   endpoint: z.url().max(1000),
@@ -26,7 +33,7 @@ const prefSchema = z.object({
 })
 
 // Registra las rutas en un router que YA lleva requireAuth.
-export function registerPushRoutes(router) {
+export function registerPushRoutes(router: Hono<PushEnv>) {
   // Clave pública VAPID para applicationServerKey. No es secreta, pero solo
   // se sirve con sesión. En demo y sin claves configuradas la UI lo detecta.
   router.get('/push/vapid-public-key', (c) => {
@@ -87,7 +94,7 @@ export function registerPushRoutes(router) {
     const db = c.get('db')
     const filas = db
       .prepare('SELECT tipo, enabled FROM notification_preferences WHERE user_id = ?')
-      .all(c.get('user').id)
+      .all(c.get('user').id) as Array<{ tipo: string; enabled: number }>
     const mapa = Object.fromEntries(filas.map((f) => [f.tipo, f.enabled === 1]))
     const prefs = Object.fromEntries(TIPOS_ALERTA.map((t) => [t, mapa[t] !== false]))
     return c.json({ prefs })
