@@ -12,6 +12,21 @@ y este proyecto se adhiere a [Versionado Semántico](https://semver.org/lang/es/
 > release usar `scripts/release.sh` (calcula la versión y crea el tag con el
 > mensaje correcto).
 
+## [1.5.64] - 2026-10-19
+
+### Changed
+
+- **Código interno migrado a TypeScript (#293).** El servidor (15 módulos),
+  sus 11 suites de tests y los scripts de la landing están ahora escritos en
+  TypeScript: el backend compila con `tsc` en modo estricto y arranca desde
+  el JavaScript compilado (`dist/`), con la misma arquitectura que Helios.
+  Los tests siguen siendo los mismos (133/133) y no hay ningún cambio
+  funcional: la aplicación se comporta exactamente igual que la 1.5.63.
+- **Empaquetado de la release actualizado.** Los assets llevan ahora el
+  servidor compilado (`server/dist`) en lugar del código fuente, y el
+  auto-actualizador entiende el nuevo layout (limpia un `src/` antiguo si
+  existiera).
+
 ## [1.5.63] - 2026-10-11
 
 ### Added
