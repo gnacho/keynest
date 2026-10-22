@@ -40,6 +40,35 @@ export function airbnbDataDir(): string {
   return process.env.AIRBNB_DATA_DIR || DEF_DIR
 }
 
+/**
+ * Emparejamiento anuncio Airbnb <-> inmueble de Keynest por listing_id.
+ *
+ * El nombre NO sirve como clave: Keynest usa nombres internos ("Pisete",
+ * "Entrepinos") y Airbnb el titulo del anuncio ("Piso en la Plaza de Espana
+ * Sin Ascensor.", "Chalet familiar en La Eliana"). El vinculo fiable es el
+ * listing_id de Airbnb, que ya esta en properties.ical_url
+ * (https://www.airbnb.com/calendar/ical/<LISTING_ID>.ics?t=...).
+ */
+export function listingIdDePropiedad(icalUrl: string | null | undefined): string | null {
+  if (!icalUrl) return null
+  const m = String(icalUrl).match(/\/calendar\/ical\/(\d+)\.ics/)
+  return m ? m[1] : null
+}
+
+/** Mapa listing_id -> property_id para todos los inmuebles con ICS de Airbnb. */
+export function mapaListings(db: DB): Map<string, string> {
+  const filas = db.prepare('SELECT id, ical_url FROM properties').all() as Array<{
+    id: string
+    ical_url: string | null
+  }>
+  const mapa = new Map<string, string>()
+  for (const f of filas) {
+    const lid = listingIdDePropiedad(f.ical_url)
+    if (lid) mapa.set(lid, f.id)
+  }
+  return mapa
+}
+
 export function airbnbSessionPath(): string {
   return process.env.AIRBNB_SESSION_PATH || DEF_SESION
 }

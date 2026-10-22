@@ -161,6 +161,23 @@ const MIGRATIONS = [
      last_used_at INTEGER
    );
    CREATE INDEX IF NOT EXISTS idx_login_tokens_user ON login_tokens(user_id)`,
+  // 26: transferencias individuales de Airbnb (#298). Las estancias de más de
+  //     un mes se cobran en plazos, así que el importe abonado no coincide con
+  //     el total de la reserva. Cada fila es un abono concreto; external_ref
+  //     (token de la transacción de producto) evita duplicados al reingerir.
+  `CREATE TABLE IF NOT EXISTS reservation_payments (
+     id TEXT PRIMARY KEY,
+     reservation_id TEXT,
+     confirmation_code TEXT NOT NULL,
+     paid_on TEXT NOT NULL,
+     amount REAL NOT NULL,
+     currency TEXT NOT NULL DEFAULT 'EUR',
+     status TEXT NOT NULL DEFAULT '',
+     external_ref TEXT NOT NULL UNIQUE,
+     detected_at INTEGER NOT NULL
+   );
+   CREATE INDEX IF NOT EXISTS idx_res_payments_code ON reservation_payments(confirmation_code);
+   CREATE INDEX IF NOT EXISTS idx_res_payments_res ON reservation_payments(reservation_id)`,
 ]
 
 export function migrate(db: DB) {

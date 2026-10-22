@@ -6,7 +6,7 @@ import { join } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { openDb } from '../src/db.js'
 import type { DB } from '../src/db.js'
-import { aplicarCruce, syncAirbnb, crearPairing, pairingVigente, consumirPairing, guardarSesion, marcarSesionRestaurada } from '../src/airbnb-sync.js'
+import { aplicarCruce, syncAirbnb, crearPairing, pairingVigente, consumirPairing, guardarSesion, marcarSesionRestaurada, listingIdDePropiedad, mapaListings } from '../src/airbnb-sync.js'
 
 // notifyAll de push.js se mockea para capturar los avisos de sesión.
 vi.mock('../src/push.js', async (importOriginal) => {
@@ -210,5 +210,42 @@ describe('pairing + guardarSesion', () => {
     expect(escrito.cookies[1]).toEqual({ name: 'datadome', value: 'y' })
     const st = statSync(ruta)
     expect(st.mode & 0o777).toBe(0o600)
+  })
+})
+
+// El emparejamiento anuncio<->inmueble va por listing_id (el nombre no sirve:
+// Keynest usa nombres internos y Airbnb el titulo del anuncio). #298
+describe('mapa de listings por listing_id', () => {
+  it('extrae el listing_id de la URL del ICS', () => {
+    expect(listingIdDePropiedad('https://www.airbnb.com/calendar/ical/935312538627141204.ics?t=abc')).toBe(
+      '935312538627141204'
+    )
+    expect(listingIdDePropiedad('https://www.airbnb.com/calendar/ical/577146229558270702.ics?t=x')).toBe(
+      '577146229558270702'
+    )
+    expect(listingIdDePropiedad('https://otro.com/cal.ics')).toBeNull()
+    expect(listingIdDePropiedad(null)).toBeNull()
+  })
+
+  it('mapea los cuatro inmuebles reales de Keynest a su listing_id', () => {
+    const reales: Array<[string, string, string]> = [
+      ['pisete', 'Pisete', '935312538627141204'],
+      ['el-47', 'El 47', '577146229558270702'],
+      ['camnpanar', 'Campanar', '1607945371495321384'],
+      ['apartamento-malvarrosa', 'Entrepinos', '941965992844344229'],
+    ]
+    for (const [id, name, lid] of reales) {
+      db.prepare('INSERT INTO properties (id, name, slug, ical_url, created_at) VALUES (?, ?, ?, ?, ?)').run(
+        id,
+        name,
+        id,
+        `https://www.airbnb.com/calendar/ical/${lid}.ics?t=tok`,
+        Date.now()
+      )
+    }
+    const mapa = mapaListings(db)
+    expect(mapa.size).toBe(4)
+    expect(mapa.get('935312538627141204')).toBe('pisete')
+    expect(mapa.get('941965992844344229')).toBe('apartamento-malvarrosa')
   })
 })
