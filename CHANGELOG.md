@@ -12,6 +12,21 @@ y este proyecto se adhiere a [Versionado Semántico](https://semver.org/lang/es/
 > release usar `scripts/release.sh` (calcula la versión y crea el tag con el
 > mensaje correcto).
 
+## [1.5.65] - 2026-10-22
+
+### Added
+
+- **Aviso de cada transferencia de estancias largas (#298).** Airbnb abona
+  los alquileres de más de un mes en plazos mensuales, pero el aviso de pago
+  salía una sola vez, 24 h después del check-in y con el total de la
+  estancia, así que los plazos posteriores no se veían. Ahora la app ingiere
+  cada transferencia desde el panel de anfitrión, la asocia a su reserva por
+  el `listing_id` de Airbnb (no por el nombre) y avisa al dueño del inmueble
+  el mismo día en que Airbnb emite el pago, con el importe real de esa
+  transferencia y el inmueble. El detalle de la reserva muestra lo abonado
+  hasta la fecha frente al total de la estancia. Las estancias de un mes o
+  menos se comportan como antes.
+
 ## [1.5.64] - 2026-10-19
 
 ### Changed
