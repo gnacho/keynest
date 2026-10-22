@@ -1,12 +1,12 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router';
 import { toast } from 'sonner';
-import { CalendarDays, Sparkles, TrendingUp } from 'lucide-react';
+import { CalendarDays, Sparkles, TrendingUp, Wallet } from 'lucide-react';
 import StatusBadge from '@/components/StatusBadge';
 import { useTranslation } from 'react-i18next';
 import { useData } from '@/data/useData';
 import type { Reservation } from '@/data/types';
-import { capitalize, fmtDateLong, startOfDay } from '@/lib/format';
+import { capitalize, fmtDateLong, fmtMoney, startOfDay } from '@/lib/format';
 import { requestIcon } from './request-icon';
 
 const CLEANING_LABEL_KEY: Record<string, string> = {
@@ -103,6 +103,40 @@ export default function ReservationDetail({ reservation: r }: { reservation: Res
             <ReqIcon className="h-4 w-4 shrink-0" />
             {capitalize(r.specialRequest)}
           </div>
+        </div>
+      )}
+
+      {/* Pagos de Airbnb (#298): en estancias largas se cobra en plazos. Muestra
+          lo ya abonado frente al total, no el total tal cual. */}
+      {r.amount > 0 && r.numPagos != null && r.pagado != null && (
+        <div className="flex flex-col gap-1.5">
+          <SectionTitle>{t('res.pagos')}</SectionTitle>
+          <div
+            className="flex items-center gap-2 rounded-xl border px-3 py-2 text-xs"
+            style={{
+              backgroundColor: 'rgb(99 102 241 / 0.08)',
+              borderColor: 'rgb(99 102 241 / 0.25)',
+              color: 'var(--text-muted)',
+            }}
+          >
+            <Wallet className="h-4 w-4 shrink-0 text-indigo-500" />
+            <span className="font-semibold" style={{ color: 'var(--text)' }}>
+              {fmtMoney(r.pagado, true)}
+            </span>
+            <span>
+              / {fmtMoney(r.amount, true)}
+              {r.numPagos > 1 && (
+                <span className="ml-1">
+                  · {t('res.plazosDe', { n: r.numPagos })}
+                </span>
+              )}
+            </span>
+          </div>
+          {r.pagado < r.amount && (
+            <p className="text-[11px]" style={{ color: 'var(--text-faint)' }}>
+              {t('res.pendienteAbono', { importe: fmtMoney(r.amount - r.pagado, true) })}
+            </p>
+          )}
         </div>
       )}
 

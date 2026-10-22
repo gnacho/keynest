@@ -34,6 +34,7 @@ interface ApiReservation {
   id: string; property_id: string; uid: string; checkin: string; checkout: string;
   summary: string; confirmation_code: string; phone_last4: string;
   amount?: number; notes?: string; guest_name?: string; booked_date?: string;
+  pagado?: number; numPagos?: number;
   guests?: number | null;
   guest_location?: string;
 }
@@ -85,6 +86,8 @@ function mapReservation(row: ApiReservation): Reservation {
     guestAges: [],
     status: checkOut.getTime() < Date.now() ? 'completada' : checkIn.getTime() <= Date.now() ? 'activa' : 'confirmada',
     amount: row.amount ?? 0,
+    pagado: row.pagado ?? 0,
+    numPagos: row.numPagos ?? 0,
     notes: row.notes ?? '',
     bookedDate: row.booked_date || '',
     isManual: typeof row.uid === 'string' && row.uid.startsWith('manual-'),
@@ -495,6 +498,13 @@ export default function DataProvider({ children }: { children: ReactNode }) {
           body: JSON.stringify(patch),
         });
         const mapped = mapReservation(res.reservation);
+        // El PUT devuelve la reserva sin pagado/numPagos (viene del bootstrap).
+        // Conserva los pagos ya cargados para que guardar notas no los ponga a 0.
+        const prev = reservations.current.find((r) => r.id === id);
+        if (prev) {
+          mapped.pagado = prev.pagado;
+          mapped.numPagos = prev.numPagos;
+        }
         const idx = reservations.current.findIndex((r) => r.id === id);
         if (idx >= 0) reservations.current[idx] = mapped;
         bump();

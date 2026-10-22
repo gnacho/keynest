@@ -18,6 +18,7 @@ import { saveTedeeConfig, tedeeConfig, tedeeLocks, tedeeAccesses } from './tedee
 import { currentId, updateStatus, updateProgress, getUpdateHistory, consumePendingUpdate, requestUpdate, requestRollback } from './update.js'
 import { importAirbnb, parseAirbnbCsv } from './import-airbnb.js'
 import { syncAirbnb, airbnbStatus, crearPairing, pairingVigente, consumirPairing, guardarSesion, marcarSesionRestaurada } from './airbnb-sync.js'
+import { sincronizarPagos, pagadoDeReserva, parseImporteES } from './airbnb-payments.js'
 import { configurePush, flushNotificationQueue, notifyUsers } from './push.js'
 import { registerPushRoutes } from './routes-push.js'
 import * as alerts from './alerts.js'
@@ -517,7 +518,11 @@ guarded.get('/bootstrap', async (c) => {
   const db = c.get('db')
   const properties = (db.prepare('SELECT * FROM properties ORDER BY created_at').all() as Row[])
     .map((p) => ({ ...p, checklist: JSON.parse(p.checklist || '[]') }))
-  const reservations = db.prepare('SELECT * FROM reservations ORDER BY checkin').all() as Row[]
+  const reservations = (db.prepare('SELECT * FROM reservations ORDER BY checkin').all() as Row[])
+    .map((r) => {
+      const { total, plazos } = pagadoDeReserva(db, String(r.confirmation_code || ''))
+      return plazos > 0 ? { ...r, pagado: total, numPagos: plazos } : r
+    })
   const cleanings = (db.prepare('SELECT * FROM cleanings ORDER BY date').all() as Row[])
     .map((cl) => hydrateCleaning(cl as CleaningRow, properties as PropertyRow[]))
   const maintenance = (db.prepare('SELECT * FROM maintenance_tasks ORDER BY created_at DESC').all() as Row[])
@@ -1575,6 +1580,18 @@ setInterval(() => tedeeChecker.check().catch((e) => console.error('[keynest] ted
 const runAirbnb = () => syncAirbnb(prodDb).catch((e) => console.error('[keynest] airbnb job error:', e.message))
 setTimeout(runAirbnb, 8000)
 setInterval(runAirbnb, 3600 * 1000)
+
+/* Plazos de Airbnb (#298): ingesta de transferencias + aviso por cada abono
+   nuevo. Va pegado al cruce de reservas para que el reservation_id ya exista. */
+const runPagos = () => {
+  try {
+    sincronizarPagos(prodDb, notifyUsers)
+  } catch (e) {
+    console.error('[keynest] pagos job error:', (e as Error).message)
+  }
+}
+setTimeout(runPagos, 12000)
+setInterval(runPagos, 3600 * 1000)
 alerts.scheduleDaily(9, () => alerts.checkReservasHoy(prodDb), 'reservas-hoy')
 alerts.scheduleDaily(9, () => alerts.checkTransacciones(prodDb, notifyUsers), 'transacciones')
 alerts.scheduleDaily(9, () => alerts.checkMantenimientoRecordatorios(prodDb, notifyUsers), 'mantenimiento-recordatorio')

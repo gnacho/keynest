@@ -50,6 +50,10 @@ export interface Reservation {
   bookedDate?: string;
   /** Reserva creada a mano en la app (uid `manual-*`); solo estas se editan/borran. */
   isManual?: boolean;
+  /** Total abonado por Airbnb de los plazos ya registrados (#298). */
+  pagado?: number;
+  /** Número de plazos de Airbnb registrados (#298). */
+  numPagos?: number;
 }
 
 export type AccessType = 'entrada' | 'salida' | 'remota';
