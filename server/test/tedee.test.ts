@@ -235,19 +235,27 @@ describe('tedeeAccesses', () => {
     configurarTedeeCloud(db)
     mockResponse({ result: [cloudLock] })
     mockResponse({ result: { keypads: [] } }) // details (#279)
+    // Base temporal fija para que el test sea determinista: no depende de cuándo corre.
+    // La ventana es 7 días = 168 h. Se deja un margen amplio alrededor del corte
+    // (td-2199 a 180 h, fuera con margen) para que el redondeo de fechas ISO no
+    // lo empuje dentro por accidente.
+    const base = Date.now()
+    const hace = (n: number) => new Date(base - n * 3600000).toISOString()
     // Página 1: 200 eventos de 30 min (≈4,2 días, entera dentro de 7 días)
     // → más antiguo NO supera el límite y hay 200 → se pide página 2.
-    const hace = (n: number) => new Date(Date.now() - n * 3600000).toISOString()
     const pagina1 = Array.from({ length: 200 }, (_, i) => ({ id: 1000 + i, event: 61, date: hace(i / 2), pinAlias: 'Ana' }))
-    // Página 2 (más antigua): horas 100→200; solo las ≤168h entran en ventana de 7 días
-    const pagina2 = Array.from({ length: 200 }, (_, i) => ({ id: 2000 + i, event: 61, date: hace(100 + i / 2), pinAlias: 'Ana' }))
+    // Página 2 (más antigua): horas 10→110 (dentro) y td-2199 a 180 h (fuera con margen)
+    const pagina2 = [
+      ...Array.from({ length: 199 }, (_, i) => ({ id: 2000 + i, event: 61, date: hace(10 + i / 2), pinAlias: 'Ana' })),
+      { id: 2199, event: 61, date: hace(180), pinAlias: 'Ana' },
+    ]
     mockResponse({ result: pagina1 })
     mockResponse({ result: pagina2 })
     const acc = await tedeeAccesses(db, { dias: 7 })
     expect(acc.some((a) => a.id === 'td-1000')).toBe(true) // página 1
     expect(acc.some((a) => a.id === 'td-2000')).toBe(true) // página 2 (dentro de ventana)
-    expect(acc.some((a) => a.id === 'td-2199')).toBe(false) // página 2, fuera de ventana
-    expect(acc.every((a) => a.at.getTime() >= Date.now() - 7 * 86400000)).toBe(true)
+    expect(acc.some((a) => a.id === 'td-2199')).toBe(false) // página 2, fuera de ventana (180h > 168h)
+    expect(acc.every((a) => a.at.getTime() >= base - 7 * 86400000)).toBe(true)
   })
 
   it('huella → entrada', async () => {
