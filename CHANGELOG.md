@@ -12,6 +12,36 @@ y este proyecto se adhiere a [Versionado Semántico](https://semver.org/lang/es/
 > release usar `scripts/release.sh` (calcula la versión y crea el tag con el
 > mensaje correcto).
 
+## [1.6.0] - 2026-10-26
+
+### Added
+
+- **Estados reales de Airbnb y sincronización visible (#301).** Las reservas
+  muestran por separado el estado real de Airbnb y el estado del cruce con el
+  scraper. Una reserva recién llegada por iCal aparece como pendiente de
+  sincronización hasta que una instantánea posterior la cruza por su código de
+  confirmación. También se distinguen las reservas pendientes de confirmación
+  y las pendientes de cancelación, sin inferir esos estados desde campos
+  vacíos.
+
+### Changed
+
+- **Los datos desconocidos ya no se sustituyen por valores ficticios (#301).**
+  El número de huéspedes y el importe se muestran con un guion mientras falten
+  en el cruce. Antes se mostraban dos huéspedes y cero euros como si fueran
+  datos reales.
+
+### Fixed
+
+- **Una reserva ausente de la instantánea del scraper ya no se presenta como
+  confirmada (#301).** Si una reserva importada deja de aparecer en el panel de
+  Airbnb, se mantiene como pendiente de sincronización en lugar de mostrarse
+  como confirmada sin huéspedes ni importe.
+- **La migración de las columnas de Airbnb se aplica en pasos independientes
+  (#301).** Cada columna se registra por separado, de modo que una migración
+  interrumpida o una columna ya creada a mano no deja el esquema a medias con
+  la versión avanzada.
+
 ## [1.5.65] - 2026-10-22
 
 ### Added
