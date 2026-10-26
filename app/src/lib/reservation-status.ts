@@ -1,5 +1,9 @@
 import type { ReservationStatus, SemColor } from '@/data/types';
 
+export function isAirbnbSyncUnresolved(status?: string | null): boolean {
+  return ['pending', 'missing'].includes((status ?? '').trim().toLowerCase());
+}
+
 export interface ReservationStateInput {
   checkIn: Date;
   checkOut: Date;

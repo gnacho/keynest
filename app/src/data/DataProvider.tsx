@@ -24,7 +24,7 @@ import type {
   TedeeAccess,
 } from './types';
 import { isSameDay, startOfDay } from '@/lib/format';
-import { reservationStatusFor } from '@/lib/reservation-status';
+import { isAirbnbSyncUnresolved, reservationStatusFor } from '@/lib/reservation-status';
 
 /* -------------------------------------------------- mapeos API → dominio */
 interface ApiProperty {
@@ -102,7 +102,7 @@ function mapReservation(row: ApiReservation): Reservation {
     isManual: typeof row.uid === 'string' && row.uid.startsWith('manual-'),
     airbnbStatus: row.airbnb_status ?? '',
     airbnbCancellationStatus: row.airbnb_cancellation_status ?? '',
-    airbnbSyncPending: row.airbnb_sync_state === 'pending',
+    airbnbSyncPending: isAirbnbSyncUnresolved(row.airbnb_sync_state),
   };
 }
 

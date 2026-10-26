@@ -1,8 +1,9 @@
 import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import Database from 'better-sqlite3';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { openDb } from '../src/db.js';
+import { migrate, openDb } from '../src/db.js';
 import type { DB } from '../src/db.js';
 
 let dir: string;
@@ -65,11 +66,70 @@ describe('issue #207 — gastos persistidos en BD', () => {
     const hasExp = (db2.prepare("SELECT COUNT(*) n FROM sqlite_master WHERE type='table' AND name='expenses'").get() as { n: number }).n;
     expect(hasExp).toBe(1);
     const maxV = (db2.prepare('SELECT MAX(version) v FROM schema_version').get() as { v: number | null }).v;
-    expect(maxV).toBe(27);
+    expect(maxV).toBe(31);
     const versions = (db2.prepare('SELECT version FROM schema_version ORDER BY version').all() as Array<{ version: number }>).map((r) => r.version);
     expect(versions).toContain(20);
     db2.close();
     rmSync(dir2, { recursive: true, force: true });
+  });
+
+  it('completa una migración parcial de las columnas Airbnb', () => {
+    const dir2 = mkdtempSync(join(tmpdir(), 'keynest-exp27-partial-'));
+    const partial = new Database(join(dir2, 'partial.db'));
+    try {
+      partial.exec(`
+        CREATE TABLE schema_version (version INTEGER PRIMARY KEY, applied_at INTEGER);
+        INSERT INTO schema_version (version, applied_at) VALUES (26, 0);
+        CREATE TABLE reservations (id TEXT PRIMARY KEY, airbnb_status TEXT DEFAULT '');
+      `);
+      migrate(partial);
+      const cols = (partial.prepare('PRAGMA table_info(reservations)').all() as Array<{ name: string }>).map((c) => c.name);
+      expect(cols).toEqual(expect.arrayContaining([
+        'airbnb_status',
+        'airbnb_status_localized',
+        'airbnb_cancellation_status',
+        'airbnb_sync_state',
+        'airbnb_synced_at',
+      ]));
+      const maxV = (partial.prepare('SELECT MAX(version) v FROM schema_version').get() as { v: number | null }).v;
+      expect(maxV).toBe(31);
+    } finally {
+      partial.close();
+      rmSync(dir2, { recursive: true, force: true });
+    }
+  });
+
+  it('acredita las migraciones 28-31 sobre un schema 27 completo', () => {
+    const dir2 = mkdtempSync(join(tmpdir(), 'keynest-exp27-full-'));
+    const full = new Database(join(dir2, 'full.db'));
+    try {
+      full.exec(`
+        CREATE TABLE schema_version (version INTEGER PRIMARY KEY, applied_at INTEGER);
+        INSERT INTO schema_version (version, applied_at) VALUES (27, 0);
+        CREATE TABLE reservations (
+          id TEXT PRIMARY KEY,
+          airbnb_status TEXT DEFAULT '',
+          airbnb_status_localized TEXT DEFAULT '',
+          airbnb_cancellation_status TEXT DEFAULT '',
+          airbnb_sync_state TEXT DEFAULT '',
+          airbnb_synced_at INTEGER
+        )
+      `);
+      migrate(full);
+      const cols = (full.prepare('PRAGMA table_info(reservations)').all() as Array<{ name: string }>).map((c) => c.name);
+      expect(cols).toEqual(expect.arrayContaining([
+        'airbnb_status',
+        'airbnb_status_localized',
+        'airbnb_cancellation_status',
+        'airbnb_sync_state',
+        'airbnb_synced_at',
+      ]));
+      const maxV = (full.prepare('SELECT MAX(version) v FROM schema_version').get() as { v: number | null }).v;
+      expect(maxV).toBe(31);
+    } finally {
+      full.close();
+      rmSync(dir2, { recursive: true, force: true });
+    }
   });
 
   it('inserta un gasto y lo recupera con sus valores', () => {
