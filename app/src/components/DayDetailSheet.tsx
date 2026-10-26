@@ -117,7 +117,7 @@ export default function DayDetailSheet({ date, open, onOpenChange }: DayDetailSh
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-sm font-semibold">{r.guest.name}</p>
                   <p className="truncate text-xs" style={{ color: 'var(--text-muted)' }}>
-                    {p.name} · {r.guestsCount} huéspedes
+                    {p.name} · {r.guestsCount > 0 ? `${r.guestsCount} huéspedes` : '-'}
                   </p>
                 </div>
                 <StatusBadge label="En curso" tone="blue" dot />

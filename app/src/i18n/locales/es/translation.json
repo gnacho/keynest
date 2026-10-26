@@ -188,6 +188,8 @@
     "huespedAbrev": "Huésp.",
     "estado": "Estado",
     "importe": "Importe",
+    "pendienteSincronizacion": "Pendiente de sincronización",
+    "pendienteSincronizacionHint": "La reserva está en el calendario de Airbnb, pero el scraper todavía no ha enviado sus datos. El nombre, los huéspedes y el importe se completarán en el próximo cruce.",
     "importeEur": "Importe (€)",
     "sinReservas": "No hay reservas con estos filtros",
     "limpiarFiltros": "Limpiar filtros",
@@ -234,7 +236,8 @@
   },
   "estadoReserva": {
     "confirmada": "Confirmada",
-    "pendiente": "Pendiente",
+    "pendiente": "Pendiente de confirmación",
+    "pendienteCancelacion": "Pendiente de cancelación",
     "completada": "Completada",
     "activa": "Activa"
   },

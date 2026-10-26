@@ -31,7 +31,7 @@ export interface Guest {
   initials: string;
 }
 
-export type ReservationStatus = 'confirmada' | 'activa' | 'pendiente' | 'completada';
+export type ReservationStatus = 'confirmada' | 'activa' | 'pendiente' | 'pendienteCancelacion' | 'completada';
 
 export interface Reservation {
   id: string;
@@ -54,6 +54,11 @@ export interface Reservation {
   pagado?: number;
   /** Número de plazos de Airbnb registrados (#298). */
   numPagos?: number;
+  /** Estado devuelto por Airbnb, sin inferirlo desde los datos del iCal. */
+  airbnbStatus?: string;
+  airbnbCancellationStatus?: string;
+  /** La reserva existe en iCal pero aún no ha sido cruzada con el scraper. */
+  airbnbSyncPending?: boolean;
 }
 
 export type AccessType = 'entrada' | 'salida' | 'remota';

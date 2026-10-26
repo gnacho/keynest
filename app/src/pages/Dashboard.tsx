@@ -204,7 +204,7 @@ export default function Dashboard() {
             )}
             <span className="flex shrink-0 items-center gap-0.5 text-xs font-semibold" style={{ color: accent }}>
               <Users className="h-3.5 w-3.5" />
-              {r.guestsCount}
+              {r.guestsCount > 0 ? r.guestsCount : '-'}
             </span>
           </span>
           {/* Desktop (>= md): nombre plano + bandera/código + guests muted */}
@@ -222,7 +222,7 @@ export default function Dashboard() {
             )}
             <span className="flex shrink-0 items-center gap-0.5 text-xs" style={{ color: 'var(--text-muted)' }}>
               <Users className="h-3.5 w-3.5" />
-              {r.guestsCount}
+              {r.guestsCount > 0 ? r.guestsCount : '-'}
             </span>
           </span>
           {/* Ancho mínimo (< sm): la nacionalidad va junto al inmueble (la línea

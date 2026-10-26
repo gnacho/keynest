@@ -59,6 +59,14 @@ export default function ReservationDetail({ reservation: r }: { reservation: Res
       className="grid gap-4 rounded-xl p-4 lg:grid-cols-3"
       style={{ backgroundColor: 'var(--surface-2)' }}
     >
+      {r.airbnbSyncPending && (
+        <div
+          className="rounded-xl border px-3 py-2 text-xs lg:col-span-3"
+          style={{ borderColor: 'rgb(245 158 11 / 0.3)', backgroundColor: 'rgb(245 158 11 / 0.08)', color: 'var(--text-muted)' }}
+        >
+          {t('res.pendienteSincronizacionHint')}
+        </div>
+      )}
       {/* Huésped: mantiene la nacionalidad visible dentro del detalle (#290) */}
       <div className="flex flex-col gap-1.5">
         <SectionTitle>{t('res.huesped')}</SectionTitle>

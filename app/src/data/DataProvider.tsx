@@ -24,6 +24,7 @@ import type {
   TedeeAccess,
 } from './types';
 import { isSameDay, startOfDay } from '@/lib/format';
+import { isAirbnbSyncUnresolved, reservationStatusFor } from '@/lib/reservation-status';
 
 /* -------------------------------------------------- mapeos API → dominio */
 interface ApiProperty {
@@ -37,6 +38,9 @@ interface ApiReservation {
   pagado?: number; numPagos?: number;
   guests?: number | null;
   guest_location?: string;
+  airbnb_status?: string | null;
+  airbnb_cancellation_status?: string | null;
+  airbnb_sync_state?: string | null;
 }
 
 function mapProperty(row: ApiProperty): Property {
@@ -82,15 +86,23 @@ function mapReservation(row: ApiReservation): Reservation {
     },
     checkIn,
     checkOut,
-    guestsCount: row.guests ?? 2,
+    guestsCount: row.guests ?? 0,
     guestAges: [],
-    status: checkOut.getTime() < Date.now() ? 'completada' : checkIn.getTime() <= Date.now() ? 'activa' : 'confirmada',
+    status: reservationStatusFor({
+      checkIn,
+      checkOut,
+      airbnbStatus: row.airbnb_status ?? '',
+      airbnbCancellationStatus: row.airbnb_cancellation_status ?? '',
+    }),
     amount: row.amount ?? 0,
     pagado: row.pagado ?? 0,
     numPagos: row.numPagos ?? 0,
     notes: row.notes ?? '',
     bookedDate: row.booked_date || '',
     isManual: typeof row.uid === 'string' && row.uid.startsWith('manual-'),
+    airbnbStatus: row.airbnb_status ?? '',
+    airbnbCancellationStatus: row.airbnb_cancellation_status ?? '',
+    airbnbSyncPending: isAirbnbSyncUnresolved(row.airbnb_sync_state),
   };
 }
 

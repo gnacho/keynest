@@ -178,6 +178,19 @@ const MIGRATIONS = [
    );
    CREATE INDEX IF NOT EXISTS idx_res_payments_code ON reservation_payments(confirmation_code);
    CREATE INDEX IF NOT EXISTS idx_res_payments_res ON reservation_payments(reservation_id)`,
+   // 27-31: estado Airbnb y estado del cruce por confirmation_code (#301).
+   // La reserva iCal puede llegar antes que la siguiente instantánea del scraper.
+   // pending = aún no procesada por una instantánea posterior, matched = presente,
+   // missing = una instantánea posterior ya no la contiene. Los estados de Airbnb
+   // se conservan en crudo para no inferir confirmaciones desde campos vacíos.
+   // Una columna por migración: el runner solo puede acreditar la columna que
+   // aparece en el error. Agruparlas dejaría el schema a medias si otra sesión
+   // ya hubiera creado la primera.
+   `ALTER TABLE reservations ADD COLUMN airbnb_status TEXT DEFAULT ''`,
+   `ALTER TABLE reservations ADD COLUMN airbnb_status_localized TEXT DEFAULT ''`,
+   `ALTER TABLE reservations ADD COLUMN airbnb_cancellation_status TEXT DEFAULT ''`,
+   `ALTER TABLE reservations ADD COLUMN airbnb_sync_state TEXT DEFAULT ''`,
+   `ALTER TABLE reservations ADD COLUMN airbnb_synced_at INTEGER`,
 ]
 
 export function migrate(db: DB) {

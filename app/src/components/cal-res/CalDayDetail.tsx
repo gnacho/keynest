@@ -172,7 +172,7 @@ export default function CalDayDetail({ date, open, onOpenChange, properties, onl
               style={{ color: 'var(--text-muted)' }}
             >
               <Users className="h-3.5 w-3.5" />
-              {t('cal.huesped', { count: r.guestsCount })}
+              {r.guestsCount > 0 ? t('cal.huesped', { count: r.guestsCount }) : '-'}
               {ages && <span>· {ages}</span>}
             </p>
 
@@ -189,7 +189,7 @@ export default function CalDayDetail({ date, open, onOpenChange, properties, onl
                 </p>
                 <p>{t('cal.noches', { count: nightsOf(r) })}</p>
               </div>
-              <MoneyText value={r.amount} className="text-base text-emerald-500" />
+              {r.airbnbSyncPending ? <span className="text-base" style={{ color: 'var(--text-muted)' }}>-</span> : <MoneyText value={r.amount} className="text-base text-emerald-500" />}
             </div>
 
             {/* Peticiones especiales */}

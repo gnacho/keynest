@@ -116,4 +116,21 @@ END:VEVENT`,
     const row = db.prepare("SELECT property_id FROM reservations WHERE uid = 'shared@airbnb.com'").get() as { property_id: string };
     expect(row.property_id).toBe('p1');
   });
+
+  it('marca una reserva nueva del feed como pendiente de sincronización Airbnb', async () => {
+    db.prepare("DELETE FROM reservations").run();
+    (fetchIcs as any).mockResolvedValue(feedWith([
+      'BEGIN:VEVENT',
+      `DTSTART;VALUE=DATE:${icsDT(daysFrom(10))}`,
+      `DTEND;VALUE=DATE:${icsDT(daysFrom(13))}`,
+      'UID:nueva-sync-state@airbnb.com',
+      'SUMMARY:Reserved',
+      'END:VEVENT',
+    ]));
+
+    await syncAll(db);
+
+    const row = db.prepare("SELECT airbnb_sync_state FROM reservations WHERE uid = 'nueva-sync-state@airbnb.com'").get() as { airbnb_sync_state: string };
+    expect(row.airbnb_sync_state).toBe('pending');
+  });
 });
