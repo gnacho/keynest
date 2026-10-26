@@ -65,7 +65,7 @@ describe('issue #207 — gastos persistidos en BD', () => {
     const hasExp = (db2.prepare("SELECT COUNT(*) n FROM sqlite_master WHERE type='table' AND name='expenses'").get() as { n: number }).n;
     expect(hasExp).toBe(1);
     const maxV = (db2.prepare('SELECT MAX(version) v FROM schema_version').get() as { v: number | null }).v;
-    expect(maxV).toBe(26);
+    expect(maxV).toBe(27);
     const versions = (db2.prepare('SELECT version FROM schema_version ORDER BY version').all() as Array<{ version: number }>).map((r) => r.version);
     expect(versions).toContain(20);
     db2.close();

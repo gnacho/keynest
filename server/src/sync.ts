@@ -31,15 +31,16 @@ export async function syncAll(db: DB, { onNews } = {} as { onNews?: (name: strin
       const prevUids = new Set((db.prepare('SELECT uid FROM reservations WHERE property_id = ?').all(p.id) as Array<{ uid: string }>).map((r) => r.uid))
 
       const upsert = db.prepare(`
-        INSERT INTO reservations (id, property_id, uid, checkin, checkout, summary, confirmation_code, phone_last4, created_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        INSERT INTO reservations (id, property_id, uid, checkin, checkout, summary, confirmation_code, phone_last4, created_at, airbnb_sync_state)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending')
         ON CONFLICT(uid) DO UPDATE SET
           property_id = reservations.property_id,
           checkin = excluded.checkin,
           checkout = excluded.checkout,
           summary = excluded.summary,
           confirmation_code = excluded.confirmation_code,
-          phone_last4 = excluded.phone_last4
+          phone_last4 = excluded.phone_last4,
+          airbnb_sync_state = CASE WHEN reservations.airbnb_sync_state = '' THEN 'pending' ELSE reservations.airbnb_sync_state END
       `)
       const tx = db.transaction(() => {
         for (const i of items) {

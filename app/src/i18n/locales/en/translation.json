@@ -188,6 +188,8 @@
     "huespedAbrev": "Gsts.",
     "estado": "Status",
     "importe": "Amount",
+    "pendienteSincronizacion": "Pending sync",
+    "pendienteSincronizacionHint": "This reservation is in the Airbnb calendar, but the scraper has not sent its details yet. The guest name, guest count and amount will be filled in on the next sync.",
     "importeEur": "Amount (€)",
     "sinReservas": "No reservations match these filters",
     "limpiarFiltros": "Clear filters",
@@ -234,7 +236,8 @@
   },
   "estadoReserva": {
     "confirmada": "Confirmed",
-    "pendiente": "Pending",
+    "pendiente": "Pending confirmation",
+    "pendienteCancelacion": "Pending cancellation",
     "completada": "Completed",
     "activa": "Active"
   },

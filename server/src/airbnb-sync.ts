@@ -140,6 +140,8 @@ export function aplicarCruce(db: DB) {
   const dir = airbnbDataDir()
   const reservas = leerJSON(path.join(dir, 'airbnb_reservas.json'))
   const sesion = leerJSON(path.join(dir, 'airbnb_sesion.json'))
+  const parsedSnapshot = Date.parse(reservas?.extraido || '')
+  const snapshotMs = Number.isFinite(parsedSnapshot) ? parsedSnapshot : Date.now()
 
   const stmtGet = db.prepare('SELECT id FROM reservations WHERE confirmation_code = ?')
   const stmtUpd = db.prepare(`
@@ -148,7 +150,24 @@ export function aplicarCruce(db: DB) {
       amount = ?,
       guest_name = CASE WHEN TRIM(COALESCE(guest_name, '')) = '' THEN COALESCE(?, guest_name) ELSE guest_name END,
       booked_date = CASE WHEN COALESCE(booked_date, '') = '' THEN COALESCE(?, booked_date) ELSE booked_date END,
-      guest_location = CASE WHEN TRIM(COALESCE(guest_location, '')) = '' THEN COALESCE(?, guest_location) ELSE guest_location END
+      guest_location = CASE WHEN TRIM(COALESCE(guest_location, '')) = '' THEN COALESCE(?, guest_location) ELSE guest_location END,
+      airbnb_status = COALESCE(?, airbnb_status),
+      airbnb_status_localized = COALESCE(?, airbnb_status_localized),
+      airbnb_cancellation_status = COALESCE(?, airbnb_cancellation_status),
+      airbnb_sync_state = 'matched',
+      airbnb_synced_at = ?
+    WHERE id = ? AND (airbnb_synced_at IS NULL OR airbnb_synced_at <= ?)
+  `)
+  const stmtCandidates = db.prepare(`
+    SELECT id, confirmation_code FROM reservations
+    WHERE confirmation_code <> ''
+      AND checkout >= date('now')
+      AND created_at <= ?
+      AND (uid LIKE '%@airbnb.com' OR summary = 'Reserved' OR airbnb_sync_state IN ('pending', 'matched', 'missing'))
+      AND (airbnb_synced_at IS NULL OR airbnb_synced_at < ?)
+  `)
+  const stmtMissing = db.prepare(`
+    UPDATE reservations SET airbnb_sync_state = 'missing', airbnb_synced_at = ?
     WHERE id = ?
   `)
   let cruzadas = 0
@@ -156,12 +175,30 @@ export function aplicarCruce(db: DB) {
 
   if (reservas && Array.isArray(reservas.reservas)) {
     const tx = db.transaction(() => {
+      const codes = new Set<string>()
       for (const r of reservas.reservas) {
         if (!r || !r.confirmation_code) continue
+        codes.add(r.confirmation_code)
         const fila = stmtGet.get(r.confirmation_code) as { id: string } | undefined
         if (!fila) { sinMatch++; continue }
-        stmtUpd.run(r.guests ?? null, r.amount ?? null, r.guest_name ?? null, r.booked_date ?? null, r.guest_location ?? null, fila.id)
-        cruzadas++
+        const result = stmtUpd.run(
+          r.guests ?? null,
+          r.amount ?? null,
+          r.guest_name ?? null,
+          r.booked_date ?? null,
+          r.guest_location ?? null,
+          r.status ?? null,
+          r.status_localized ?? null,
+          r.cancellation_status ?? null,
+          snapshotMs,
+          fila.id,
+          snapshotMs,
+        )
+        if (result.changes > 0) cruzadas++
+      }
+      const candidates = stmtCandidates.all(snapshotMs, snapshotMs) as Array<{ id: string; confirmation_code: string }>
+      for (const fila of candidates) {
+        if (!codes.has(fila.confirmation_code)) stmtMissing.run(snapshotMs, fila.id)
       }
     })
     tx()

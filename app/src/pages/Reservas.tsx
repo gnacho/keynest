@@ -39,6 +39,7 @@ import { useData } from '@/data/useData';
 import type { Reservation } from '@/data/types';
 import { addDays, fmtDateShort, fmtDateShortYear, isSameDay, startOfDay } from '@/lib/format';
 import { cachedUser } from '@/lib/auth';
+import { reservationStatusKey, reservationStatusTone } from '@/lib/reservation-status';
 
 /** Fecha de un rango: con año cuando entrada y salida cruzan años (30 dic 2026 → 10 ene 2027) */
 const fmtRangeDate = (a: Date, b: Date, d: Date) =>
@@ -561,13 +562,16 @@ export default function Reservas() {
                     {dateCell(r.checkOut, 'out')}
                     <span className="flex items-center gap-1 text-[13px]" style={{ color: 'var(--text-muted)' }}>
                       <Users className="h-3.5 w-3.5" />
-                      <span className="tnum">{r.guestsCount}</span>
+                      <span className="tnum">{r.guestsCount > 0 ? r.guestsCount : '-'}</span>
                     </span>
                     <span>
-                      <StatusBadge label={t(`estadoReserva.${r.status}`)} />
+                      <StatusBadge
+                        label={t(reservationStatusKey(r.status, r.airbnbSyncPending))}
+                        tone={reservationStatusTone(r.status, r.airbnbSyncPending)}
+                      />
                     </span>
                     <span className="text-right">
-                      <MoneyText value={r.amount} className="text-sm text-emerald-500" />
+                      {r.airbnbSyncPending ? <span className="text-sm" style={{ color: 'var(--text-muted)' }}>-</span> : <MoneyText value={r.amount} className="text-sm text-emerald-500" />}
                     </span>
                     <ChevronDown
                       className={cn(
@@ -674,17 +678,20 @@ export default function Reservas() {
                           <span className="truncate text-sm font-semibold">{r.guest.name}</span>
                           <span className="flex shrink-0 items-center gap-0.5 text-xs" style={{ color: 'var(--text-muted)' }}>
                             <Users className="h-3.5 w-3.5" />
-                            <span className="tnum">{r.guestsCount}</span>
+                            <span className="tnum">{r.guestsCount > 0 ? r.guestsCount : '-'}</span>
                           </span>
                         </span>
                       </span>
-                      <StatusBadge label={t(`estadoReserva.${r.status}`)} />
+                      <StatusBadge
+                        label={t(reservationStatusKey(r.status, r.airbnbSyncPending))}
+                        tone={reservationStatusTone(r.status, r.airbnbSyncPending)}
+                      />
                     </span>
                     {/* Fila 2: inmueble + importe en la misma horizontal */}
                     <span className="flex items-center gap-2">
                       <PropertyAvatar property={p} size={28} />
                       <span className="min-w-0 flex-1 truncate text-[13px] font-medium">{p.name}</span>
-                      <MoneyText value={r.amount} className="shrink-0 text-sm text-emerald-500" />
+                      {r.airbnbSyncPending ? <span className="shrink-0 text-sm" style={{ color: 'var(--text-muted)' }}>-</span> : <MoneyText value={r.amount} className="shrink-0 text-sm text-emerald-500" />}
                     </span>
                     {/* Fila 3: fechas + noches + peticiones + chevron expand */}
                     <span className="flex items-center gap-1.5 font-display text-[13px] font-medium">

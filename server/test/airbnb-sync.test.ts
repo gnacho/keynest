@@ -34,17 +34,27 @@ afterEach(() => {
   vi.clearAllMocks()
 })
 
-function escribeReservas(reservas: Array<Record<string, any>>) {
-  writeFileSync(join(dataDir, 'airbnb_reservas.json'), JSON.stringify({ extraido: new Date().toISOString(), reservas }))
+function escribeReservas(reservas: Array<Record<string, any>>, extraido = new Date().toISOString()) {
+  writeFileSync(join(dataDir, 'airbnb_reservas.json'), JSON.stringify({ extraido, reservas }))
 }
 function escribeSesion(viva: boolean, detalle: string | null = null) {
   writeFileSync(join(dataDir, 'airbnb_sesion.json'), JSON.stringify({ viva, detalle: detalle ?? null }))
 }
 function insertaReserva(id: string, code: string, extra: Record<string, any> = {}) {
   db.prepare(
-    `INSERT INTO reservations (id, property_id, uid, checkin, checkout, summary, confirmation_code, guest_name, booked_date, created_at)
-     VALUES (?, 'p1', ?, '2026-08-10', '2026-08-12', 'A', ?, ?, ?, ?)`,
-  ).run(id, `uid-${id}`, code, extra.guest_name ?? '', extra.booked_date ?? '', Date.now())
+    `INSERT INTO reservations (id, property_id, uid, checkin, checkout, summary, confirmation_code, guest_name, booked_date, created_at, airbnb_sync_state)
+     VALUES (?, 'p1', ?, ?, ?, 'A', ?, ?, ?, ?, ?)`,
+  ).run(
+    id,
+    extra.uid ?? `uid-${id}`,
+    extra.checkin ?? '2026-08-10',
+    extra.checkout ?? '2026-08-12',
+    code,
+    extra.guest_name ?? '',
+    extra.booked_date ?? '',
+    extra.created_at ?? Date.now(),
+    extra.airbnb_sync_state ?? '',
+  )
 }
 
 describe('aplicarCruce', () => {
@@ -115,6 +125,95 @@ describe('aplicarCruce', () => {
     expect(f6.guest_location).toBe('Berlin, Germany')
     const f7 = db.prepare('SELECT guest_location FROM reservations WHERE id = ?').get('res-7') as { guest_location: string }
     expect(f7.guest_location).toBe('')
+  })
+
+  it('mantiene pendiente una reserva iCal creada después de la instantánea', () => {
+    const created = Date.parse('2026-10-26T19:14:21.397Z')
+    insertaReserva('res-nueva', 'HM-NUEVA', {
+      uid: 'nueva@airbnb.com',
+      created_at: created,
+      checkin: '2026-11-25',
+      checkout: '2027-01-25',
+      airbnb_sync_state: 'pending',
+    })
+    escribeReservas([], '2026-10-26T19:04:13.870Z')
+
+    aplicarCruce(db)
+
+    const fila = db.prepare('SELECT airbnb_sync_state, airbnb_synced_at FROM reservations WHERE id = ?').get('res-nueva') as {
+      airbnb_sync_state: string
+      airbnb_synced_at: number | null
+    }
+    expect(fila.airbnb_sync_state).toBe('pending')
+    expect(fila.airbnb_synced_at).toBeNull()
+  })
+
+  it('marca missing solo cuando una instantánea posterior no contiene el código', () => {
+    const created = Date.parse('2026-10-26T19:14:21.397Z')
+    const extracted = Date.parse('2026-10-26T20:04:13.870Z')
+    insertaReserva('res-ausente', 'HM-AUSENTE', {
+      uid: 'ausente@airbnb.com',
+      created_at: created,
+      checkin: '2026-11-25',
+      checkout: '2027-01-25',
+      airbnb_sync_state: 'pending',
+    })
+    escribeReservas([], '2026-10-26T20:04:13.870Z')
+
+    aplicarCruce(db)
+
+    const fila = db.prepare('SELECT airbnb_sync_state, airbnb_synced_at FROM reservations WHERE id = ?').get('res-ausente') as {
+      airbnb_sync_state: string
+      airbnb_synced_at: number | null
+    }
+    expect(fila.airbnb_sync_state).toBe('missing')
+    expect(fila.airbnb_synced_at).toBe(extracted)
+  })
+
+  it('guarda el estado real de Airbnb al cruzar la reserva', () => {
+    const extracted = Date.parse('2026-10-26T20:04:13.870Z')
+    insertaReserva('res-estado', 'HM-ESTADO', {
+      uid: 'estado@airbnb.com',
+      created_at: Date.parse('2026-10-26T19:14:21.397Z'),
+    })
+    escribeReservas([{
+      confirmation_code: 'HM-ESTADO',
+      guests: 3,
+      amount: 6020.25,
+      status: 'request',
+      status_localized: 'Pendiente',
+      cancellation_status: 'PENDING_REVIEW',
+    }], '2026-10-26T20:04:13.870Z')
+
+    aplicarCruce(db)
+
+    const fila = db.prepare(`SELECT airbnb_sync_state, airbnb_synced_at, airbnb_status,
+      airbnb_status_localized, airbnb_cancellation_status, guests, amount
+      FROM reservations WHERE id = ?`).get('res-estado') as Record<string, any>
+    expect(fila).toMatchObject({
+      airbnb_sync_state: 'matched',
+      airbnb_synced_at: extracted,
+      airbnb_status: 'request',
+      airbnb_status_localized: 'Pendiente',
+      airbnb_cancellation_status: 'PENDING_REVIEW',
+      guests: 3,
+      amount: 6020.25,
+    })
+  })
+
+  it('no hace retroceder una reserva sincronizada con una instantánea antigua', () => {
+    insertaReserva('res-reciente', 'HM-RECIENTE', {
+      uid: 'reciente@airbnb.com',
+      created_at: Date.parse('2026-10-26T19:14:21.397Z'),
+    })
+    escribeReservas([{ confirmation_code: 'HM-RECIENTE', status: 'upcoming', guests: 3 }], '2026-10-26T20:04:13.870Z')
+    aplicarCruce(db)
+    escribeReservas([], '2026-10-26T19:04:13.870Z')
+
+    aplicarCruce(db)
+
+    const fila = db.prepare('SELECT airbnb_sync_state, airbnb_status, guests FROM reservations WHERE id = ?').get('res-reciente') as Record<string, any>
+    expect(fila).toMatchObject({ airbnb_sync_state: 'matched', airbnb_status: 'upcoming', guests: 3 })
   })
 })
 
