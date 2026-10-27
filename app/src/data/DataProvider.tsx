@@ -240,6 +240,9 @@ interface BootstrapData {
   users?: AppUser[];
   demo?: boolean;
   demoEnabled?: boolean;
+}
+
+interface TedeeBootstrapData {
   locks?: ApiTedeeLock[];
   accesses?: ApiTedeeAccess[];
 }
@@ -312,15 +315,29 @@ export default function DataProvider({ children }: { children: ReactNode }) {
   const monthlyFinance = useRef<MonthlyFinance[]>([]);
   const userSeq = useRef(1);
 
+  const refreshTedee = useCallback(async () => {
+    try {
+      const data = await api<TedeeBootstrapData>('/api/tedee/bootstrap');
+      locks.current = (data.locks ?? []).map(mapLock);
+      accesses.current = (data.accesses ?? []).map(mapAccess);
+      bump();
+    } catch {
+      return
+    }
+  }, []);
+
   const refresh = useCallback(async () => {
     if (!isAuthed()) {
       setLoading(false);
       return;
     }
+    void refreshTedee();
     try {
-      const user = await fetchMe();
+      const [user, data] = await Promise.all([
+        fetchMe(),
+        api<BootstrapData>('/api/bootstrap'),
+      ]);
       if (user?.language) applyLanguage(user.language);
-      const data = await api<BootstrapData>('/api/bootstrap');
       properties.current = data.properties.map(mapProperty);
       reservations.current = data.reservations.map(mapReservation);
       cleanings.current = (data.cleanings ?? []).map(mapCleaning);
@@ -339,8 +356,6 @@ export default function DataProvider({ children }: { children: ReactNode }) {
       };
       syncMap.current = data.sync ?? {};
       users.current = data.users ?? [];
-      locks.current = (data.locks ?? []).map(mapLock);
-      accesses.current = (data.accesses ?? []).map(mapAccess);
       setIsDemo(Boolean(data.demo));
       bump();
     } catch {
@@ -348,7 +363,7 @@ export default function DataProvider({ children }: { children: ReactNode }) {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [refreshTedee]);
 
   useEffect(() => {
     void refresh();
