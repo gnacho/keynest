@@ -545,9 +545,11 @@ guarded.get('/bootstrap', async (c) => {
     })(),
   }
   const users = db.prepare('SELECT id, username AS name, phone, role FROM users').all()
-  // Tedee (best-effort): cerraduras asignadas a inmuebles (#277: el resto se
-  // oculta) + accesos reales desde la cloud; si falla o no está configurado,
-  // arrays vacíos (la página Tedee muestra vacío).
+  return c.json({ properties, reservations, cleanings, maintenance, people, expenses, categories: JSON.parse(categories), config: { ...settings }, sync: syncStatus(db), users, demo: c.get('user').is_demo, demoEnabled: auth.demoEnabled(prodDb) })
+})
+
+guarded.get('/tedee/bootstrap', async (c) => {
+  const db = c.get('db')
   let locks: TedeeLock[] = []
   let accesses: TedeeAccess[] = []
   try {
@@ -555,7 +557,7 @@ guarded.get('/bootstrap', async (c) => {
     locks = lk
     accesses = ac
   } catch { /* tedee no configurado o caído */ }
-  return c.json({ properties, reservations, cleanings, maintenance, people, expenses, categories: JSON.parse(categories), config: { ...settings }, sync: syncStatus(db), users, locks, accesses, demo: c.get('user').is_demo, demoEnabled: auth.demoEnabled(prodDb) })
+  return c.json({ locks, accesses })
 })
 
 const propertySchema = z.object({
