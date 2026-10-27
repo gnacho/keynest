@@ -230,7 +230,7 @@ export default function UpdateDialog({ open, onClose }: { open: boolean; onClose
               {t('update.dialog.desc')}
             </p>
             {changelogLines.length > 0 && (
-              <div className="flex flex-col gap-1.5">
+              <div className="flex flex-col gap-1.5 md:min-h-0 md:flex-1">
                 <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">
                   {t('update.dialog.changelogTitle')}
                 </p>

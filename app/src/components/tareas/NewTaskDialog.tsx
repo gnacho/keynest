@@ -376,7 +376,7 @@ export function NewTaskDialog({
               forceMount
               value="tarea"
               inert={tab !== 'tarea'}
-              className="flex max-h-[62vh] flex-col gap-3 overflow-y-auto pr-1 data-[state=inactive]:invisible data-[state=inactive]:max-h-0 data-[state=inactive]:overflow-hidden sm:col-span-2 sm:col-start-1 sm:row-start-2 sm:data-[state=inactive]:max-h-none sm:data-[state=inactive]:overflow-visible"
+              className="flex max-h-[62vh] flex-col gap-3 overflow-y-auto -m-1 p-1 data-[state=inactive]:invisible data-[state=inactive]:max-h-0 data-[state=inactive]:overflow-hidden sm:col-span-2 sm:col-start-1 sm:row-start-2 sm:data-[state=inactive]:max-h-none sm:data-[state=inactive]:overflow-visible"
             >
               {campoTitulo}
               {campoNotas}
@@ -386,7 +386,7 @@ export function NewTaskDialog({
               forceMount
               value="detalles"
               inert={tab !== 'detalles'}
-              className="grid max-h-[62vh] grid-cols-1 gap-3 overflow-y-auto pr-1 data-[state=inactive]:invisible data-[state=inactive]:max-h-0 data-[state=inactive]:overflow-hidden sm:col-span-2 sm:col-start-1 sm:row-start-2 sm:grid-cols-2 sm:data-[state=inactive]:max-h-none sm:data-[state=inactive]:overflow-visible"
+              className="grid max-h-[62vh] grid-cols-1 gap-3 overflow-y-auto -m-1 p-1 data-[state=inactive]:invisible data-[state=inactive]:max-h-0 data-[state=inactive]:overflow-hidden sm:col-span-2 sm:col-start-1 sm:row-start-2 sm:grid-cols-2 sm:data-[state=inactive]:max-h-none sm:data-[state=inactive]:overflow-visible"
             >
               {campoInmueble}
               {campoCategoria}
@@ -397,7 +397,7 @@ export function NewTaskDialog({
             </TabsContent>
           </Tabs>
         ) : (
-          <div className="grid max-h-[62vh] grid-cols-1 gap-3 overflow-y-auto pr-1 sm:grid-cols-2">
+          <div className="grid max-h-[62vh] grid-cols-1 gap-3 overflow-y-auto -m-1 p-1 sm:grid-cols-2">
             {campoInmueble}
             {campoCategoria}
             {campoTitulo}
