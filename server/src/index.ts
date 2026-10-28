@@ -5,6 +5,7 @@ import crypto from 'node:crypto'
 import { serve } from '@hono/node-server'
 import { serveStatic } from '@hono/node-server/serve-static'
 import { isOwnedStoredPhoto, isSafeStoredPhotoPath, removeStoredPhoto } from './photo-path.js'
+import { assignedSql, isAssignedTo, personProperties } from './person-scope.js'
 import { migrateLegacySecrets } from './secrets-migration.js'
 import { ensureExternalSecrets } from './external-secrets.js'
 import { streamSSE } from 'hono/streaming'
@@ -453,10 +454,14 @@ app.put('/api/config/tedee', auth.requireAdmin(prodDb, demoDb), async (c) => {
   return c.json({ ok: true })
 })
 
-/* Test de conexión con el bridge + lista de cerraduras */
+/* Test de conexión con el bridge + lista de cerraduras.
+   Usa la BD de la sesión: antes leía siempre prodDb, así que una sesión de demo
+   devolvía el identificador de las cerraduras reales. En demo no hay bridge
+   propio, así que se responde sin salir a la red. */
 app.get('/api/tedee/test', auth.requireAuth(prodDb, demoDb), async (c) => {
+  if (c.get('user').is_demo) return c.json({ ok: false, code: 'demo' })
   try {
-    const locks = await tedeeLocks(prodDb)
+    const locks = await tedeeLocks(c.get('db'))
     return c.json({ ok: true, locks })
   } catch (err) {
     const code = (err as Error).message === 'not-configured' ? 'not-configured' : (err as Error).message.startsWith('http-') ? (err as Error).message : 'fetch'
@@ -1166,13 +1171,13 @@ function taskByToken(db: DB, token: string): Row | undefined {
 app.get('/api/t/:token', (c) => {
   const person = personByToken(prodDb, c.req.param('token'))
   if (person) {
-    const props = (prodDb.prepare('SELECT * FROM properties').all() as Row[])
-      .map((p) => ({ id: p.id, name: p.name, address: p.address, photo: p.photo, instructions: p.instructions, checklist: JSON.parse(p.checklist || '[]') }))
+    // Solo los inmuebles con limpieza vigente asignada a esta persona.
+    const props = personProperties(prodDb, person.id)
     const cleanings = (prodDb.prepare(
-      `SELECT * FROM cleanings
-       WHERE status != 'archivada'
-          AND EXISTS (SELECT 1 FROM json_each(assignee_ids) WHERE value = ?)
-       ORDER BY date`,
+      `SELECT * FROM cleanings x
+       WHERE x.status != 'archivada'
+         AND ${assignedSql('x')}
+       ORDER BY x.date`,
     ).all(person.id) as Row[])
       .map((cl) => hydrateCleaning(cl as CleaningRow, props))
     return c.json({ type: 'person', person, cleanings, properties: props })
@@ -1251,10 +1256,7 @@ app.post('/api/t/:token/cleanings/:id/photo', async (c) => {
   if (!person) return c.json({ error: 'enlace no válido' }, 404)
   const cl = prodDb.prepare('SELECT * FROM cleanings WHERE id = ?').get(c.req.param('id')) as Row | undefined
   if (!cl) return c.json({ error: 'no encontrada' }, 404)
-  const assigned = prodDb.prepare(
-    'SELECT 1 ok FROM json_each((SELECT assignee_ids FROM cleanings WHERE id = ?)) WHERE value = ?',
-  ).get(cl.id, person.id)
-  if (!assigned) return c.json({ error: 'no asignada' }, 403)
+  if (!isAssignedTo(cl.assignee_ids, person.id)) return c.json({ error: 'no asignada' }, 403)
   const body = await c.req.parseBody().catch(() => null)
   const file = body?.photo
   if (!file || !(file instanceof File)) return c.json({ error: 'falta el fichero (campo photo)' }, 400)
@@ -1274,7 +1276,7 @@ app.post('/api/t/:token/cleanings/:id', async (c) => {
   if (!person) return c.json({ error: 'enlace no válido' }, 404)
   const cl = prodDb.prepare('SELECT * FROM cleanings WHERE id = ?').get(c.req.param('id')) as Row | undefined
   if (!cl) return c.json({ error: 'no encontrada' }, 404)
-  if (!JSON.parse(cl.assignee_ids || '[]').includes(person.id)) return c.json({ error: 'no asignada' }, 403)
+  if (!isAssignedTo(cl.assignee_ids, person.id)) return c.json({ error: 'no asignada' }, 403)
   const body = await c.req.json().catch(() => null)
   const parsed = tokenActionSchema.safeParse(body)
   if (!parsed.success) return c.json({ error: 'formato inválido' }, 400)
