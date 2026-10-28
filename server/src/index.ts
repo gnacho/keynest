@@ -5,6 +5,7 @@ import crypto from 'node:crypto'
 import { serve } from '@hono/node-server'
 import { serveStatic } from '@hono/node-server/serve-static'
 import { isOwnedStoredPhoto, isSafeStoredPhotoPath, removeStoredPhoto } from './photo-path.js'
+import { registerMediaRoutes, signMediaPayload } from './media.js'
 import { workOrderPayload } from './work-order.js'
 import { assignedSql, isAssignedTo, personProperties } from './person-scope.js'
 import { migrateLegacySecrets } from './secrets-migration.js'
@@ -1191,7 +1192,7 @@ app.get('/api/t/:token', (c) => {
        ORDER BY x.date`,
     ).all(person.id) as Row[])
       .map((cl) => hydrateCleaning(cl as CleaningRow, props))
-    return c.json({ type: 'person', person, cleanings, properties: props })
+    return c.json(signMediaPayload({ type: 'person', person, cleanings, properties: props }))
   }
   // Token POR ORDEN de trabajo (proveedor): la orden + su inmueble + su asignado
   const task = taskByToken(prodDb, c.req.param('token'))
@@ -1200,7 +1201,7 @@ app.get('/api/t/:token', (c) => {
   const assignee = task.assignee_id
     ? prodDb.prepare('SELECT id, name, phone, specialty FROM people WHERE id = ?').get(task.assignee_id)
     : null
-  return c.json(workOrderPayload(task, prop, assignee))
+  return c.json(signMediaPayload(workOrderPayload(task, prop, assignee)))
 })
 
 /* Acciones del proveedor sobre la orden (checks / fotos / finalizar) */
@@ -1230,7 +1231,7 @@ app.post('/api/t/:token/task', async (c) => {
     prodDb.prepare("UPDATE maintenance_tasks SET status = 'asignada' WHERE id = ?").run(task.id)
   }
   const updated = prodDb.prepare('SELECT * FROM maintenance_tasks WHERE id = ?').get(task.id) as Row
-  return c.json({ ok: true, task: { ...updated, checks: JSON.parse(updated.checks || '[]'), photos: JSON.parse(updated.photos || '[]'), token_hash: undefined } })
+  return c.json(signMediaPayload({ ok: true, task: { ...updated, checks: JSON.parse(updated.checks || '[]'), photos: JSON.parse(updated.photos || '[]'), token_hash: undefined } }))
 })
 
 app.post('/api/t/:token/task/photo', async (c) => {
@@ -1253,7 +1254,7 @@ app.post('/api/t/:token/task/photo', async (c) => {
   photos.push(`/photos/${filename}`)
   prodDb.prepare('UPDATE maintenance_tasks SET photos = ? WHERE id = ?').run(JSON.stringify(photos), task.id)
   const updated = prodDb.prepare('SELECT * FROM maintenance_tasks WHERE id = ?').get(task.id) as Row
-  return c.json({ ok: true, task: { ...updated, checks: JSON.parse(updated.checks || '[]'), photos: JSON.parse(updated.photos || '[]'), token_hash: undefined } })
+  return c.json(signMediaPayload({ ok: true, task: { ...updated, checks: JSON.parse(updated.checks || '[]'), photos: JSON.parse(updated.photos || '[]'), token_hash: undefined } }))
 })
 
 app.post('/api/t/:token/cleanings/:id/photo', async (c) => {
@@ -1268,7 +1269,7 @@ app.post('/api/t/:token/cleanings/:id/photo', async (c) => {
   if (!file || !(file instanceof File)) return c.json({ error: 'falta el fichero (campo photo)' }, 400)
   const res = await saveCleaningPhoto(prodDb, cl.id, file)
   if (res.error) return c.json({ error: res.error }, res.status)
-  return c.json({ ok: true, cleaning: res.cleaning })
+  return c.json(signMediaPayload({ ok: true, cleaning: res.cleaning }))
 })
 
 const tokenActionSchema = z.object({
@@ -1307,7 +1308,7 @@ app.post('/api/t/:token/cleanings/:id', async (c) => {
     syncCleaningExpense(prodDb, prodDb.prepare('SELECT * FROM cleanings WHERE id = ?').get(cl.id) as CleaningRow)
   }
   const updated = prodDb.prepare('SELECT * FROM cleanings WHERE id = ?').get(cl.id)
-  return c.json({ ok: true, cleaning: updated })
+  return c.json(signMediaPayload({ ok: true, cleaning: updated }))
 })
 
 const PHOTO_MIME: Record<string, string> = { 'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'webp' }
@@ -1530,8 +1531,7 @@ app.use('/*', (c, next) => {
   return next()
 })
 app.use('/assets/*', serveStatic({ root: config.staticDir }))
-app.use('/photos/*', serveStatic({ root: config.dataDir }))
-app.use('/avatars/*', serveStatic({ root: config.dataDir }))
+registerMediaRoutes(app, { dataDir: config.dataDir, prodDb, demoDb })
 app.use('/*', serveStatic({ root: config.staticDir }))
 // index.html se lee EN CADA PETICIÓN: tras un deploy (rsync/tar) no hace falta reiniciar
 app.get('*', (c) => {
