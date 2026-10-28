@@ -24,8 +24,10 @@ import {
 
 let dir: string;
 let db: DB;
+const oldSessionSecret = process.env.SESSION_SECRET;
 
 beforeAll(async () => {
+  process.env.SESSION_SECRET = 's'.repeat(64);
   dir = mkdtempSync(join(tmpdir(), 'keynest-test-'));
   db = openDb(dir, 'test.db');
   await ensureBootstrapAdmin(db, { authUser: 'admin', authPass: 'secreto123' });
@@ -34,6 +36,8 @@ beforeAll(async () => {
 afterAll(() => {
   db.close();
   rmSync(dir, { recursive: true, force: true });
+  if (oldSessionSecret === undefined) delete process.env.SESSION_SECRET;
+  else process.env.SESSION_SECRET = oldSessionSecret;
 });
 
 describe('auth (base común)', () => {
@@ -193,5 +197,25 @@ describe('re-autenticación persistente (#290)', () => {
     for (let i = 0; i < 8; i++) createRestoreToken(db, lauraId());
     const n = (db.prepare('SELECT COUNT(*) n FROM login_tokens WHERE user_id = ?').get(lauraId()) as { n: number }).n;
     expect(n).toBeLessThanOrEqual(5);
+  });
+
+  it('changePassword revokes restore tokens for the user', async () => {
+    const user = await createUser(db, { username: 'restore-change', password: 'old-password', role: 'admin' });
+    if (!user) throw new Error('fixture user was not created');
+    const token = createRestoreToken(db, user.id);
+
+    expect(await changePassword(db, user.id, 'old-password', 'new-password')).toBe('ok');
+
+    expect(restoreFromToken(db, ctx(), token)).toBeNull();
+  });
+
+  it('setUserPassword revokes restore tokens for the user', async () => {
+    const user = await createUser(db, { username: 'restore-reset', password: 'old-password', role: 'user' });
+    if (!user) throw new Error('fixture user was not created');
+    const token = createRestoreToken(db, user.id);
+
+    expect(await setUserPassword(db, user.id, 'new-password')).toBe(true);
+
+    expect(restoreFromToken(db, ctx(), token)).toBeNull();
   });
 });

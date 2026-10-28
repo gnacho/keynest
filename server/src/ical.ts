@@ -4,6 +4,8 @@
  * "Phone Number (Last 4 Digits): NNNN").
  * Los eventos "Airbnb (Not available)" (bloqueos manuales) se ignoran de momento.
  */
+import { fetchPublicText } from './outbound.js'
+
 export interface IcsEvent {
   uid?: string
   dtstart?: string
@@ -80,7 +82,5 @@ export function icsToReservations(events: IcsEvent[]): IcsReservation[] {
 }
 
 export async function fetchIcs(url: string): Promise<string> {
-  const res = await fetch(url, { redirect: 'follow', signal: AbortSignal.timeout(20000) })
-  if (!res.ok) throw new Error(`HTTP ${res.status}`)
-  return res.text()
+  return fetchPublicText(url, { timeoutMs: 20000, maxBytes: 5 * 1024 * 1024 })
 }

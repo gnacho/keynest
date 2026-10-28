@@ -13,7 +13,7 @@ import { hoyLocal } from './alerts.js'
  * NUNCA se llama en el primer sync OK del inmueble (import inicial = todo
  * "nuevo" → anti-spam; se detecta por el kv sync_<id> con ok previo).
  */
-export async function syncAll(db: DB, { onNews } = {} as { onNews?: (name: string, items: IcsReservation[]) => void }) {
+export async function syncAll(db: DB, { onNews, fetchIcs: fetchFeed = fetchIcs } = {} as { onNews?: (name: string, items: IcsReservation[]) => void; fetchIcs?: typeof fetchIcs }) {
   const props = db.prepare("SELECT id, name, ical_url FROM properties WHERE ical_url != ''").all() as Array<{ id: string; name: string; ical_url: string }>
   const results: Array<Record<string, unknown>> = []
   for (const p of props) {
@@ -23,7 +23,7 @@ export async function syncAll(db: DB, { onNews } = {} as { onNews?: (name: strin
       prevOk = JSON.parse(kvGet(db, key) || '{}').ok === true
     } catch { /* noop */ }
     try {
-      const text = await fetchIcs(p.ical_url)
+      const text = await fetchFeed(p.ical_url)
       const events = parseIcs(text)
       const items = icsToReservations(events)
       const now = Date.now()

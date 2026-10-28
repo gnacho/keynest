@@ -118,7 +118,7 @@ curl -fsSL https://raw.githubusercontent.com/gnacho/keynest/main/install.sh | sh
 ```
 
 The installer is plain, readable shell: [inspect it first](install.sh). It
-installs the versioned Node 22 runtime and the latest release (frontend
+installs the versioned Node 24 runtime and the latest release (frontend
 pre-built, production `node_modules` per arch, no compiler needed on the
 server) as a sandboxed systemd service under `/opt/keynest`, capistrano-style
 (`releases/` + `current` symlink). Data lives in `/var/lib/keynest`, config
@@ -139,7 +139,10 @@ The service reads its environment (installer: `/etc/keynest/env`):
 | `DATA_DIR` | `/var/lib/keynest` | SQLite files + uploads. |
 | `STATIC_DIR` | `/opt/keynest/current/dist` | Built frontend to serve. |
 | `AUTH_USER` / `AUTH_PASS` | - | Bootstrap admin on first boot. |
+| `ENC_KEY` / `SESSION_SECRET` | generated | External encryption and session keys. |
 | `SYNC_INTERVAL_MS` | `900000` | iCal sync interval (min 60000). |
+
+Fresh installs generate both secrets. On the first upgraded boot, legacy installations migrate them to `<DATA_DIR>/secrets.env` (0600), re-encrypt stored tokens and revoke existing sessions and restore tokens. Keep that file with the data directory and protect its backups. Later boots reuse it without rotating credentials again. A rollback must restore the database and its matching secret configuration together.
 
 Restart after changes: `sudo systemctl restart keynest`.
 
@@ -149,7 +152,7 @@ Restart after changes: `sudo systemctl restart keynest`.
 # Backend (API + static server)
 cd server
 npm install
-cp .env.example .env   # set AUTH_USER / AUTH_PASS
+cp .env.example .env   # set AUTH_USER / AUTH_PASS and generate both secrets
 npm start
 
 # Frontend (dev server)

@@ -1,5 +1,4 @@
 import { mkdtempSync, rmSync } from 'node:fs';
-import { createServer } from 'node:http';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
@@ -110,13 +109,10 @@ describe('sync iCal vs reservas CSV', () => {
   it('el sync borra uds iCal obsoletos pero NO los csv-', async () => {
     // ICS con UNA sola reserva (la otra iCal existente, 'abc@airbnb.com', quedará obsoleta)
     const ics = `BEGIN:VCALENDAR\nBEGIN:VEVENT\nUID:nueva-uid@airbnb.com\nDTSTART;VALUE=DATE:20260810\nDTEND;VALUE=DATE:20260815\nSUMMARY:Reserved\nDESCRIPTION:Reservation URL: https://www.airbnb.com/h/HMNEW12345\\nPhone (Last 4 Digits): 1234\nEND:VEVENT\nEND:VCALENDAR`;
-    const server = createServer((req, res) => { res.end(ics) });
-    await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', () => resolve()));
     db.prepare("UPDATE properties SET ical_url = ? WHERE id = 'prop-chalet'")
-      .run(`http://127.0.0.1:${(server.address() as { port: number }).port}/cal.ics`);
+      .run('https://calendar.example/cal.ics');
 
-    await syncAll(db);
-    server.close();
+    await syncAll(db, { fetchIcs: async () => ics });
 
     const uids = (db.prepare("SELECT uid FROM reservations WHERE property_id = 'prop-chalet'").all() as Array<{ uid: string }>).map((r) => r.uid);
     expect(uids).toContain('nueva-uid@airbnb.com'); // upsert

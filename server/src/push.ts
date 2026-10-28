@@ -12,7 +12,9 @@
 // - Las alertas son operativas (reservas, limpiezas, cerradura): se notifican
 //   a TODOS los usuarios; las preferencias por tipo filtran por usuario.
 import crypto from 'node:crypto'
+import { Agent } from 'node:https'
 import webpush from 'web-push'
+import { assertPublicUrl, createPublicLookup, setAgentRequestDeadline } from './outbound.js'
 import type { PushSubscription, RequestOptions, SendResult } from 'web-push'
 import type { Statement } from 'better-sqlite3'
 import type { DB } from './db.js'
@@ -29,6 +31,8 @@ interface SubRow {
 let vapidOk = false
 type SendFn = (sub: PushSubscription, payload: string, opts?: RequestOptions) => Promise<any>
 let sendFn: SendFn = (sub, payload, opts) => webpush.sendNotification(sub, payload, opts)
+const pushAgent = new Agent({ lookup: createPublicLookup() })
+setAgentRequestDeadline(pushAgent, 10000)
 
 // Configura VAPID una vez al arrancar. Devuelve true si el push queda activo.
 export function configurePush({ publicKey, privateKey, subject } = {} as { publicKey?: string; privateKey?: string; subject?: string }): boolean {
@@ -198,9 +202,10 @@ function componerPayload(lang: string, tipo: string, datos: NotifData, url: stri
 // con backoff + jitter (máx 3); otros status = bug nuestro (log sin endpoint).
 async function enviarAUna(db: DB, sub: SubRow, json: string, opciones: RequestOptions): Promise<'ok' | 'borrada' | 'fallido'> {
   const destino: PushSubscription = { endpoint: sub.endpoint, keys: { p256dh: sub.p256dh, auth: sub.auth } }
+  assertPublicUrl(sub.endpoint)
   for (let intento = 1; intento <= 3; intento++) {
     try {
-      await sendFn(destino, json, { ...opciones, contentEncoding: 'aes128gcm' })
+      await sendFn(destino, json, { ...opciones, contentEncoding: 'aes128gcm', agent: pushAgent, timeout: 10000 })
       return 'ok'
     } catch (err) {
       const e = err as { statusCode?: number; message?: string }

@@ -4,6 +4,7 @@
 import { mkdtempSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
+import { Agent } from 'node:https'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import webpush from 'web-push'
 import { openDb } from '../src/db.js'
@@ -96,6 +97,39 @@ describe('schema', () => {
 })
 
 describe('motor notifyUsers', () => {
+  it('descarta una suscripción no HTTPS sin invocar el envío', async () => {
+    const userId = insertUser('ana')
+    insertSub(userId, 'http://127.0.0.1/push')
+    let calls = 0
+    _setSendFn(async () => { calls++ })
+    configura()
+
+    const result = await notifyUsers(db, [userId], 'tedee_offline', { nombre: 'Portal' }, { severity: 'critical' })
+
+    expect(calls).toBe(0)
+    expect(result.fallidos).toBe(1)
+    expect(result.enviados).toBe(0)
+  })
+
+  it('usa un agente con destinos públicos validados y timeout', async () => {
+    const userId = insertUser('ana')
+    insertSub(userId)
+    let options: any
+    _setSendFn(async (_sub, _payload, opts) => { options = opts })
+    configura()
+
+    await notifyUsers(db, [userId], 'tedee_offline', { nombre: 'Portal' }, { severity: 'critical' })
+
+    expect(options.timeout).toBe(10000)
+    expect(options.agent).toBeInstanceOf(Agent)
+    const lookup = options.agent.options.lookup
+    expect(typeof lookup).toBe('function')
+    const error = await new Promise<Error | null>((resolve) => {
+      lookup('127.0.0.1', { all: false }, (err: Error | null) => resolve(err))
+    })
+    expect(error?.message).toMatch(/public/)
+  })
+
   it('envía con el idioma del usuario y borra suscripciones muertas (410)', async () => {
     const u1 = insertUser('ana', 'es')
     const u2 = insertUser('bob', 'en')

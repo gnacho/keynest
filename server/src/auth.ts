@@ -30,21 +30,10 @@ function hmac(secret: string, data: string): string {
   return crypto.createHmac('sha256', secret).update(data).digest('hex')
 }
 
-/* session_secret: lee de SESSION_SECRET en entorno; fallback a kv con warning */
-let _sessionSecretWarned = false
 function sessionSecret(db: DB): string {
-  const envSecret = process.env.SESSION_SECRET
-  if (envSecret && envSecret.length >= 32) return envSecret
-  if (!_sessionSecretWarned) {
-    console.warn('[auth] SESSION_SECRET no definida en entorno, usando clave en BD (menos seguro)')
-    _sessionSecretWarned = true
-  }
-  let s = kvGet(db, 'session_secret')
-  if (!s) {
-    s = crypto.randomBytes(32).toString('hex')
-    kvSet(db, 'session_secret', s)
-  }
-  return s
+  const secret = process.env.SESSION_SECRET || kvGet(db, 'session_secret')
+  if (!secret || secret.length < 32) throw new Error('SESSION_SECRET is required')
+  return secret
 }
 
 export async function ensureBootstrapAdmin(db: DB, config: { authUser?: string; authPass?: string }): Promise<void> {
@@ -291,13 +280,17 @@ export function destroyRestoreToken(db: DB, token: string): void {
 }
 
 /** Cambio de contraseña: verifica la actual con bcrypt antes de re-hashear. */
-export async function changePassword(db: DB, userId: string, current: string, next: string): Promise<'error' | 'wrong-current' | 'ok'> {
+export async function changePassword(db: DB, userId: string, current: string, next: string, currentToken?: string): Promise<'error' | 'wrong-current' | 'ok'> {
   const user = db.prepare('SELECT * FROM users WHERE id = ?').get(userId) as { password_hash: string } | undefined
   if (!user) return 'error'
   const ok = await bcrypt.compare(current, user.password_hash)
   if (!ok) return 'wrong-current'
   const hash = await bcrypt.hash(next, 10)
-  db.prepare('UPDATE users SET password_hash = ? WHERE id = ?').run(hash, userId)
+  db.transaction(() => {
+    db.prepare('UPDATE users SET password_hash = ? WHERE id = ?').run(hash, userId)
+    db.prepare('DELETE FROM login_tokens WHERE user_id = ?').run(userId)
+    if (currentToken !== undefined) db.prepare('DELETE FROM sessions WHERE user_id = ? AND id <> ?').run(userId, currentToken)
+  })()
   return 'ok'
 }
 
@@ -333,8 +326,11 @@ export async function setUserPassword(db: DB, userId: string, password: string):
   const user = db.prepare('SELECT id FROM users WHERE id = ?').get(userId) as { id: string } | undefined
   if (!user) return false
   const hash = await bcrypt.hash(password, 10)
-  db.prepare('UPDATE users SET password_hash = ? WHERE id = ?').run(hash, userId)
-  db.prepare('DELETE FROM sessions WHERE user_id = ?').run(userId)
+  db.transaction(() => {
+    db.prepare('UPDATE users SET password_hash = ? WHERE id = ?').run(hash, userId)
+    db.prepare('DELETE FROM sessions WHERE user_id = ?').run(userId)
+    db.prepare('DELETE FROM login_tokens WHERE user_id = ?').run(userId)
+  })()
   return true
 }
 
