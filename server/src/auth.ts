@@ -1,4 +1,5 @@
 import crypto from 'node:crypto'
+import { isIP } from 'node:net'
 import bcrypt from 'bcryptjs'
 import { getCookie, setCookie, deleteCookie } from 'hono/cookie'
 import type { Context, Next } from 'hono'
@@ -46,17 +47,30 @@ export async function ensureBootstrapAdmin(db: DB, config: { authUser?: string; 
   console.log(`[auth] admin bootstrap creado: ${config.authUser}`)
 }
 
-/* IP del cliente: socket real por defecto; XFF solo si TRUST_PROXY=true (detrás de proxy inverso).
- *  Fallback: si no hay socket, usa XFF aunque TRUST_PROXY no esté seteado (evita
- *  que todas las IPs compartan la clave "unknown" en rate limits). */
-function clientIp(c: Context<AppEnv>): string {
+/* IP del cliente para rate limits y lockout.
+ *  Sin proxy de confianza se usa SIEMPRE la IP del socket: cualquier cliente
+ *  puede inventarse X-Forwarded-For y así rotar la clave del rate limit.
+ *  Con TRUST_PROXY=true el socket es el proxy, así que se usa el último salto
+ *  de XFF (el que añadió ese proxy): los saltos anteriores los controla el
+ *  cliente y son falsificables. Ese salto tiene que ser una IP de verdad; si un
+ *  proxy reenvía la cabecera sin normalizar, un valor inventado dejaría rotar la
+ *  clave del rate limit igual que sin proxy. Sin socket no se inventa nada. */
+function normalizeIp(value: string | undefined): string | undefined {
+  if (!value) return undefined
+  let candidate = value.trim()
+  const bracketed = /^\[([^\]]+)\](?::\d+)?$/.exec(candidate)
+  if (bracketed) candidate = bracketed[1]
+  else if (/^\d{1,3}(?:\.\d{1,3}){3}:\d+$/.test(candidate)) candidate = candidate.slice(0, candidate.lastIndexOf(':'))
+  return isIP(candidate) ? candidate : undefined
+}
+
+export function clientIp(c: Context<AppEnv>): string {
   const req = c.req.raw as unknown as { socket?: { remoteAddress?: string }; connection?: { remoteAddress?: string } }
-  const socket = req?.socket || req?.connection
-  const ip = socket?.remoteAddress
-  if (ip && ip !== '::1' && ip !== '127.0.0.1') return ip
+  const socket = normalizeIp((req?.socket || req?.connection)?.remoteAddress)
+  if (process.env.TRUST_PROXY !== 'true') return socket || 'unknown'
   const xff = c.req.header('x-forwarded-for')
-  if (xff) return xff.split(',')[0].trim()
-  return ip || 'unknown'
+  const last = normalizeIp(xff?.split(',').filter((hop) => hop.trim()).at(-1))
+  return last || socket || 'unknown'
 }
 
 /* Rate limit general para acciones costosas (sync, uploads).
