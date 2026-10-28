@@ -7,6 +7,7 @@ import crypto from 'node:crypto'
 import { z } from 'zod'
 import type { Hono } from 'hono'
 import { isPushConfigured, pushPublicKey, TIPOS_ALERTA } from './push.js'
+import { subscribeRateLimited, subscriptionQuotaAllows } from './push-limits.js'
 import type { DB, UserRow } from './db.js'
 
 interface PushEnv {
@@ -51,6 +52,15 @@ export function registerPushRoutes(router: Hono<PushEnv>) {
     const parsed = subscribeSchema.safeParse(body)
     if (!parsed.success) return c.json({ error: 'suscripción inválida' }, 400)
     const db = c.get('db')
+    const userId = c.get('user').id
+    // Límites (#316): sin ellos un usuario puede registrar endpoints propios
+    // y mantener conexiones o memoria crecientes en el servidor.
+    if (subscribeRateLimited(db, userId)) {
+      return c.json({ error: 'demasiadas peticiones, espera 1 minuto', code: 'rate' }, 429)
+    }
+    if (!subscriptionQuotaAllows(db, userId, parsed.data.endpoint)) {
+      return c.json({ error: 'demasiados dispositivos suscritos', code: 'quota' }, 429)
+    }
     const now = Date.now()
     db.prepare(
       `INSERT INTO push_subscriptions (id, user_id, endpoint, p256dh, auth, user_agent, created_at, updated_at)

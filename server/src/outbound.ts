@@ -103,7 +103,7 @@ export function createPublicLookup(resolver: PublicResolver = lookup as PublicRe
   }
 }
 
-export function setAgentRequestDeadline(agent: Agent, timeoutMs: number): void {
+export function setAgentRequestDeadline(agent: Agent, timeoutMs: number, maxBytes = 0): void {
   const createConnection = agent.createConnection.bind(agent)
   agent.createConnection = (options, callback) => {
     const socket = createConnection(options, callback)
@@ -111,6 +111,15 @@ export function setAgentRequestDeadline(agent: Agent, timeoutMs: number): void {
     const timer = setTimeout(() => socket.destroy(new Error('Outbound request timed out')), timeoutMs)
     timer.unref()
     socket.once('close', () => clearTimeout(timer))
+    // Tope de respuesta: la librería acumula el cuerpo en memoria, así que se
+    // corta el socket en cuanto el destino envía más bytes de los permitidos.
+    if (maxBytes > 0) {
+      let received = 0
+      socket.on('data', (chunk: Buffer) => {
+        received += chunk.length
+        if (received > maxBytes) socket.destroy(new Error('Outbound response exceeds the configured size limit'))
+      })
+    }
     return socket
   }
 }
