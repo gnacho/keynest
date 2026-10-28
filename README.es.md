@@ -145,6 +145,7 @@ El servicio lee su entorno (instalador: `/etc/keynest/env`):
 | `AUTH_USER` / `AUTH_PASS` | - | Admin de arranque en el primer boot. |
 | `ENC_KEY` / `SESSION_SECRET` | generadas | Claves externas de cifrado y sesiones. |
 | `SYNC_INTERVAL_MS` | `900000` | Intervalo de sync iCal (mín 60000). |
+| `TRUST_PROXY` | `false` | Ponlo a `true` detrás de un proxy inverso (Nginx Proxy Manager, Caddy...). La IP del cliente se toma del último salto de `X-Forwarded-For` y la cookie de sesión se marca `Secure` cuando el último salto de `X-Forwarded-Proto` es `https`. Solo es seguro si el proxy **sobrescribe** ambas cabeceras (`proxy_set_header X-Forwarded-Proto $scheme`) en vez de añadirlas, y si el puerto de la app no es accesible salvo a través del proxy. Déjalo en `false` si se accede directamente por HTTP. |
 
 Las instalaciones nuevas generan ambas claves. En el primer arranque actualizado, las instalaciones heredadas las migran a `<DATA_DIR>/secrets.env` (0600), vuelven a cifrar los tokens guardados y revocan las sesiones y tokens de restauración existentes. Conserva ese fichero con el directorio de datos y protege sus copias. Los arranques posteriores lo reutilizan sin rotar credenciales otra vez. Un rollback debe restaurar conjuntamente la base de datos y su configuración de claves correspondiente.
 

@@ -15,6 +15,7 @@
 //      que la UI muestre un ribbon que reaparece a las 24h si se descarta.
 //
 // La ruta se configura con AIRBNB_DATA_DIR (defecto /opt/airbnb-scraper/data).
+import { randomInt } from 'node:crypto'
 import fs from 'node:fs'
 import path from 'node:path'
 import { kvGet, kvSet } from './db.js'
@@ -88,7 +89,7 @@ export function pairingVigente(db: DB, ahora = Date.now()): { code: string; expi
  *  capturador local pueda subir la sesión nueva a la webapp. */
 export function crearPairing(db: DB, ahora = Date.now()): { code: string; expira: number } {
   let code = ''
-  for (let i = 0; i < 6; i++) code += PAIRING_ALPHABET[Math.floor(Math.random() * PAIRING_ALPHABET.length)]
+  for (let i = 0; i < 6; i++) code += PAIRING_ALPHABET[randomInt(PAIRING_ALPHABET.length)]
   const expira = ahora + PAIRING_TTL_MS
   kvSet(db, CLAVE_PAIRING, JSON.stringify({ code, expira }))
   return { code, expira }

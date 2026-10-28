@@ -1,6 +1,6 @@
 import Database from 'better-sqlite3'
 import { randomBytes } from 'node:crypto'
-import { existsSync, mkdirSync, readdirSync, rmSync, statSync, unlinkSync } from 'node:fs'
+import { chmodSync, existsSync, mkdirSync, readdirSync, rmSync, statSync, unlinkSync } from 'node:fs'
 import { join } from 'node:path'
 import { kvGet, kvSet } from './db.js'
 import type { DB } from './db.js'
@@ -8,6 +8,10 @@ import type { DB } from './db.js'
 const BACKUP_DIR_NAME = 'backups'
 // Tablas sin las cuales la copia no sirve para recuperar la instalación.
 const ESSENTIAL_TABLES = ['users', 'properties', 'reservations', 'cleanings', 'kv']
+
+export function backupDirPath(dataDir: string): string {
+  return join(dataDir, BACKUP_DIR_NAME)
+}
 
 export type BackupResult =
   | { ok: true; path: string; bytes: number; quickCheck: 'ok' }
@@ -60,7 +64,7 @@ function discard(path: string): void {
    servidor tenga el binario sqlite3 instalado. Solo actualiza backup_last
    cuando la copia se ha verificado. */
 export async function runBackup(db: DB, dataDir: string, dbName = 'keynest.db'): Promise<BackupResult> {
-  const backupDir = join(dataDir, BACKUP_DIR_NAME)
+  const backupDir = backupDirPath(dataDir)
   // Milisegundos y sufijo aleatorio: dos copias en el mismo segundo (doble
   // clic, cron y petición manual) no deben apuntar al mismo fichero.
   const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 23)
@@ -69,7 +73,10 @@ export async function runBackup(db: DB, dataDir: string, dbName = 'keynest.db'):
 
   try {
     mkdirSync(backupDir, { recursive: true })
+    // Las copias contienen la misma informacion sensible que la BD viva.
+    try { chmodSync(backupDir, 0o700) } catch { /* sin permisos POSIX */ }
     await db.backup(backupPath)
+    try { chmodSync(backupPath, 0o600) } catch { /* idem */ }
   } catch (err) {
     discard(backupPath)
     return { error: 'backup-fallido', detail: (err as Error).message }
@@ -86,7 +93,7 @@ export async function runBackup(db: DB, dataDir: string, dbName = 'keynest.db'):
 }
 
 export function cleanOldBackups(dataDir: string, dbName = 'keynest.db', retentionDays = 7) {
-  const backupDir = join(dataDir, BACKUP_DIR_NAME)
+  const backupDir = backupDirPath(dataDir)
   if (!existsSync(backupDir)) return { cleaned: 0 }
 
   const prefix = dbName.replace('.db', '') + '-'

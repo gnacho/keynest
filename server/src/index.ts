@@ -5,6 +5,7 @@ import crypto from 'node:crypto'
 import { serve } from '@hono/node-server'
 import { serveStatic } from '@hono/node-server/serve-static'
 import { isOwnedStoredPhoto, isSafeStoredPhotoPath, removeStoredPhoto } from './photo-path.js'
+import { workOrderPayload } from './work-order.js'
 import { assignedSql, isAssignedTo, personProperties } from './person-scope.js'
 import { migrateLegacySecrets } from './secrets-migration.js'
 import { ensureExternalSecrets } from './external-secrets.js'
@@ -14,7 +15,7 @@ import { Hono } from 'hono'
 import { z } from 'zod'
 import * as auth from './auth.js'
 import type { AppEnv } from './auth.js'
-import { audit, openDb, kvGet, kvSet, encryptSecret, decryptSecret, hydrateCleaning, cleaningCostOf, syncCleaningExpense, removeCleaningExpense } from './db.js'
+import { audit, openDb, kvGet, kvSet, encryptSecret, decryptSecret, hydrateCleaning, cleaningCostOf, syncCleaningExpense, removeCleaningExpense, ensurePrivateDir } from './db.js'
 import { syncAll, syncStatus } from './sync.js'
 import { fetchIcs, icsToReservations, parseIcs } from './ical.js'
 import { seedDemo } from './seed-demo.js'
@@ -26,7 +27,7 @@ import { sincronizarPagos, pagadoDeReserva, parseImporteES } from './airbnb-paym
 import { configurePush, flushNotificationQueue, notifyUsers } from './push.js'
 import { registerPushRoutes } from './routes-push.js'
 import * as alerts from './alerts.js'
-import { getBackupConfig, setBackupConfig, runBackup, cleanOldBackups } from './backup.js'
+import { backupDirPath, getBackupConfig, setBackupConfig, runBackup, cleanOldBackups } from './backup.js'
 import { createHub } from './sse.js'
 import type { DB, CleaningRow, PropertyRow } from './db.js'
 import type { TedeeLock, TedeeAccess } from './tedee.js'
@@ -78,6 +79,11 @@ const config = {
 
 const prodDb = openDb(config.dataDir, 'keynest.db')
 const demoDb = openDb(config.dataDir, 'keynest_demo.db')
+// Instalaciones actualizadas traen directorios creados con el umask antiguo:
+// se endurecen en cada arranque, no solo cuando el código los crea.
+for (const dir of ['photos', 'avatars'].map((name) => join(config.dataDir, name)).concat(backupDirPath(config.dataDir))) {
+  ensurePrivateDir(dir)
+}
 ensureExternalSecrets(config.dataDir, [prodDb, demoDb])
 if (migrateLegacySecrets(prodDb)) console.log('[security] claves legacy migradas en producción')
 if (migrateLegacySecrets(demoDb)) console.log('[security] claves legacy migradas en demo')
@@ -419,6 +425,11 @@ const airbnbSessionSchema = z.object({
   }),
 })
 app.post('/api/airbnb/session', async (c) => {
+  // Ruta pública: la credencial es un código de 6 caracteres, así que se
+  // limita por IP antes de comprobarlo para que no se pueda ir probando.
+  if (auth.rateLimitAction(prodDb, 'airbnb:pairing', c, 10)) {
+    return c.json({ error: 'demasiados intentos, espera 1 minuto', code: 'rate' }, 429)
+  }
   const body = await c.req.json().catch(() => null)
   const parsed = airbnbSessionSchema.safeParse(body)
   if (!parsed.success) return c.json({ error: 'formato inválido', code: 'format' }, 400)
@@ -1187,14 +1198,9 @@ app.get('/api/t/:token', (c) => {
   if (!task) return c.json({ error: 'enlace no válido' }, 404)
   const prop = prodDb.prepare('SELECT id, name, address, photo, instructions FROM properties WHERE id = ?').get(task.property_id)
   const assignee = task.assignee_id
-    ? prodDb.prepare('SELECT id, name, phone, specialty, hourly_rate FROM people WHERE id = ?').get(task.assignee_id)
+    ? prodDb.prepare('SELECT id, name, phone, specialty FROM people WHERE id = ?').get(task.assignee_id)
     : null
-  return c.json({
-    type: 'workorder',
-    task: { ...task, checks: JSON.parse(task.checks || '[]'), photos: JSON.parse(task.photos || '[]'), token_hash: undefined },
-    property: prop,
-    assignee,
-  })
+  return c.json(workOrderPayload(task, prop, assignee))
 })
 
 /* Acciones del proveedor sobre la orden (checks / fotos / finalizar) */
@@ -1240,7 +1246,7 @@ app.post('/api/t/:token/task/photo', async (c) => {
   const buffer = Buffer.from(await file.arrayBuffer())
   if (!validatePhotoMagic(buffer, ext)) return c.json({ error: 'contenido inválido' }, 400)
   const photosDir = join(config.dataDir, 'photos')
-  mkdirSync(photosDir, { recursive: true })
+  ensurePrivateDir(photosDir)
   const filename = `maint-${task.id}-${Date.now()}.${ext}`
   writeFileSync(join(photosDir, filename), buffer)
   const photos = JSON.parse(task.photos || '[]')
@@ -1329,7 +1335,7 @@ async function saveCleaningPhoto(db: DB, cleaningId: string, file: File): Promis
   const buffer = Buffer.from(await file.arrayBuffer())
   if (!validatePhotoMagic(buffer, ext)) return { error: 'contenido inválido', status: 400 }
   const photosDir = join(config.dataDir, 'photos')
-  mkdirSync(photosDir, { recursive: true })
+  ensurePrivateDir(photosDir)
   const filename = `clean-${cleaningId}-${Date.now()}.${ext}`
   writeFileSync(join(photosDir, filename), buffer)
   const photos = JSON.parse(cl.photos || '[]')
@@ -1351,7 +1357,7 @@ guarded.post('/avatar', async (c) => {
   if (!validatePhotoMagic(buffer, ext)) return c.json({ error: 'contenido inválido' }, 400)
 
   const avatarsDir = join(config.dataDir, 'avatars')
-  mkdirSync(avatarsDir, { recursive: true })
+  ensurePrivateDir(avatarsDir)
   const userId = c.get('user').id
   const filename = `${userId}.${ext}`
   writeFileSync(join(avatarsDir, filename), buffer)
@@ -1393,7 +1399,7 @@ guarded.post('/properties/:id/photo', async (c) => {
   if (!validatePhotoMagic(buffer, ext)) return c.json({ error: 'contenido inválido' }, 400)
 
   const photosDir = join(config.dataDir, 'photos')
-  mkdirSync(photosDir, { recursive: true })
+  ensurePrivateDir(photosDir)
   const filename = `${existing.id}-${Date.now()}.${ext}`
   writeFileSync(join(photosDir, filename), buffer)
 
@@ -1490,7 +1496,7 @@ app.get('/health', (c) => {
   return c.json({ status: dbOk === 'connected' ? 'ok' : 'degraded', uptime: process.uptime(), db: dbOk })
 })
 
-app.get('/api/system/info', auth.requireAuth(prodDb, demoDb), (c) => {
+app.get('/api/system/info', auth.requireAdmin(prodDb, demoDb), (c) => {
   const cpuInfo = cpus()
   const distro = platform() === 'linux' && existsSync('/etc/os-release')
     ? (() => { try { return readFileSync('/etc/os-release', 'utf8').match(/^PRETTY_NAME="?([^"\n]+)"?/m)?.[1] || '' } catch { return '' } })()
@@ -1572,7 +1578,7 @@ const runSync = () => syncAll(prodDb, { onNews: onSyncNews }).catch((e) => conso
 setTimeout(runSync, 5000) // sync inicial al arrancar
 try { purgeExpiredPhotos(prodDb, config.dataDir) } catch { /* noop */ } // purge fotos expiradas al arrancar
 setInterval(runSync, config.syncIntervalMs)
-setInterval(() => { auth.cleanExpiredSessions(prodDb); auth.cleanExpiredLoginAttempts(prodDb) }, 3600 * 1000)
+setInterval(() => { auth.cleanExpiredSessions(prodDb); auth.cleanExpiredLoginAttempts(prodDb); auth.cleanExpiredRateLimits(prodDb); auth.cleanExpiredRateLimits(demoDb) }, 3600 * 1000)
 setInterval(() => {
   try { prodDb.pragma('wal_checkpoint(TRUNCATE)'); demoDb.pragma('wal_checkpoint(TRUNCATE)') } catch { /* noop */ }
   flushNotificationQueue(prodDb).catch((err) => console.error('[keynest] flush cola push error:', err.message))

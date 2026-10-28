@@ -141,6 +141,7 @@ The service reads its environment (installer: `/etc/keynest/env`):
 | `AUTH_USER` / `AUTH_PASS` | - | Bootstrap admin on first boot. |
 | `ENC_KEY` / `SESSION_SECRET` | generated | External encryption and session keys. |
 | `SYNC_INTERVAL_MS` | `900000` | iCal sync interval (min 60000). |
+| `TRUST_PROXY` | `false` | Set to `true` behind a reverse proxy (Nginx Proxy Manager, Caddy...). It reads the client IP from the last `X-Forwarded-For` hop and marks the session cookie `Secure` when the last `X-Forwarded-Proto` hop is `https`. This is only safe when the proxy **overwrites** both headers (`proxy_set_header X-Forwarded-Proto $scheme`) instead of appending them, and when the app port is not reachable except through the proxy. Leave it `false` when the app is reached directly over HTTP. |
 
 Fresh installs generate both secrets. On the first upgraded boot, legacy installations migrate them to `<DATA_DIR>/secrets.env` (0600), re-encrypt stored tokens and revoke existing sessions and restore tokens. Keep that file with the data directory and protect its backups. Later boots reuse it without rotating credentials again. A rollback must restore the database and its matching secret configuration together.
 
