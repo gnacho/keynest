@@ -396,27 +396,10 @@ export function kvSet(db: DB, key: string, value: string): void {
 }
 
 /* ---- Secrets cifrados: AES-256-GCM, clave desde entorno (ENC_KEY) ---- */
-/* Si ENC_KEY no existe, fallback a kv (legacy) con warning. Migración: generar ENC_KEY y reiniciar. */
-let _encKeyWarned = false
 function encKey(db: DB): Buffer {
-  const envKey = process.env.ENC_KEY
-  if (envKey) {
-    if (envKey.length < 32) {
-      console.warn('[db] ENC_KEY demasiado corta (mín 32 chars), usando fallback kv')
-    } else {
-      return Buffer.from(envKey.padEnd(64, envKey).slice(0, 64), 'hex')
-    }
-  }
-  if (!_encKeyWarned) {
-    console.warn('[db] ENC_KEY no definida en entorno, usando clave en BD (menos seguro). Configura ENC_KEY en /etc/keynest/env')
-    _encKeyWarned = true
-  }
-  let k = kvGet(db, 'enc_key')
-  if (!k) {
-    k = crypto.randomBytes(32).toString('hex')
-    kvSet(db, 'enc_key', k)
-  }
-  return Buffer.from(k, 'hex')
+  const key = process.env.ENC_KEY || kvGet(db, 'enc_key')
+  if (!key || key.length < 32) throw new Error('ENC_KEY is required')
+  return Buffer.from(key.padEnd(64, key).slice(0, 64), 'hex')
 }
 
 export function encryptSecret(db: DB, plaintext: string): string {

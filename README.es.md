@@ -121,7 +121,7 @@ curl -fsSL https://raw.githubusercontent.com/gnacho/keynest/main/install.sh | sh
 ```
 
 El instalador es shell plano y legible: [inspecciónalo primero](install.sh).
-Instala el runtime Node 22 versionado y la última release (frontend
+Instala el runtime Node 24 versionado y la última release (frontend
 precompilado, `node_modules` de producción por arquitectura, sin compilador
 en el servidor) como servicio systemd enjaulado bajo `/opt/keynest`, estilo
 capistrano (`releases/` + symlink `current`). Los datos viven en
@@ -143,7 +143,10 @@ El servicio lee su entorno (instalador: `/etc/keynest/env`):
 | `DATA_DIR` | `/var/lib/keynest` | Ficheros SQLite + uploads. |
 | `STATIC_DIR` | `/opt/keynest/current/dist` | Frontend compilado a servir. |
 | `AUTH_USER` / `AUTH_PASS` | - | Admin de arranque en el primer boot. |
+| `ENC_KEY` / `SESSION_SECRET` | generadas | Claves externas de cifrado y sesiones. |
 | `SYNC_INTERVAL_MS` | `900000` | Intervalo de sync iCal (mín 60000). |
+
+Las instalaciones nuevas generan ambas claves. En el primer arranque actualizado, las instalaciones heredadas las migran a `<DATA_DIR>/secrets.env` (0600), vuelven a cifrar los tokens guardados y revocan las sesiones y tokens de restauración existentes. Conserva ese fichero con el directorio de datos y protege sus copias. Los arranques posteriores lo reutilizan sin rotar credenciales otra vez. Un rollback debe restaurar conjuntamente la base de datos y su configuración de claves correspondiente.
 
 Reinicia tras cambios: `sudo systemctl restart keynest`.
 
@@ -153,7 +156,7 @@ Reinicia tras cambios: `sudo systemctl restart keynest`.
 # Backend (API + servidor estático)
 cd server
 npm install
-cp .env.example .env   # ajusta AUTH_USER / AUTH_PASS
+cp .env.example .env   # ajusta AUTH_USER / AUTH_PASS y genera ambas claves
 npm start
 
 # Frontend (dev server)

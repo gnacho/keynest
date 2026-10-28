@@ -292,11 +292,15 @@ ok "release v$VERSION_NORM at $RELEASE_DIR (current -> it)"
 # Initial config ONLY on fresh install (upgrades never touch credentials)
 if [ ! -f "$ENV_FILE" ]; then
     ADMIN_PASS=$(head -c 18 /dev/urandom | base64 | tr -d '/+=' | head -c 16)
+    SESSION_SECRET=$(head -c 32 /dev/urandom | od -An -tx1 | tr -d ' \n')
+    ENC_KEY=$(head -c 32 /dev/urandom | od -An -tx1 | tr -d ' \n')
     if [ "$DRY_RUN" -eq 1 ]; then info "[dry-run] would generate $ENV_FILE (0600, random admin password, PORT=$PORT)"; else
         $SUDO tee "$ENV_FILE" >/dev/null <<EOF
 PORT=$PORT
 AUTH_USER=admin
 AUTH_PASS=$ADMIN_PASS
+SESSION_SECRET=$SESSION_SECRET
+ENC_KEY=$ENC_KEY
 DATA_DIR=$STATE_DIR
 STATIC_DIR=$OPT_DIR/current/dist
 EOF

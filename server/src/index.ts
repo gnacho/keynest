@@ -4,6 +4,9 @@ import { hostname, arch as osArch, platform, totalmem, type, release, cpus } fro
 import crypto from 'node:crypto'
 import { serve } from '@hono/node-server'
 import { serveStatic } from '@hono/node-server/serve-static'
+import { isOwnedStoredPhoto, isSafeStoredPhotoPath, removeStoredPhoto } from './photo-path.js'
+import { migrateLegacySecrets } from './secrets-migration.js'
+import { ensureExternalSecrets } from './external-secrets.js'
 import { streamSSE } from 'hono/streaming'
 import { bodyLimit } from 'hono/body-limit'
 import { Hono } from 'hono'
@@ -50,8 +53,8 @@ const envSchema = z
     VAPID_PUBLIC_KEY: z.string().optional(),
     VAPID_PRIVATE_KEY: z.string().optional(),
     VAPID_SUBJECT: z.string().optional(),
-    ENC_KEY: z.string().optional(),
-    SESSION_SECRET: z.string().optional(),
+    ENC_KEY: z.string().min(32).optional(),
+    SESSION_SECRET: z.string().min(32).optional(),
     TRUST_PROXY: z.enum(['true', 'false']).default('false'),
   })
   .superRefine((env, ctx) => {
@@ -74,6 +77,9 @@ const config = {
 
 const prodDb = openDb(config.dataDir, 'keynest.db')
 const demoDb = openDb(config.dataDir, 'keynest_demo.db')
+ensureExternalSecrets(config.dataDir, [prodDb, demoDb])
+if (migrateLegacySecrets(prodDb)) console.log('[security] claves legacy migradas en producción')
+if (migrateLegacySecrets(demoDb)) console.log('[security] claves legacy migradas en demo')
 seedDemo(demoDb)
 await auth.ensureBootstrapAdmin(prodDb, config)
 auth.cleanExpiredSessions(prodDb)
@@ -247,12 +253,9 @@ app.put('/api/auth/password', auth.requireAuth(prodDb, demoDb), async (c) => {
   const body = await c.req.json().catch(() => null)
   const parsed = passwordSchema.safeParse(body)
   if (!parsed.success) return c.json({ error: 'formato inválido', code: 'format' }, 400)
-  const res = await auth.changePassword(c.get('db'), c.get('user').id, parsed.data.current, parsed.data.next)
-  if (res === 'wrong-current') return c.json({ error: 'contraseña actual incorrecta', code: 'wrong-current' }, 403)
-  // Invalida el resto de sesiones del usuario (la actual sobrevive): si alguien
-  // tenía la contraseña vieja en otro dispositivo, se le desconecta (auditoría).
   const current = auth.sessionFromCookie(c.get('db'), c)
-  auth.destroyOtherSessions(c.get('db'), c.get('user').id, current?.id || '')
+  const res = await auth.changePassword(c.get('db'), c.get('user').id, parsed.data.current, parsed.data.next, current?.id || '')
+  if (res === 'wrong-current') return c.json({ error: 'contraseña actual incorrecta', code: 'wrong-current' }, 403)
   return c.json({ ok: true })
 })
 
@@ -566,7 +569,7 @@ const propertySchema = z.object({
   bedrooms: z.coerce.number().int().min(0).default(1),
   bathrooms: z.coerce.number().int().min(0).default(1),
   area: z.coerce.number().int().min(0).default(0),
-  photo: z.string().default('/prop-carmen.svg'),
+  photo: z.string().default('/prop-carmen.svg').refine((value) => !value.startsWith('/photos/') || isSafeStoredPhotoPath(value), { message: 'foto inválida' }),
   icalUrl: z.string().default(''),
   checklist: z.array(z.string()).default([]),
   instructions: z.string().default(''),
@@ -586,6 +589,7 @@ guarded.post('/properties', async (c) => {
   const parsed = propertySchema.safeParse(body)
   if (!parsed.success) return c.json({ error: 'formato inválido' }, 400)
   const d = parsed.data
+  if (d.photo.startsWith('/photos/') && !isOwnedStoredPhoto([], d.photo)) return c.json({ error: 'foto no asignable' }, 400)
   let slug = slugify(d.name)
   let n = 2
   const db = c.get('db')
@@ -607,6 +611,8 @@ guarded.put('/properties/:id', async (c) => {
   const parsed = propertySchema.safeParse(body)
   if (!parsed.success) return c.json({ error: 'formato inválido' }, 400)
   const d = parsed.data
+  const currentPhotos = typeof existing.photo === 'string' ? [existing.photo] : []
+  if (d.photo.startsWith('/photos/') && !isOwnedStoredPhoto(currentPhotos, d.photo)) return c.json({ error: 'foto no asignable' }, 400)
   db.prepare(`UPDATE properties SET name=?, address=?, bedrooms=?, bathrooms=?, area=?, photo=?, ical_url=?, checklist=?, instructions=?, owner_id=? WHERE id=?`)
     .run(d.name, d.address, d.bedrooms, d.bathrooms, d.area, d.photo, d.icalUrl, JSON.stringify(d.checklist), d.instructions, d.owner_id, existing.id)
   const property = db.prepare('SELECT * FROM properties WHERE id = ?').get(existing.id) as Row
@@ -656,15 +662,15 @@ guarded.post('/ical/validate', async (c) => {
   const parsed = icalSchema.safeParse(body)
   if (!parsed.success) return c.json({ ok: false, code: 'url' })
   try {
-    const res = await fetch(parsed.data.url, { redirect: 'follow', signal: AbortSignal.timeout(15000) })
-    if (!res.ok) return c.json({ ok: false, code: 'http', status: res.status })
-    const text = await res.text()
+    const text = await fetchIcs(parsed.data.url)
     if (!text.includes('BEGIN:VCALENDAR')) return c.json({ ok: false, code: 'not-ics' })
     const events = parseIcs(text)
     const reservations = icsToReservations(events)
     if (events.length === 0) return c.json({ ok: false, code: 'empty' })
     return c.json({ ok: true, count: reservations.length })
-  } catch {
+  } catch (error) {
+    const http = /^HTTP (\d+)$/.exec((error as Error).message)
+    if (http) return c.json({ ok: false, code: 'http', status: Number(http[1]) })
     return c.json({ ok: false, code: 'fetch' })
   }
 })
@@ -1052,7 +1058,7 @@ const cleaningUpdateSchema = z.object({
   estimatedHours: z.coerce.number().min(0).optional(),
   checks: z.array(z.object({ id: z.string(), label: z.string(), done: z.boolean() })).optional(),
   instructions: z.string().optional(),
-  photos: z.array(z.string()).optional(),
+  photos: z.array(z.string().refine(isSafeStoredPhotoPath, { message: 'foto inválida' })).optional(),
   workLog: z.array(z.object({ personId: z.string(), hours: z.number() })).optional(),
   supplies: z.array(z.object({ label: z.string(), amount: z.number() })).optional(),
 })
@@ -1064,6 +1070,8 @@ guarded.put('/cleanings/:id', async (c) => {
   const parsed = cleaningUpdateSchema.safeParse(body)
   if (!parsed.success) return c.json({ error: 'formato inválido' }, 400)
   const d = parsed.data
+  const currentPhotos = JSON.parse(existing.photos || '[]') as string[]
+  if (d.photos?.some((photo) => !isOwnedStoredPhoto(currentPhotos, photo))) return c.json({ error: 'foto no asignable' }, 400)
   const materials = d.supplies ? d.supplies.reduce((a, s) => a + s.amount, 0) : undefined
   db.prepare(`UPDATE cleanings SET
     status = COALESCE(?, status),
@@ -1389,7 +1397,7 @@ guarded.post('/properties/:id/photo', async (c) => {
 
   // Borra la foto anterior si era nuestra (/photos/...)
   if (existing.photo?.startsWith('/photos/')) {
-    try { unlinkSync(join(photosDir, existing.photo.replace('/photos/', ''))) } catch { /* noop */ }
+    removeStoredPhoto(photosDir, existing.photo)
   }
   const photoPath = `/photos/${filename}`
   db.prepare('UPDATE properties SET photo = ? WHERE id = ?').run(photoPath, existing.id)
@@ -1548,9 +1556,7 @@ function purgeExpiredPhotos(db: DB, dataDir: string) {
   for (const c of expired) {
     const photos = JSON.parse(c.photos || '[]')
     for (const p of photos) {
-      const filename = p.replace('/photos/', '')
-      const filepath = join(photosDir, filename)
-      try { if (existsSync(filepath)) { unlinkSync(filepath); deleted++ } } catch { /* noop */ }
+      if (removeStoredPhoto(photosDir, p)) deleted++
     }
     db.prepare("UPDATE cleanings SET photos = '[]' WHERE id = ?").run(c.id)
   }

@@ -1,5 +1,6 @@
+import { createServer } from 'node:http';
 import { describe, expect, it } from 'vitest';
-import { icsToReservations, parseIcs } from '../src/ical.js';
+import { fetchIcs, icsToReservations, parseIcs } from '../src/ical.js';
 
 const ICS = `BEGIN:VCALENDAR
 PRODID:-//Airbnb Inc//Hosting Calendar 1.0//EN
@@ -39,5 +40,24 @@ describe('icsToReservations', () => {
       confirmation_code: 'HMNETDBM8D',
       phone_last4: '4045',
     });
+  });
+});
+
+describe('fetchIcs destination policy', () => {
+  it('rejects a non-HTTPS calendar before connecting', async () => {
+    let requests = 0;
+    const server = createServer((_req, res) => {
+      requests++;
+      res.end('BEGIN:VCALENDAR');
+    });
+    await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve));
+    const address = server.address();
+    if (!address || typeof address === 'string') throw new Error('Missing test port');
+    try {
+      await expect(fetchIcs(`http://127.0.0.1:${address.port}/calendar`)).rejects.toThrow(/HTTPS/);
+      expect(requests).toBe(0);
+    } finally {
+      await new Promise<void>((resolve, reject) => server.close((error) => error ? reject(error) : resolve()));
+    }
   });
 });
