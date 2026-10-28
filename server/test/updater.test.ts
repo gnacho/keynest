@@ -29,7 +29,12 @@ function buildFixture(opts: { omitServerDist?: boolean } = {}) {
   }
   execFileSync('tar', ['-czf', join(fix, 'app.tar.gz'), '-C', join(fix, 'pkg'), '.'])
   const hash = execFileSync('sha256sum', [join(fix, 'app.tar.gz')], { encoding: 'utf8' }).split(/\s+/)[0]!
-  writeFileSync(join(fix, 'checksums.txt'), `${hash}  keynest_1.7.0_linux_amd64.tar.gz\n`)
+  // El actualizador elige el tarball con `uname -m`, así que el nombre del
+  // checksum debe seguir la arquitectura del runner (arm64 en CI).
+  const arch = execFileSync('uname', ['-m'], { encoding: 'utf8' }).trim()
+    .replace('x86_64', 'amd64')
+    .replace('aarch64', 'arm64')
+  writeFileSync(join(fix, 'checksums.txt'), `${hash}  keynest_1.7.0_linux_${arch}.tar.gz\n`)
   writeFileSync(join(fix, 'latest.json'), '{"tag_name":"v1.7.0"}\n')
 
   writeExecutable(join(fix, 'bin', 'curl'), `#!/bin/sh
