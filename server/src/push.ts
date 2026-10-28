@@ -15,6 +15,7 @@ import crypto from 'node:crypto'
 import { Agent } from 'node:https'
 import webpush from 'web-push'
 import { assertPublicUrl, createPublicLookup, setAgentRequestDeadline } from './outbound.js'
+import { MAX_CONCURRENT_PUSH, mapWithConcurrency } from './push-limits.js'
 import type { PushSubscription, RequestOptions, SendResult } from 'web-push'
 import type { Statement } from 'better-sqlite3'
 import type { DB } from './db.js'
@@ -32,7 +33,7 @@ let vapidOk = false
 type SendFn = (sub: PushSubscription, payload: string, opts?: RequestOptions) => Promise<any>
 let sendFn: SendFn = (sub, payload, opts) => webpush.sendNotification(sub, payload, opts)
 const pushAgent = new Agent({ lookup: createPublicLookup() })
-setAgentRequestDeadline(pushAgent, 10000)
+setAgentRequestDeadline(pushAgent, 10000, 64 * 1024)
 
 // Configura VAPID una vez al arrancar. Devuelve true si el push queda activo.
 export function configurePush({ publicKey, privateKey, subject } = {} as { publicKey?: string; privateKey?: string; subject?: string }): boolean {
@@ -276,7 +277,7 @@ export async function notifyUsers(db: DB, userIds: string[], tipo: string, datos
       continue
     }
     const urgency = severity === 'critical' ? 'high' : severity === 'high' ? 'normal' : 'low'
-    const resultados = await Promise.allSettled(subs.map((sub) => enviarAUna(db, sub, json, { TTL: ttl, urgency, topic: tipo })))
+    const resultados = await mapWithConcurrency(subs, MAX_CONCURRENT_PUSH, (sub) => enviarAUna(db, sub, json, { TTL: ttl, urgency, topic: tipo }))
     for (const r of resultados) {
       if (r.status === 'fulfilled' && r.value === 'ok') res.enviados++
       else if (r.status === 'fulfilled' && r.value === 'borrada') res.borrados++

@@ -1,13 +1,16 @@
 [Unit]
-Description=Keynest — aplicar actualización on-demand (flag en el dir de datos)
+Description=Keynest — aplicar actualización o rollback on-demand (flag en el dir de datos)
 
 [Path]
 # Dos layouts: capistrano (/var/lib/keynest, StateDirectory del install.sh) y
-# plano (/opt/keynest/data, deploy manual tipo CT 226). El apply in-app escribe
-# el flag en el dir escribible correspondiente; cualquiera de los dos lo
-# dispara. systemd vigila por inotify (fuera del sandbox del servicio).
+# plano (/opt/keynest/data, deploy manual tipo CT 226). El apply y el rollback
+# in-app escriben el flag en el dir escribible correspondiente; cualquiera de
+# las cuatro rutas lo dispara. systemd vigila por inotify (fuera del sandbox
+# del servicio).
 PathExists=/var/lib/keynest/.update-requested
 PathExists=/opt/keynest/data/.update-requested
+PathExists=/var/lib/keynest/.rollback-requested
+PathExists=/opt/keynest/data/.rollback-requested
 Unit=keynest-update.service
 
 [Install]

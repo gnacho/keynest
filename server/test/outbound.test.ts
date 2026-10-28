@@ -86,6 +86,21 @@ describe('outbound destination policy', () => {
     agent.destroy()
   })
 
+  it('destroys an agent socket that receives more bytes than allowed', () => {
+    const agent = new Agent()
+    let destroyed = false
+    const socket = new EventEmitter() as EventEmitter & { destroy: () => void }
+    socket.destroy = () => { destroyed = true }
+    agent.createConnection = () => socket as never
+    setAgentRequestDeadline(agent, 1000, 16)
+
+    agent.createConnection({} as never)
+    socket.emit('data', Buffer.alloc(32))
+
+    expect(destroyed).toBe(true)
+    agent.destroy()
+  })
+
   it('enforces a total deadline even without a socket timeout event', async () => {
     const resolver: PublicResolver = (_hostname, _options, callback) => {
       callback(null, [{ address: '8.8.8.8', family: 4 }])

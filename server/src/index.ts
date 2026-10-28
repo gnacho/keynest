@@ -1441,13 +1441,13 @@ guarded.put('/config/backup', async (c) => {
   aud(c, 'update', 'config', 'backup', JSON.stringify(parsed.data))
   return c.json({ ok: true, config })
 })
-guarded.post('/backup/run', (c) => {
+guarded.post('/backup/run', async (c) => {
   if (c.get('user').role !== 'admin') return c.json({ error: 'solo admin' }, 403)
-  const result = runBackup(prodDb, config.dataDir)
-  if (result.error) return c.json({ error: result.error }, 400)
+  const result = await runBackup(prodDb, config.dataDir)
+  if ('error' in result) return c.json({ error: result.error, detail: result.detail }, 400)
   cleanOldBackups(config.dataDir, 'keynest.db', getBackupConfig(prodDb).retentionDays)
   aud(c, 'create', 'backup', '', result.path)
-  return c.json({ ok: true, path: result.path })
+  return c.json({ ok: true, path: result.path, bytes: result.bytes })
 })
 
 const pkgJson = JSON.parse(readFileSync(join(import.meta.dirname, '..', 'package.json'), 'utf8'))
@@ -1606,11 +1606,11 @@ alerts.scheduleDaily(9, () => alerts.checkMantenimientoRecordatorios(prodDb, not
 alerts.scheduleDaily(12, () => alerts.checkLimpiezas(prodDb), 'limpiezas-pendientes')
 
 /* Backup diario a las 03:00 si está habilitado */
-alerts.scheduleDaily(3, () => {
+alerts.scheduleDaily(3, async () => {
   const cfg = getBackupConfig(prodDb)
   if (!cfg.enabled) return
-  const result = runBackup(prodDb, config.dataDir)
-  if (result.ok) {
+  const result = await runBackup(prodDb, config.dataDir)
+  if ('ok' in result) {
     cleanOldBackups(config.dataDir, 'keynest.db', cfg.retentionDays)
     console.log(`[backup] creado: ${result.path}`)
   } else {
