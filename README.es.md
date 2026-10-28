@@ -151,6 +151,8 @@ Las instalaciones nuevas generan ambas claves. En el primer arranque actualizado
 
 Reinicia tras cambios: `sudo systemctl restart keynest`.
 
+Las fotos y avatares subidos son privados: el servidor solo los entrega a una sesión autenticada o a una URL firmada de vida corta (`exp` + `sig`) ligada a ese fichero exacto. La sesión demo se emite sin credenciales, así que no da acceso a esos ficheros: sus páginas usan URLs firmadas como cualquier enlace público. Los enlaces públicos de proveedor y limpieza reciben URLs firmadas en su JSON, así siguen mostrando sus imágenes sin exponer el resto del directorio de medios. Una firma se rechaza si se reutiliza para otro fichero o cuando caduca (24 horas). Rotar `SESSION_SECRET` invalida todas las URLs firmadas ya emitidas, así que conviene mantenerlo estable salvo que quieras revocarlas todas.
+
 ## Desarrollo
 
 ```bash

@@ -52,7 +52,7 @@ interface ApiCleaningRow {
   estimated_hours: number;
   checks: string;
   instructions?: string | null;
-  photos: string;
+  photos: string | string[]; // Superado el endurecimiento de medios llega como array; el string se mantiene por compatibilidad.
 }
 
 interface TokenData {

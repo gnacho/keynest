@@ -147,6 +147,8 @@ Fresh installs generate both secrets. On the first upgraded boot, legacy install
 
 Restart after changes: `sudo systemctl restart keynest`.
 
+Uploaded photos and avatars are private: the server only delivers them to an authenticated session or to a short-lived signed URL (`exp` + `sig`) bound to that exact file. The demo session is created without credentials, so it does not grant access to these files: demo pages rely on signed URLs like any other public link. Public provider and cleaning links receive signed URLs in their JSON payload, so they keep showing their images without exposing the rest of the media directory. A signature is rejected if it is reused for another file or once it expires (24 hours). Rotating `SESSION_SECRET` invalidates every signed URL already handed out, so keep it stable unless you need to revoke them all.
+
 ## Development
 
 ```bash
