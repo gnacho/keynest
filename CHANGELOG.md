@@ -12,6 +12,72 @@ y este proyecto se adhiere a [Versionado Semántico](https://semver.org/lang/es/
 > release usar `scripts/release.sh` (calcula la versión y crea el tag con el
 > mensaje correcto).
 
+## [1.6.1] - 2026-10-28
+
+### Added
+
+- **Copias de seguridad verificadas (#316).** La copia diaria usa la API de
+  SQLite (incluye el WAL), se abre aparte y se comprueba con `quick_check` y
+  las tablas esenciales antes de darse por buena. Una copia que no pasa la
+  verificación se descarta y la app informa del error en lugar de anunciar un
+  éxito falso.
+- **Recuperación del actualizador (#316).** El actualizador solo marca la
+  versión nueva cuando el servicio responde y sirve la versión esperada. Si
+  algo falla, vuelve al release anterior, lo verifica y deja constancia.
+- **Entrega autenticada de fotos y avatares (#321).** Los ficheros subidos
+  dejan de servirse como estáticos públicos. Se entregan con sesión válida o
+  con una URL firmada de 24 horas ligada a ese fichero, que es lo que reciben
+  los enlaces públicos de proveedor y limpieza.
+
+### Changed
+
+- **Las claves de cifrado y de sesión ya no viven en la base de datos.** Una
+  instalación nueva las genera en su fichero de entorno. Una instalación
+  existente las migra en el primer arranque a `<DATA_DIR>/secrets.env` con
+  permisos 0600, vuelve a cifrar los datos cifrados y revoca las sesiones y
+  los tokens de recuperación existentes. Después de actualizar hay que volver
+  a iniciar sesión.
+- **Los calendarios y las suscripciones push solo admiten HTTPS y destinos
+  públicos.** Una URL `http://`, una IP privada o un redirect hacia la red
+  interna se rechazan antes de conectar.
+- **Los límites de push son explícitos.** Como máximo 10 suscripciones por
+  usuario, 30 altas por minuto, 4 envíos en paralelo y un tope de tamaño en la
+  respuesta.
+- **La IP del cliente respeta `TRUST_PROXY`.** Detrás de un proxy inverso hay
+  que poner `TRUST_PROXY=true` para que el límite de intentos y el bloqueo de
+  cuenta usen la IP real. Sin proxy, la cabecera `X-Forwarded-For` se ignora.
+- **Los enlaces personales muestran solo lo asignado.** Un enlace de limpieza
+  o de proveedor ve los inmuebles donde tiene trabajo activo y los campos
+  necesarios para ese trabajo, sin tarifas ni datos internos.
+- **El panel de sistema queda en manos de administradores.**
+  `/api/system/info` deja de estar disponible para usuarios normales.
+- **El build de producción ya no publica source maps.**
+
+### Fixed
+
+- **El borrado de fotos queda contenido (#314).** Ningún usuario puede borrar
+  la foto de otro inmueble ni salir del directorio de medios mediante rutas o
+  enlaces simbólicos.
+- **Cambiar o resetear una contraseña invalida los enlaces de recuperación
+  (#314).** Antes seguían sirviendo después del cambio.
+- **Una cookie de sesión malformada ya no provoca un error del servidor.** Se
+  trata como sesión ausente.
+- **Las cookies de sesión llevan `Secure` cuando la instalación va por HTTPS.**
+- **El código de emparejamiento de Airbnb usa un generador criptográfico y
+  tiene límite de intentos.**
+- **Los datos y las copias quedan con permisos restringidos.** El directorio
+  de datos, las fotos, los avatares y las copias se crean y se corrigen a 0700.
+  Los ficheros de base de datos y las copias quedan a 0600.
+- **La página del proveedor vuelve a mostrar todo el trabajo.** Categoría,
+  urgencia, notas, fecha prevista y coste quedaban fuera del resumen que
+  recibía ese enlace.
+
+### Security
+
+- Endurecimiento derivado de la auditoría interna: revocación de credenciales,
+  destinos salientes, permisos de datos, límites de recursos y entrega de
+  medios. Los detalles técnicos quedan fuera del repositorio público.
+
 ## [1.6.0] - 2026-10-26
 
 ### Added
