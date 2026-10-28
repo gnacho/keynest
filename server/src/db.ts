@@ -1,6 +1,6 @@
 import Database from 'better-sqlite3'
 import crypto from 'node:crypto'
-import { mkdirSync } from 'node:fs'
+import { chmodSync, mkdirSync } from 'node:fs'
 import { join } from 'node:path'
 
 export type DB = Database.Database
@@ -235,9 +235,24 @@ export function migrate(db: DB) {
   }
 }
 
+/** Crea un subdirectorio de datos (fotos, avatares) accesible solo por su dueño.
+ *  Se aplica también si ya existía con permisos heredados del umask. */
+export function ensurePrivateDir(path: string): void {
+  mkdirSync(path, { recursive: true, mode: 0o700 })
+  try { chmodSync(path, 0o700) } catch (err) {
+    // Un directorio heredado de otra cuenta no se puede restringir desde aquí:
+    // queda visible en el log en lugar de pasar desapercibido.
+    console.warn(`[db] no se pudieron restringir los permisos de ${path}: ${(err as Error).message}`)
+  }
+}
+
 export function openDb(dataDir: string, filename = 'keynest.db'): DB {
   mkdirSync(dataDir, { recursive: true })
+  // Los datos, la BD y sus sidecars no deben ser legibles por otros usuarios
+  // locales: dentro viven sesiones, tokens cifrados y claves heredadas.
+  try { chmodSync(dataDir, 0o700) } catch { /* sistema de ficheros sin permisos POSIX */ }
   const db = new Database(join(dataDir, filename))
+  try { chmodSync(join(dataDir, filename), 0o600) } catch { /* idem */ }
   db.pragma('journal_mode = WAL')
   db.pragma('synchronous = NORMAL')
 

@@ -38,7 +38,9 @@ export default defineConfig({
     },
   },
   build: {
-    sourcemap: true,
+    // Sin mapas en produccion: publicaban el codigo fuente del cliente.
+    // Solo se generan pidiendolos explicitamente para diagnosticar.
+    sourcemap: process.env['KEYNEST_SOURCEMAP'] === 'true',
     rollupOptions: {
       output: {
         manualChunks(id) {

@@ -31,6 +31,30 @@ function hmac(secret: string, data: string): string {
   return crypto.createHmac('sha256', secret).update(data).digest('hex')
 }
 
+/** Marca la cookie Secure solo cuando la petición llegó por HTTPS real
+ *  (socket TLS o proxy de confianza que lo declara). En HTTP local sigue
+ *  funcionando igual: un navegador descartaría una cookie Secure en HTTP. */
+function isSecureRequest(c: Context<AppEnv>): boolean {
+  const url = c.req.url
+  if (typeof url === 'string' && url.startsWith('https:')) return true
+  if (process.env.TRUST_PROXY === 'true') {
+    // El último salto lo añade el proxy de confianza; los anteriores los
+    // controla el cliente, igual que en clientIp.
+    const hops = (c.req.header('x-forwarded-proto') || '').split(',').map((hop) => hop.trim().toLowerCase())
+    return hops[hops.length - 1] === 'https'
+  }
+  return false
+}
+
+/** Compara firmas en tiempo constante exigiendo longitudes iguales primero:
+ *  timingSafeEqual lanza RangeError si los buffers difieren de tamaño. */
+function signatureMatches(provided: string, expected: string): boolean {
+  const a = Buffer.from(provided)
+  const b = Buffer.from(expected)
+  if (a.length !== b.length || a.length === 0) return false
+  return crypto.timingSafeEqual(a, b)
+}
+
 function sessionSecret(db: DB): string {
   const secret = process.env.SESSION_SECRET || kvGet(db, 'session_secret')
   if (!secret || secret.length < 32) throw new Error('SESSION_SECRET is required')
@@ -91,6 +115,12 @@ export function rateLimitAction(db: DB, action: string, c: Context<AppEnv>, maxP
   return false
 }
 
+/* Purga las ventanas de rate limit ya vencidas: sin esto las filas de IPs
+ * externas (escáneres, sondeos) se acumulan para siempre en la BD. */
+export function cleanExpiredRateLimits(db: DB): number {
+  return db.prepare('DELETE FROM rate_limits WHERE window_end < ?').run(Date.now()).changes
+}
+
 export function loginRateLimited(db: DB, c: Context<AppEnv>): boolean {
   const row = db.prepare('SELECT * FROM login_attempts WHERE ip = ?').get(clientIp(c)) as { locked_until: number } | undefined
   return Boolean(row && row.locked_until > Date.now())
@@ -134,7 +164,7 @@ function renewCookie(db: DB, s: SessionRow, c: Context<AppEnv>): void {
   setCookie(c, COOKIE_NAME, `${s.id}.${hmac(sessionSecret(db), s.id)}`, {
     httpOnly: true,
     sameSite: 'Lax',
-    secure: false,
+    secure: isSecureRequest(c),
     maxAge: SESSION_TTL_MS / 1000,
     path: '/',
   })
@@ -146,7 +176,7 @@ export function sessionFromCookie(db: DB, c: Context<AppEnv>): SessionRow | null
   const [id, mac] = raw.split('.')
   if (!id || !mac) return null
   const expected = hmac(sessionSecret(db), id)
-  if (!crypto.timingSafeEqual(Buffer.from(mac), Buffer.from(expected))) return null
+  if (!signatureMatches(mac, expected)) return null
   const s = db.prepare('SELECT * FROM sessions WHERE id = ?').get(id) as SessionRow | undefined
   if (!s || s.expires_at < Date.now()) return null
   return s
@@ -199,7 +229,7 @@ export function handleDemoLogin(prodDb: DB, c: Context<AppEnv>): UserRow | null 
   setCookie(c, COOKIE_NAME, `${id}.${mac}`, {
     httpOnly: true,
     sameSite: 'Lax',
-    secure: false,
+    secure: isSecureRequest(c),
     maxAge: SESSION_TTL_MS / 1000,
     path: '/',
   })
@@ -222,7 +252,7 @@ export async function handleLogin(db: DB, c: Context<AppEnv>, { username, passwo
   setCookie(c, COOKIE_NAME, `${id}.${mac}`, {
     httpOnly: true,
     sameSite: 'Lax',
-    secure: false,
+    secure: isSecureRequest(c),
     ...(remember ? { maxAge: SESSION_TTL_MS / 1000 } : {}),
     path: '/',
   })
@@ -277,7 +307,7 @@ export function restoreFromToken(db: DB, c: Context<AppEnv>, token: string | und
   setCookie(c, COOKIE_NAME, `${id}.${mac}`, {
     httpOnly: true,
     sameSite: 'Lax',
-    secure: false,
+    secure: isSecureRequest(c),
     maxAge: SESSION_TTL_MS / 1000,
     path: '/',
   })
