@@ -82,6 +82,8 @@ case "$url" in
   *.tar.gz) if [ -n "$out" ]; then cp "$FIXTURE/app.tar.gz" "$out"; else cat "$FIXTURE/app.tar.gz"; fi ;;
   */health) exit "\${FAKE_HEALTH:-0}" ;;
   */api/version) printf '{"version":"%s"}\\n' "\${FAKE_VERSION:-$(cat "$FIXTURE/version.txt")}" ;;
+  */api/auth/demo-status) printf '{"enabled":%s}\\n' "\${FAKE_DEMO_ENABLED:-true}" ;;
+  *:*/) if [ "\${FAKE_FRONTEND:-ok}" = ok ]; then printf '<!DOCTYPE html><html></html>\\n'; else exit 22; fi ;;
   *) echo "unexpected url $url" >&2; exit 1 ;;
 esac
 `)
@@ -231,6 +233,26 @@ describe('demo updater', () => {
       expect(existsSync(join(backup, 'data', 'keynest.db'))).toBe(true)
       expect(existsSync(join(backup, 'data', 'keynest.db-wal'))).toBe(false)
     }
+  })
+
+  it('restores the previous build when the demo route is disabled', () => {
+    seedInstall('1.6.1')
+
+    const run = runDemoUpdater({ FAKE_DEMO_ENABLED: 'false' })
+
+    expect(run.code).toBe(7)
+    expect(readFileSync(join(opt, 'server', 'dist', 'index.js'), 'utf8')).toBe('// old build\n')
+    expect(readFileSync(join(opt, '.release-id'), 'utf8').trim()).toBe('1.6.1')
+  })
+
+  it('restores the previous build when the frontend is not served', () => {
+    seedInstall('1.6.1')
+
+    const run = runDemoUpdater({ FAKE_FRONTEND: 'missing' })
+
+    expect(run.code).toBe(7)
+    expect(readFileSync(join(opt, 'public', 'index.html'), 'utf8')).toBe('<html>old</html>')
+    expect(readFileSync(join(opt, '.release-id'), 'utf8').trim()).toBe('1.6.1')
   })
 
   it('refuses to deploy when the checksum does not match', () => {
