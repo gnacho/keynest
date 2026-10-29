@@ -57,7 +57,25 @@ resolve_port() {
   echo "$p"
 }
 
-# Servicio activo, /health 200 y versión servida igual a la esperada.
+# Prueba de humo de la superficie propia de la demo. /health y /api/version no
+# detectan una SPA sin servir ni una ruta de demo desactivada, que es justo lo
+# que rompe una actualización del frontend.
+smoke_ok() {
+  estado=$(curl -fsS --max-time 3 "http://127.0.0.1:$PORT/api/auth/demo-status" 2>/dev/null || true)
+  case "$estado" in
+    *'"enabled":true'*) ;;
+    *) log "smoke: la ruta de demo no responde habilitada"; return 1 ;;
+  esac
+  portada=$(curl -fsS --max-time 3 "http://127.0.0.1:$PORT/" 2>/dev/null | head -c 200 || true)
+  case "$portada" in
+    *'<html'*|*'<HTML'*|*'<!DOCTYPE html'*|*'<!doctype html'*) return 0 ;;
+    *) log "smoke: el frontend no se sirve en /"; return 1 ;;
+  esac
+}
+
+# Servicio activo, /health 200, versión servida igual a la esperada y humo de la
+# demo. Los fallos de humo se reintentan hasta agotar el timeout, igual que el
+# resto: durante el arranque el frontend tarda un instante en servirse.
 wait_healthy() { # $1 = versión esperada (vacío = cualquiera)
   esperada=$1
   i=0
@@ -70,7 +88,7 @@ wait_healthy() { # $1 = versión esperada (vacío = cualquiera)
         log "versión servida $efectiva no coincide con $esperada"
         return 1
       fi
-      return 0
+      smoke_ok && return 0
     fi
     sleep 1
     i=$((i + 1))
