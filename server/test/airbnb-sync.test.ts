@@ -201,6 +201,34 @@ describe('aplicarCruce', () => {
     })
   })
 
+  it('resuelve en un solo cruce una solicitud pendiente que la instantánea ya traía (#330)', () => {
+    insertaReserva('res-solicitud', 'HM-SOLICITUD', {
+      uid: 'solicitud@airbnb.com',
+      airbnb_sync_state: 'pending',
+    })
+    escribeReservas([{
+      confirmation_code: 'HM-SOLICITUD',
+      guests: 4,
+      amount: 2510.47,
+      guest_name: 'Laith Kawar',
+      status: 'pending',
+      status_localized: 'Reserva solicitada',
+    }])
+
+    aplicarCruce(db)
+
+    const fila = db.prepare(`SELECT airbnb_sync_state, airbnb_status, airbnb_status_localized,
+      guests, amount, guest_name FROM reservations WHERE id = ?`).get('res-solicitud') as Record<string, any>
+    expect(fila).toMatchObject({
+      airbnb_sync_state: 'matched',
+      airbnb_status: 'pending',
+      airbnb_status_localized: 'Reserva solicitada',
+      guests: 4,
+      amount: 2510.47,
+      guest_name: 'Laith Kawar',
+    })
+  })
+
   it('no hace retroceder una reserva sincronizada con una instantánea antigua', () => {
     insertaReserva('res-reciente', 'HM-RECIENTE', {
       uid: 'reciente@airbnb.com',

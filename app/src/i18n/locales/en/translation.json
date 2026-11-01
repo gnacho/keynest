@@ -189,7 +189,7 @@
     "estado": "Status",
     "importe": "Amount",
     "pendienteSincronizacion": "Pending sync",
-    "pendienteSincronizacionHint": "This reservation is in the Airbnb calendar, but the scraper has not sent its details yet. The guest name, guest count and amount will be filled in on the next sync.",
+    "pendienteSincronizacionHint": "The status of this reservation could not be confirmed with Airbnb yet: it may be a request waiting for your approval or a newly created booking that has not reached the calendar. The guest name, guest count and amount will be filled in once its details arrive.",
     "importeEur": "Amount (€)",
     "sinReservas": "No reservations match these filters",
     "limpiarFiltros": "Clear filters",
