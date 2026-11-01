@@ -1424,6 +1424,9 @@ guarded.post('/sync', async (c) => {
   syncing = true
   try {
     const results = await syncAll(prodDb, { onNews: onSyncNews })
+    // Cruce inmediato (#330): resuelve el estado Airbnb real (p. ej. solicitud
+    // pendiente de aprobación) en vez de esperar al job horario
+    await syncAirbnb(prodDb).catch((e) => console.error('[keynest] airbnb post-sync error:', e.message))
     return c.json({ ok: true, results })
   } finally {
     syncing = false
@@ -1574,7 +1577,12 @@ function purgeExpiredPhotos(db: DB, dataDir: string) {
   return { cleanings: expired.length, files: deleted }
 }
 
-const runSync = () => syncAll(prodDb, { onNews: onSyncNews }).catch((e) => console.error('[sync] error job:', e.message))
+const runSync = async () => {
+  await syncAll(prodDb, { onNews: onSyncNews }).catch((e) => console.error('[sync] error job:', e.message))
+  // Cruce inmediato (#330): el snapshot del scraper suele llegar antes que el
+  // iCal, así que el estado real puede resolverse en el mismo ciclo
+  await syncAirbnb(prodDb).catch((e) => console.error('[keynest] airbnb post-sync error:', e.message))
+}
 setTimeout(runSync, 5000) // sync inicial al arrancar
 try { purgeExpiredPhotos(prodDb, config.dataDir) } catch { /* noop */ } // purge fotos expiradas al arrancar
 setInterval(runSync, config.syncIntervalMs)
@@ -1592,7 +1600,7 @@ const tedeeChecker = alerts.createTedeeChecker({ db: prodDb })
 setTimeout(() => tedeeChecker.check().catch((e) => console.error('[keynest] tedee check error:', e.message)), 10000)
 setInterval(() => tedeeChecker.check().catch((e) => console.error('[keynest] tedee check error:', e.message)), 5 * 60 * 1000)
 
-/* Cruce Airbnb (guests+amount) + aviso de sesión muerta, cada hora */
+/* Cruce Airbnb (guests+amount) + aviso de sesión muerta, cada hora y tras cada sync iCal (#330) */
 const runAirbnb = () => syncAirbnb(prodDb).catch((e) => console.error('[keynest] airbnb job error:', e.message))
 setTimeout(runAirbnb, 8000)
 setInterval(runAirbnb, 3600 * 1000)

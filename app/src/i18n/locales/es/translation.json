@@ -189,7 +189,7 @@
     "estado": "Estado",
     "importe": "Importe",
     "pendienteSincronizacion": "Pendiente de sincronización",
-    "pendienteSincronizacionHint": "La reserva está en el calendario de Airbnb, pero el scraper todavía no ha enviado sus datos. El nombre, los huéspedes y el importe se completarán en el próximo cruce.",
+    "pendienteSincronizacionHint": "El estado de esta reserva aún no se ha podido confirmar con Airbnb: puede ser una solicitud pendiente de tu aprobación o una reserva recién creada que todavía no llega al calendario. El nombre, los huéspedes y el importe se completarán en cuanto lleguen sus datos.",
     "importeEur": "Importe (€)",
     "sinReservas": "No hay reservas con estos filtros",
     "limpiarFiltros": "Limpiar filtros",
