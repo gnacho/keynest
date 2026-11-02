@@ -66,7 +66,7 @@ describe('issue #207 — gastos persistidos en BD', () => {
     const hasExp = (db2.prepare("SELECT COUNT(*) n FROM sqlite_master WHERE type='table' AND name='expenses'").get() as { n: number }).n;
     expect(hasExp).toBe(1);
     const maxV = (db2.prepare('SELECT MAX(version) v FROM schema_version').get() as { v: number | null }).v;
-    expect(maxV).toBe(31);
+    expect(maxV).toBe(33);
     const versions = (db2.prepare('SELECT version FROM schema_version ORDER BY version').all() as Array<{ version: number }>).map((r) => r.version);
     expect(versions).toContain(20);
     db2.close();
@@ -81,6 +81,14 @@ describe('issue #207 — gastos persistidos en BD', () => {
         CREATE TABLE schema_version (version INTEGER PRIMARY KEY, applied_at INTEGER);
         INSERT INTO schema_version (version, applied_at) VALUES (26, 0);
         CREATE TABLE reservations (id TEXT PRIMARY KEY, airbnb_status TEXT DEFAULT '');
+        CREATE TABLE login_tokens (
+          id TEXT PRIMARY KEY,
+          user_id TEXT NOT NULL,
+          token_hash TEXT NOT NULL,
+          created_at INTEGER NOT NULL,
+          expires_at INTEGER NOT NULL,
+          last_used_at INTEGER
+        );
       `);
       migrate(partial);
       const cols = (partial.prepare('PRAGMA table_info(reservations)').all() as Array<{ name: string }>).map((c) => c.name);
@@ -92,7 +100,7 @@ describe('issue #207 — gastos persistidos en BD', () => {
         'airbnb_synced_at',
       ]));
       const maxV = (partial.prepare('SELECT MAX(version) v FROM schema_version').get() as { v: number | null }).v;
-      expect(maxV).toBe(31);
+      expect(maxV).toBe(33);
     } finally {
       partial.close();
       rmSync(dir2, { recursive: true, force: true });
@@ -113,6 +121,14 @@ describe('issue #207 — gastos persistidos en BD', () => {
           airbnb_cancellation_status TEXT DEFAULT '',
           airbnb_sync_state TEXT DEFAULT '',
           airbnb_synced_at INTEGER
+        );
+        CREATE TABLE login_tokens (
+          id TEXT PRIMARY KEY,
+          user_id TEXT NOT NULL,
+          token_hash TEXT NOT NULL,
+          created_at INTEGER NOT NULL,
+          expires_at INTEGER NOT NULL,
+          last_used_at INTEGER
         )
       `);
       migrate(full);
@@ -125,7 +141,7 @@ describe('issue #207 — gastos persistidos en BD', () => {
         'airbnb_synced_at',
       ]));
       const maxV = (full.prepare('SELECT MAX(version) v FROM schema_version').get() as { v: number | null }).v;
-      expect(maxV).toBe(31);
+      expect(maxV).toBe(33);
     } finally {
       full.close();
       rmSync(dir2, { recursive: true, force: true });

@@ -238,7 +238,7 @@ export function handleDemoLogin(prodDb: DB, c: Context<AppEnv>): UserRow | null 
 
 const DUMMY_HASH = '$2b$10$abcdefghijklmnopqrstuuABCDEFGHIJKLMNOPQRSTUVWXYZ012'
 
-export async function handleLogin(db: DB, c: Context<AppEnv>, { username, password, remember }: { username?: string; password?: string; remember?: boolean }): Promise<{ user: UserRow; restoreToken?: string } | null> {
+export async function handleLogin(db: DB, c: Context<AppEnv>, { username, password }: { username?: string; password?: string; remember?: boolean }): Promise<{ user: UserRow; restoreToken?: string } | null> {
   const user = db.prepare('SELECT * FROM users WHERE username = ?').get(username || '') as (UserRow & { password_hash: string }) | undefined
   if (!user) {
     await bcrypt.compare(password || '', DUMMY_HASH)
@@ -246,20 +246,24 @@ export async function handleLogin(db: DB, c: Context<AppEnv>, { username, passwo
   }
   const valid = await bcrypt.compare(password || '', user.password_hash)
   if (!valid) return null
-  const id = createSession(db, user.id, c.req.header('user-agent'), false, Boolean(remember))
+  // Sesión SIEMPRE persistente (#333): cookie con maxAge y token de
+  // restauración en cada login. El flag remember de clientes antiguos se
+  // acepta pero se ignora: una cookie sin maxAge (muere al cerrar el
+  // navegador) en una PWA es un cierre de sesión garantizado.
+  const id = createSession(db, user.id, c.req.header('user-agent'), false, true)
   const mac = hmac(sessionSecret(db), id)
-  // Recuérdame: cookie 7d. Sin marcar: cookie de sesión (muere al cerrar el navegador)
   setCookie(c, COOKIE_NAME, `${id}.${mac}`, {
     httpOnly: true,
     sameSite: 'Lax',
     secure: isSecureRequest(c),
-    ...(remember ? { maxAge: SESSION_TTL_MS / 1000 } : {}),
+    maxAge: SESSION_TTL_MS / 1000,
     path: '/',
   })
   const { password_hash, ...pub } = user
-  // Con recuerdame, token de re-autenticación: el cliente lo guarda en
-  // localStorage y lo usa si el navegador pierde la cookie (#290).
-  const restoreToken = remember ? createRestoreToken(db, user.id) : undefined
+  // Token de re-autenticación: el cliente lo guarda en localStorage y lo usa
+  // si el navegador pierde la cookie (#290). Con login siempre persistente se
+  // emite en todos los logins, no solo en los "recuérdame" (#333).
+  const restoreToken = createRestoreToken(db, user.id)
   return { user: pub, restoreToken }
 }
 
@@ -276,13 +280,33 @@ export function handleLogout(db: DB, c: Context<AppEnv>): void {
  * hash SHA-256 y rotación en cada uso. */
 
 const RESTORE_TTL_MS = 90 * 24 * 3600 * 1000 // 90 días
-const RESTORE_MAX_PER_USER = 5
+const RESTORE_MAX_PER_USER = 10
+// Ventana de gracia del hash anterior tras rotar (#333): si la respuesta con
+// el token nuevo no llega al cliente, el reintento con el token viejo repara
+// la sesión en vez de dejarlo huérfano.
+const RESTORE_GRACE_MS = 10 * 60 * 1000
+
+interface RestoreTokenRow {
+  id: string
+  user_id: string
+  expires_at: number
+  previous_hash: string | null
+}
 
 function restoreTokenHash(token: string): string {
   return crypto.createHash('sha256').update(token).digest('hex')
 }
 
-/** Crea un token de restauración para el usuario (solo en login con recuerdame). */
+/** Busca un token válido: hash vigente o hash anterior dentro de la gracia. */
+function findRestoreToken(db: DB, token: string | undefined): RestoreTokenRow | undefined {
+  if (!token) return undefined
+  const hash = restoreTokenHash(token)
+  return db.prepare(
+    'SELECT id, user_id, expires_at, previous_hash FROM login_tokens WHERE token_hash = ? OR (previous_hash IS NOT NULL AND previous_hash = ? AND previous_expires_at > ?)',
+  ).get(hash, hash, Date.now()) as RestoreTokenRow | undefined
+}
+
+/** Crea un token de restauración para el usuario (en todos los logins, #333). */
 export function createRestoreToken(db: DB, userId: string): string {
   const token = crypto.randomBytes(32).toString('base64url')
   db.prepare('INSERT INTO login_tokens (id, user_id, token_hash, created_at, expires_at) VALUES (?, ?, ?, ?, ?)')
@@ -294,11 +318,11 @@ export function createRestoreToken(db: DB, userId: string): string {
   return token
 }
 
-/** Valida el token, crea sesión persistente nueva (cookie) y rota el token.
+/** Valida el token, crea sesión persistente nueva (cookie) y rota el token
+ *  conservando el hash anterior en gracia (#333).
  *  Devuelve { user, newToken } o null si el token no es válido/expiró. */
 export function restoreFromToken(db: DB, c: Context<AppEnv>, token: string | undefined): { user: UserRow; newToken: string } | null {
-  if (!token) return null
-  const row = db.prepare('SELECT * FROM login_tokens WHERE token_hash = ?').get(restoreTokenHash(token)) as { id: string; user_id: string; expires_at: number } | undefined
+  const row = findRestoreToken(db, token)
   if (!row || row.expires_at < Date.now()) return null
   const user = db.prepare('SELECT id, username, email, phone, language, role, lookahead_days, display_name, avatar, dismissed_notifs, created_at FROM users WHERE id = ?').get(row.user_id) as UserRow | undefined
   if (!user) return null
@@ -312,15 +336,15 @@ export function restoreFromToken(db: DB, c: Context<AppEnv>, token: string | und
     path: '/',
   })
   const newToken = crypto.randomBytes(32).toString('base64url')
-  db.prepare('UPDATE login_tokens SET token_hash = ?, expires_at = ?, last_used_at = ? WHERE id = ?')
-    .run(restoreTokenHash(newToken), Date.now() + RESTORE_TTL_MS, Date.now(), row.id)
+  db.prepare('UPDATE login_tokens SET previous_hash = token_hash, previous_expires_at = ?, token_hash = ?, expires_at = ?, last_used_at = ? WHERE id = ?')
+    .run(Date.now() + RESTORE_GRACE_MS, restoreTokenHash(newToken), Date.now() + RESTORE_TTL_MS, Date.now(), row.id)
   return { user, newToken }
 }
 
 /** Invalida el token de restauración de un dispositivo (logout). */
 export function destroyRestoreToken(db: DB, token: string): void {
   if (!token) return
-  db.prepare('DELETE FROM login_tokens WHERE token_hash = ?').run(restoreTokenHash(token))
+  db.prepare('DELETE FROM login_tokens WHERE token_hash = ? OR previous_hash = ?').run(restoreTokenHash(token), restoreTokenHash(token))
 }
 
 /** Cambio de contraseña: verifica la actual con bcrypt antes de re-hashear. */
