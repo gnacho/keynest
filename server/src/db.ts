@@ -191,6 +191,13 @@ const MIGRATIONS = [
    `ALTER TABLE reservations ADD COLUMN airbnb_cancellation_status TEXT DEFAULT ''`,
    `ALTER TABLE reservations ADD COLUMN airbnb_sync_state TEXT DEFAULT ''`,
    `ALTER TABLE reservations ADD COLUMN airbnb_synced_at INTEGER`,
+   // 32-33: ventana de gracia para el hash anterior del token de restauración
+   //     (#333). La rotación escribe el hash nuevo antes de saber si la
+   //     respuesta llegó al cliente: si se pierde (app cerrada a mitad, red
+   //     caída), el token del cliente quedaría huérfano para siempre. Con el
+   //     hash anterior aceptado unos minutos, el reintento repara la sesión.
+   `ALTER TABLE login_tokens ADD COLUMN previous_hash TEXT`,
+   `ALTER TABLE login_tokens ADD COLUMN previous_expires_at INTEGER`,
 ]
 
 export function migrate(db: DB) {

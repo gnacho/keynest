@@ -31,7 +31,6 @@
     "password": "Contraseña",
     "mostrar": "Mostrar contraseña",
     "ocultar": "Ocultar contraseña",
-    "recuerdame": "Recuérdame",
     "entrar": "Entrar",
     "errorCredenciales": "Usuario o contraseña incorrectos",
     "errorConexion": "No se pudo conectar con el servidor",

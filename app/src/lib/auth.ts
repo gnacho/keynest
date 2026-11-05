@@ -99,7 +99,11 @@ export async function restoreSession(): Promise<boolean> {
       body: JSON.stringify({ token }),
     });
     if (!res.ok) {
-      storeRestoreToken(null);
+      // Solo un 401 invalida el token (credencial rechazada de verdad). Un 502
+      // durante un restart del server, un 500 o un 429 del rate limit NO deben
+      // destruir la red de seguridad (#333): el token se conserva para el
+      // próximo intento.
+      if (res.status === 401) storeRestoreToken(null);
       return false;
     }
     const data = (await res.json()) as { user: SessionUser; restoreToken: string };

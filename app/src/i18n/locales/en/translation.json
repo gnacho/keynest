@@ -31,7 +31,6 @@
     "password": "Password",
     "mostrar": "Show password",
     "ocultar": "Hide password",
-    "recuerdame": "Remember me",
     "entrar": "Sign in",
     "errorCredenciales": "Wrong username or password",
     "errorConexion": "Could not reach the server",

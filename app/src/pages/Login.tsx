@@ -28,7 +28,6 @@ function LoginForm() {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
-  const [remember, setRemember] = useState(true);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [demoAvailable, setDemoAvailable] = useState(false);
@@ -58,7 +57,7 @@ function LoginForm() {
     setLoading(true);
     setError('');
     try {
-      await login(username.trim(), password, remember);
+      await login(username.trim(), password);
       await storeCredentials(username.trim(), password); // ANTES de navegar
       window.dispatchEvent(new Event('keynest-authed'));
       navigate('/');
@@ -132,18 +131,6 @@ function LoginForm() {
           </button>
         </span>
       </label>
-
-      <div className="flex items-center justify-between">
-        <label className="flex cursor-pointer items-center gap-2 text-[13px]" style={{ color: 'var(--text-muted)' }}>
-          <input
-            type="checkbox"
-            checked={remember}
-            onChange={(e) => setRemember(e.target.checked)}
-            className="h-4 w-4 rounded accent-[#6366F1]"
-          />
-          {t('login.recuerdame')}
-        </label>
-      </div>
 
       {error && (
         <p className="rounded-xl border border-rose-300 bg-rose-50 px-3 py-2 text-[13px] font-medium text-rose-600 dark:border-rose-500/40 dark:bg-rose-500/10 dark:text-rose-400">

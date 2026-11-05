@@ -18,6 +18,7 @@ import {
   ensureBootstrapAdmin,
   renewSessionIfDue,
   restoreFromToken,
+  handleLogin,
   setUserPassword,
   setUserRole,
 } from '../src/auth.js';
@@ -158,7 +159,13 @@ describe('re-autenticación persistente (#290)', () => {
     expect(tables).toContain('login_tokens');
   });
 
-  it('crea token, restaura sesión y rota (el viejo no se reutiliza)', () => {
+  it('la migración 32/33 añade la ventana de gracia del hash anterior (#333)', () => {
+    const cols = (db.prepare('PRAGMA table_info(login_tokens)').all() as Array<{ name: string }>).map((r) => r.name);
+    expect(cols).toContain('previous_hash');
+    expect(cols).toContain('previous_expires_at');
+  });
+
+  it('crea token, restaura sesión y rota; el hash anterior queda en gracia (#333)', () => {
     const before = (db.prepare('SELECT COUNT(*) n FROM sessions').get() as { n: number }).n;
     const token = createRestoreToken(db, lauraId());
     expect(token).toBeTruthy();
@@ -169,6 +176,23 @@ describe('re-autenticación persistente (#290)', () => {
     expect((db.prepare('SELECT COUNT(*) n FROM sessions').get() as { n: number }).n).toBe(before + 1);
     expect((db.prepare('SELECT remember FROM sessions ORDER BY created_at DESC LIMIT 1').get() as { remember: number }).remember).toBe(1);
 
+    // Respuesta con el token nuevo perdida (app cerrada a mitad): el reintento
+    // con el token viejo repara la sesión dentro de la ventana de gracia.
+    const recovered = restoreFromToken(db, ctx(), token);
+    expect(recovered!.user.username).toBe('laura');
+    expect(recovered!.newToken).not.toBe(restored!.newToken);
+
+    // Consumido el turno de gracia, el token aún más viejo ya no vale.
+    expect(restoreFromToken(db, ctx(), token)).toBeNull();
+    expect(restoreFromToken(db, ctx(), recovered!.newToken)?.user.username).toBe('laura');
+  });
+
+  it('fuera de la ventana de gracia el hash anterior se rechaza (#333)', () => {
+    const token = createRestoreToken(db, lauraId());
+    const restored = restoreFromToken(db, ctx(), token);
+    expect(restored).not.toBeNull();
+    // Simula que la gracia del hash anterior ya expiró.
+    db.prepare('UPDATE login_tokens SET previous_expires_at = ?').run(Date.now() - 1000);
     expect(restoreFromToken(db, ctx(), token)).toBeNull();
     expect(restoreFromToken(db, ctx(), restored!.newToken)?.user.username).toBe('laura');
   });
@@ -187,16 +211,14 @@ describe('re-autenticación persistente (#290)', () => {
   it('logout invalida el token del dispositivo', () => {
     const token = createRestoreToken(db, lauraId());
     expect(restoreFromToken(db, ctx(), token)).not.toBeNull();
-    const newToken = (db.prepare('SELECT token_hash FROM login_tokens ORDER BY created_at DESC LIMIT 1').get() as { token_hash: string }).token_hash;
-    void newToken;
     destroyRestoreToken(db, token);
     expect(restoreFromToken(db, ctx(), token)).toBeNull();
   });
 
-  it('máximo 5 tokens por usuario y purga de expirados', () => {
-    for (let i = 0; i < 8; i++) createRestoreToken(db, lauraId());
+  it('máximo 10 tokens por usuario y purga de expirados (#333)', () => {
+    for (let i = 0; i < 12; i++) createRestoreToken(db, lauraId());
     const n = (db.prepare('SELECT COUNT(*) n FROM login_tokens WHERE user_id = ?').get(lauraId()) as { n: number }).n;
-    expect(n).toBeLessThanOrEqual(5);
+    expect(n).toBeLessThanOrEqual(10);
   });
 
   it('changePassword revokes restore tokens for the user', async () => {
@@ -217,5 +239,29 @@ describe('re-autenticación persistente (#290)', () => {
     expect(await setUserPassword(db, user.id, 'new-password')).toBe(true);
 
     expect(restoreFromToken(db, ctx(), token)).toBeNull();
+  });
+});
+
+describe('login siempre persistente (#333)', () => {
+  const cookieCtx = (url = 'https://keynest.example/api/auth/login'): { c: Context<AppEnv>; cookies: string[] } => {
+    const cookies: string[] = [];
+    const c = {
+      req: {
+        url,
+        raw: { headers: new Headers({ 'user-agent': 'test-ua' }) },
+        header: (name: string) => new Headers({ 'user-agent': 'test-ua' }).get(name) ?? undefined,
+      },
+      header: (name: string, value: string) => { if (name.toLowerCase() === 'set-cookie') cookies.push(value) },
+    } as unknown as Context<AppEnv>;
+    return { c, cookies };
+  };
+
+  it('login sin remember: cookie persistente y token de restauración siempre', async () => {
+    const { c, cookies } = cookieCtx();
+    const res = await handleLogin(db, c, { username: 'admin', password: 'secreto123', remember: false });
+    expect(res!.restoreToken).toBeTruthy();
+    const cookie = cookies.find((v) => v.startsWith('keynest_session='));
+    expect(cookie).toBeTruthy();
+    expect(cookie!).toContain('Max-Age=');
   });
 });
