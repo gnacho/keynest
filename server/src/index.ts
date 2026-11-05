@@ -34,6 +34,7 @@ import type { DB, CleaningRow, PropertyRow } from './db.js'
 import type { TedeeLock, TedeeAccess } from './tedee.js'
 import type { IcsReservation } from './ical.js'
 import type { CancelledBooking } from './cancel-booking.js'
+import { registerCancellationRoutes } from './routes-cancellations.js'
 
 type Row = Record<string, any>
 
@@ -522,6 +523,11 @@ guarded.get('/events', (c) => {
     })
   })
 })
+
+/* Cancelaciones recientes para el aviso en pantalla (#340). Se leen de
+   audit_log porque la reserva ya no existe; se registra con las rutas de push
+   en el router autenticado. */
+registerCancellationRoutes(guarded)
 
 /* Accesos Tedee con caché en caliente (10 min): la ventana de 90 días puede
    paginar hasta 8 páginas por cerradura; sin caché cada bootstrap del front
@@ -1418,7 +1424,19 @@ guarded.post('/properties/:id/photo', async (c) => {
 
 let syncing = false
 const onSyncNews = (prop: string, items: IcsReservation[]) => alerts.notifyReservasNuevas(prodDb, prop, items)
-const onSyncCancelled = (prop: string, items: CancelledBooking[]) => alerts.notifyReservasCanceladas(prodDb, items)
+const onSyncCancelled = (prop: string, items: CancelledBooking[]) => {
+  alerts.notifyReservasCanceladas(prodDb, items)
+  // Aviso en vivo del banner (#340): estas cancelaciones llegan del job o del
+  // feed, no de una mutacion HTTP, asi que el middleware no emite por si solo.
+  hub.broadcast('cancellations')
+}
+
+/* Cruce del scraper + aviso SSE si trajo cancelaciones (#340). */
+const syncAirbnbConAvisos = async () => {
+  const res = await syncAirbnb(prodDb)
+  if (res.canceladas.length > 0) hub.broadcast('cancellations')
+  return res
+}
 guarded.post('/sync', async (c) => {
   if (c.get('user').is_demo) return c.json({ ok: true, results: [] })
   if (auth.rateLimitAction(prodDb, 'sync', c, 5)) return c.json({ error: 'demasiadas sincronizaciones, espera 1 minuto' }, 429)
@@ -1428,7 +1446,7 @@ guarded.post('/sync', async (c) => {
     const results = await syncAll(prodDb, { onNews: onSyncNews, onCancelled: onSyncCancelled })
     // Cruce inmediato (#330): resuelve el estado Airbnb real (p. ej. solicitud
     // pendiente de aprobación) en vez de esperar al job horario
-    await syncAirbnb(prodDb).catch((e) => console.error('[keynest] airbnb post-sync error:', e.message))
+    await syncAirbnbConAvisos().catch((e) => console.error('[keynest] airbnb post-sync error:', e.message))
     return c.json({ ok: true, results })
   } finally {
     syncing = false
@@ -1583,7 +1601,7 @@ const runSync = async () => {
   await syncAll(prodDb, { onNews: onSyncNews, onCancelled: onSyncCancelled }).catch((e) => console.error('[sync] error job:', e.message))
   // Cruce inmediato (#330): el snapshot del scraper suele llegar antes que el
   // iCal, así que el estado real puede resolverse en el mismo ciclo
-  await syncAirbnb(prodDb).catch((e) => console.error('[keynest] airbnb post-sync error:', e.message))
+  await syncAirbnbConAvisos().catch((e) => console.error('[keynest] airbnb post-sync error:', e.message))
 }
 setTimeout(runSync, 5000) // sync inicial al arrancar
 try { purgeExpiredPhotos(prodDb, config.dataDir) } catch { /* noop */ } // purge fotos expiradas al arrancar
@@ -1603,7 +1621,7 @@ setTimeout(() => tedeeChecker.check().catch((e) => console.error('[keynest] tede
 setInterval(() => tedeeChecker.check().catch((e) => console.error('[keynest] tedee check error:', e.message)), 5 * 60 * 1000)
 
 /* Cruce Airbnb (guests+amount) + aviso de sesión muerta, cada hora y tras cada sync iCal (#330) */
-const runAirbnb = () => syncAirbnb(prodDb).catch((e) => console.error('[keynest] airbnb job error:', e.message))
+const runAirbnb = () => syncAirbnbConAvisos().catch((e) => console.error('[keynest] airbnb job error:', e.message))
 setTimeout(runAirbnb, 8000)
 setInterval(runAirbnb, 3600 * 1000)
 

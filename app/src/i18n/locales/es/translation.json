@@ -1007,5 +1007,12 @@
     "renovarHecho": "Sesión de Airbnb restaurada",
     "renovarError": "No se pudo generar el código de emparejamiento",
     "renovarCerrar": "Cerrar"
+  },
+  "cancelaciones": {
+    "titulo": "Reserva cancelada",
+    "quien": "Cancela {{quien}}",
+    "importe": "Importe: {{importe}}",
+    "disponible": "Esas fechas vuelven a estar disponibles.",
+    "cerrar": "Descartar aviso"
   }
 }

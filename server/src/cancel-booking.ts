@@ -108,8 +108,12 @@ export function cancelBooking(
   if (!fila || fila.checkout < hoyLocal()) return null
 
   const ahora = Date.now()
+  // La reserva desaparece de `reservations`, asi que el aviso en pantalla
+  // (#340) reconstruye propiedad y estancia desde este JSON.
   const detalle = JSON.stringify({
     uid: fila.uid,
+    property_id: fila.property_id,
+    property_name: fila.property_name || '',
     confirmation_code: fila.confirmation_code,
     checkin: fila.checkin,
     checkout: fila.checkout,

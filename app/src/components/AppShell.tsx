@@ -27,6 +27,7 @@ import { Toaster } from '@/components/ui/sonner';
 import { toast } from 'sonner';
 import UpdateRibbon from '@/components/UpdateRibbon';
 import AirbnbSessionRibbon from '@/components/AirbnbSessionRibbon';
+import CancellationBanner from '@/components/CancellationBanner';
 import PullToRefresh from '@/components/PullToRefresh';
 import NotificationsPopover from '@/components/NotificationsPopover';
 import { useUpdateAvailable } from '@/hooks/useUpdateAvailable';
@@ -628,6 +629,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
             )}
             {sessionUser?.role === 'admin' && <UpdateRibbon />}
             <AirbnbSessionRibbon />
+            <CancellationBanner />
             {sessionUser?.is_demo && (
               <div
                 role="status"

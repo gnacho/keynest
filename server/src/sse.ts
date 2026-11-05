@@ -19,6 +19,7 @@ const DOMAIN: Record<string, string> = {
   users: 'user',
   settings: 'settings',
   expenses: 'expense',
+  cancellations: 'cancellation',
 }
 
 export function eventName(entity: string): string {
