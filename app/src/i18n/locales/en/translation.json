@@ -1007,5 +1007,12 @@
     "renovarHecho": "Airbnb session restored",
     "renovarError": "Could not generate the pairing code",
     "renovarCerrar": "Close"
+  },
+  "cancelaciones": {
+    "titulo": "Booking cancelled",
+    "quien": "Cancelled by {{quien}}",
+    "importe": "Amount: {{importe}}",
+    "disponible": "Those dates are available again.",
+    "cerrar": "Dismiss notice"
   }
 }

@@ -404,6 +404,12 @@ export default function DataProvider({ children }: { children: ReactNode }) {
     es.addEventListener('person.changed', scheduleRefresh);
     es.addEventListener('user.changed', scheduleRefresh);
     es.addEventListener('settings.changed', scheduleRefresh);
+    /* Cancelacion de reserva (#340): refresca los datos y avisa al banner, que
+       consulta el endpoint de cancelaciones recientes. */
+    es.addEventListener('cancellation.changed', () => {
+      scheduleRefresh();
+      window.dispatchEvent(new Event('keynest-cancellations-changed'));
+    });
     es.addEventListener('sync.resync', () => {
       if (disposed) return;
       void refresh();
