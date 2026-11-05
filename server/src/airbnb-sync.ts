@@ -21,7 +21,7 @@ import path from 'node:path'
 import { kvGet, kvSet } from './db.js'
 import type { DB } from './db.js'
 import { notifyAll } from './push.js'
-import { notifyReservasCanceladas } from './alerts.js'
+import { hoyLocal, notifyReservasCanceladas } from './alerts.js'
 import { cancelBooking, esCancelacionConfirmada } from './cancel-booking.js'
 import type { CancelledBooking } from './cancel-booking.js'
 
@@ -159,6 +159,7 @@ export function aplicarCruce(db: DB) {
       airbnb_status_localized = COALESCE(?, airbnb_status_localized),
       airbnb_cancellation_status = COALESCE(?, airbnb_cancellation_status),
       airbnb_sync_state = 'matched',
+      missing_since = NULL,
       airbnb_synced_at = ?
     WHERE id = ? AND (airbnb_synced_at IS NULL OR airbnb_synced_at <= ?)
   `)
@@ -171,12 +172,14 @@ export function aplicarCruce(db: DB) {
       AND (airbnb_synced_at IS NULL OR airbnb_synced_at < ?)
   `)
   const stmtMissing = db.prepare(`
-    UPDATE reservations SET airbnb_sync_state = 'missing', airbnb_synced_at = ?
+    UPDATE reservations
+    SET airbnb_sync_state = 'missing', airbnb_synced_at = ?, missing_since = COALESCE(missing_since, ?)
     WHERE id = ?
   `)
   let cruzadas = 0
   let sinMatch = 0
   const canceladas: CancelledBooking[] = []
+  const viva = sesion?.viva !== false
 
   if (reservas && Array.isArray(reservas.reservas)) {
     const tx = db.transaction(() => {
@@ -207,15 +210,22 @@ export function aplicarCruce(db: DB) {
         )
         if (result.changes > 0) cruzadas++
       }
+      // Solo una extracción fiable puede declarar ausencias: con la sesión
+      // muerta o una extracción fallida, "no aparece" significa "no lo
+      // sabemos" y marcar missing a todo convertiría la UI en un cementerio
+      // de pendientes y alimentaría la expiración de #331 con datos falsos.
+      // Un snapshot vacío con extracción correcta sí cuenta: es el caso real
+      // de quedarse sin reservas y el test de aplicarCruce lo fija así.
+      const extraccionFiable = viva && sesion?.extraccion_ok !== false
+      if (!extraccionFiable) return
       const candidates = stmtCandidates.all(snapshotMs, snapshotMs) as Array<{ id: string; confirmation_code: string }>
       for (const fila of candidates) {
-        if (!codes.has(fila.confirmation_code)) stmtMissing.run(snapshotMs, fila.id)
+        if (!codes.has(fila.confirmation_code)) stmtMissing.run(snapshotMs, snapshotMs, fila.id)
       }
     })
     tx()
   }
 
-  const viva = sesion?.viva !== false
   kvSet(db, CLAVE_ESTADO, JSON.stringify({
     viva,
     ultimo_check: sesion?.ultimo_check || null,
@@ -223,6 +233,64 @@ export function aplicarCruce(db: DB) {
     detalle: sesion?.detalle || null,
   }))
   return { cruzadas, sinMatch, sesionViva: viva, canceladas }
+}
+
+/**
+ * Estados del panel que describen una SOLICITUD aún no confirmada (#331).
+ * Se acepta también el texto localizado porque el vocabulario de Airbnb no
+ * está documentado y solo lo hemos visto en castellano.
+ */
+export function esSolicitudPendiente(status: unknown, statusLocalizado: unknown): boolean {
+  const s = String(status ?? '').trim().toLowerCase()
+  if (['pending', 'pending_review', 'request', 'requested', 'inquiry'].includes(s)) return true
+  return /solicitud|solicitad|pendiente|\brequest\b/i.test(String(statusLocalizado ?? ''))
+}
+
+export interface OpcionesExpiracion {
+  /** Horas que una solicitud debe llevar ausente del panel para expirar. */
+  horas?: number
+  ahora?: number
+}
+
+/**
+ * Expira solicitudes que nunca llegaron a confirmarse (#331).
+ *
+ * Una solicitud aparece en el iCal y en el panel a la vez. Si se rechaza o
+ * caduca, Airbnb la quita del panel pero su exportación iCal puede seguir
+ * sirviéndola horas o días: la fila fantasma se queda bloqueando el calendario.
+ *
+ * Reglas deliberadas:
+ * - Solo solicitudes NUNCA confirmadas (pending/request/...). Una reserva
+ *   confirmada que desaparece del panel NO se toca: puede ser un fallo del
+ *   scraper y borrar una estancia real es peor que dejar un fantasma.
+ * - Solo si lleva ausente más de `horas` (por defecto 24) contadas desde
+ *   missing_since, que solo se escribe con extracciones fiables.
+ * - Sin push: nunca hubo reserva que avisar. Queda traza en audit_log
+ *   (action 'expire') y en el tombstone de cancel-booking, para que un iCal
+ *   desfasado no la resucite.
+ */
+export function expirarSolicitudes(db: DB, opciones: OpcionesExpiracion = {}): CancelledBooking[] {
+  const horas = opciones.horas ?? 24
+  const ahora = opciones.ahora ?? Date.now()
+  const limite = ahora - horas * 3600 * 1000
+  const filas = db.prepare(
+    `SELECT id, airbnb_status, airbnb_status_localized
+     FROM reservations
+     WHERE missing_since IS NOT NULL AND missing_since <= ?
+       AND checkout >= ?`
+  ).all(limite, hoyLocal()) as Array<{
+    id: string
+    airbnb_status: string | null
+    airbnb_status_localized: string | null
+  }>
+
+  const expiradas: CancelledBooking[] = []
+  for (const fila of filas) {
+    if (!esSolicitudPendiente(fila.airbnb_status, fila.airbnb_status_localized)) continue
+    const fuera = cancelBooking(db, fila.id, 'expire')
+    if (fuera) expiradas.push(fuera)
+  }
+  return expiradas
 }
 
 /**
@@ -239,6 +307,10 @@ export async function syncAirbnb(db: DB) {
   if (res.canceladas.length > 0) {
     notifyReservasCanceladas(db, res.canceladas)
   }
+  const expiradas = expirarSolicitudes(db)
+  if (expiradas.length > 0) {
+    console.log(`[airbnb] ${expiradas.length} solicitudes nunca confirmadas expiradas`)
+  }
 
   const ahoraMuerta = res.sesionViva === false
   const antesMuerta = anterior.viva === false
@@ -250,7 +322,7 @@ export async function syncAirbnb(db: DB) {
     console.log('[airbnb] sesión recuperada')
     notifyAll(db, 'airbnb_sesion_ok', {}, { severity: 'normal', url: '/reservas' })
   }
-  console.log(`[airbnb] cruce: ${res.cruzadas} reservas, ${res.sinMatch} sin match, ${res.canceladas.length} canceladas, sesión ${res.sesionViva ? 'viva' : 'MUERTA'}`)
+  console.log(`[airbnb] cruce: ${res.cruzadas} reservas, ${res.sinMatch} sin match, ${res.canceladas.length} canceladas, ${expiradas.length} expiradas, sesión ${res.sesionViva ? 'viva' : 'MUERTA'}`)
   return res
 }
 
