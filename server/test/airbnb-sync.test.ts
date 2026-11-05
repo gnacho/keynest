@@ -6,7 +6,7 @@ import { join } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { kvGet, openDb } from '../src/db.js'
 import type { DB } from '../src/db.js'
-import { aplicarCruce, esSolicitudPendiente, expirarSolicitudes, syncAirbnb, crearPairing, pairingVigente, consumirPairing, guardarSesion, marcarSesionRestaurada, listingIdDePropiedad, mapaListings } from '../src/airbnb-sync.js'
+import { aplicarCruce, airbnbStatus, esSolicitudPendiente, expirarSolicitudes, motivoSesion, syncAirbnb, crearPairing, pairingVigente, consumirPairing, guardarSesion, marcarSesionRestaurada, listingIdDePropiedad, mapaListings } from '../src/airbnb-sync.js'
 
 // notifyAll de push.js se mockea para capturar los avisos de sesión.
 vi.mock('../src/push.js', async (importOriginal) => {
@@ -534,5 +534,30 @@ describe('solicitudes nunca confirmadas (#331)', () => {
     expect(esSolicitudPendiente('', 'Solicitud pendiente')).toBe(true)
     expect(esSolicitudPendiente('complete', 'Reserva confirmada')).toBe(false)
     expect(esSolicitudPendiente('cancelled', 'Cancelada')).toBe(false)
+  })
+})
+
+describe('estado de la sesión para la UI (#303)', () => {
+  it('sin fichero de estado no hay caída: sesion null y motivo sin_estado', () => {
+    const st = airbnbStatus(db)
+    expect(st.sesion).toBeNull()
+    expect(st.configurada).toBe(false)
+    expect(st.motivo).toBe('sin_estado')
+  })
+
+  it('con fichero devuelve la sesión y su motivo traducibible', () => {
+    escribeSesion(false, 'HTTP 401: sesion muerta o bloqueo')
+    const st = airbnbStatus(db)
+    expect(st.configurada).toBe(true)
+    expect(st.sesion?.viva).toBe(false)
+    expect(st.motivo).toBe('http')
+  })
+
+  it('clasifica los detalles que escribe el scraper', () => {
+    expect(motivoSesion('ok')).toBe('ok')
+    expect(motivoSesion('sin reservas extraidas')).toBe('vacio')
+    expect(motivoSesion('2 pagina(s) con error')).toBe('errores')
+    expect(motivoSesion(null)).toBe('otro')
+    expect(motivoSesion('algo raro')).toBe('otro')
   })
 })

@@ -12,7 +12,9 @@ const REAPPEAR_MS = 24 * 60 * 60 * 1000;
 const POLL_MS = 15 * 1000;
 
 interface AirbnbStatus {
-  sesion: { viva?: boolean; ultimo_check?: string | null; extraccion_ok?: boolean; detalle?: string | null };
+  sesion: { viva?: boolean; ultimo_check?: string | null; extraccion_ok?: boolean; detalle?: string | null } | null;
+  configurada?: boolean;
+  motivo?: string;
   estadoGuardado: Record<string, unknown>;
 }
 
@@ -22,6 +24,7 @@ export default function AirbnbSessionRibbon() {
   const { t } = useTranslation();
   const [muerta, setMuerta] = useState(false);
   const [detalle, setDetalle] = useState('');
+  const [motivo, setMotivo] = useState('otro');
   const [renewOpen, setRenewOpen] = useState(false);
   const isAdmin = cachedUser()?.role === 'admin';
 
@@ -31,7 +34,9 @@ export default function AirbnbSessionRibbon() {
       try {
         const s = await api<AirbnbStatus>('/api/airbnb/status');
         if (stale) return;
-        if (s.sesion?.viva !== false) {
+        // Sin fichero de estado no hay caída: la integración simplemente no
+        // está configurada (demo, instalación sin scraper). No se avisa (#303).
+        if (!s.sesion || s.sesion.viva !== false) {
           // Recuperada (o sin datos de caída): ocultar y limpiar un dismiss
           // previo para que una nueva caída vuelva a avisar de inmediato.
           window.localStorage.removeItem(DISMISS_KEY);
@@ -41,7 +46,8 @@ export default function AirbnbSessionRibbon() {
         const last = Number(window.localStorage.getItem(DISMISS_KEY) || 0);
         if (Date.now() - last < REAPPEAR_MS) return;
         setMuerta(true);
-        setDetalle(s.sesion?.detalle ?? '');
+        setDetalle(s.sesion.detalle ?? '');
+        setMotivo(s.motivo ?? 'otro');
       } catch {
         /* sin red o sesión expirada: no molestar */
       }
@@ -68,7 +74,10 @@ export default function AirbnbSessionRibbon() {
       style={{ borderColor: 'rgb(244 63 94 / 0.4)', backgroundColor: 'rgb(244 63 94 / 0.1)', color: '#E11D48' }}
     >
       <TriangleAlert className="h-4 w-4 shrink-0" />
-      <span className="min-w-0 flex-1">{t('airbnb.sesionCaida')}{detalle ? ` · ${detalle}` : ''}</span>
+      <span className="min-w-0 flex-1">
+        {t('airbnb.sesionCaida')} · {t(`airbnb.motivo.${motivo}`, { defaultValue: t('airbnb.motivo.otro') })}
+        {isAdmin && detalle ? ` (${detalle})` : ''}
+      </span>
       {isAdmin && (
         <button
           type="button"

@@ -120,15 +120,36 @@ export function guardarSesion(session: unknown): string {
 }
 
 /**
+ * Motivo legible de la caída, deducido del texto libre que escribe el scraper.
+ * El frontend traduce el código, así que el detalle del scraper (en español)
+ * nunca se cuela en una interfaz en inglés (#303).
+ */
+export type MotivoSesion = 'ok' | 'http' | 'vacio' | 'errores' | 'otro' | 'sin_estado'
+
+export function motivoSesion(detalle: string | null | undefined): MotivoSesion {
+  if (!detalle) return 'otro'
+  if (/^HTTP \d/.test(detalle)) return 'http'
+  if (/sin reservas extraidas/i.test(detalle)) return 'vacio'
+  if (/pagina\(s\) con error/i.test(detalle)) return 'errores'
+  if (detalle.trim() === 'ok') return 'ok'
+  return 'otro'
+}
+
+/**
  * Devuelve el estado de la sesión de Airbnb para la UI (ribbon).
  * El ribbon es descartable; el frontend decide cuándo reaparece (24h).
+ * `sesion` es null si no hay fichero de estado: una instalación sin scraper
+ * (o la demo) no tiene la integración caída, simplemente no la tiene. Inventar
+ * `{viva:false}` ahí pintaba un aviso rojo falso y con texto en español (#303).
  */
 export function airbnbStatus(db: DB) {
   const s = leerJSON(path.join(airbnbDataDir(), 'airbnb_sesion.json'))
   let prev = {}
   try { prev = JSON.parse(kvGet(db, CLAVE_ESTADO) || '{}') } catch { /* noop */ }
   return {
-    sesion: s || { viva: false, detalle: 'no hay fichero de estado del scraper' },
+    sesion: s ?? null,
+    configurada: !!s,
+    motivo: s ? motivoSesion(s.detalle) : 'sin_estado',
     estadoGuardado: prev,
   }
 }
