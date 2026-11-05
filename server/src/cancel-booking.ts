@@ -84,11 +84,20 @@ function anotarTombstone(db: DB, fila: ReservaFila, ahora: number): void {
   kvSet(db, CLAVE_TOMBSTONES, JSON.stringify(lista.slice(-MAX_TOMBSTONES)))
 }
 
+/** Motivo del borrado: cancelación real o solicitud que nunca se confirmó (#331). */
+export type MotivoCancelacion = 'cancel' | 'expire'
+
 /**
  * Borra la reserva y sus datos dependientes. Devuelve los datos para el push,
  * o null si la reserva no existe o es histórica (checkout anterior a hoy).
+ * El motivo solo cambia la traza en audit_log: la expiración de una solicitud
+ * no lleva push porque nunca hubo reserva confirmada que avisar.
  */
-export function cancelBooking(db: DB, reservationId: string): CancelledBooking | null {
+export function cancelBooking(
+  db: DB,
+  reservationId: string,
+  motivo: MotivoCancelacion = 'cancel'
+): CancelledBooking | null {
   const fila = db.prepare(
     `SELECT r.id, r.property_id, r.uid, r.checkin, r.checkout, r.summary,
             r.confirmation_code, r.guest_name, r.amount, r.airbnb_status,
@@ -107,6 +116,7 @@ export function cancelBooking(db: DB, reservationId: string): CancelledBooking |
     summary: fila.summary,
     guest_name: fila.guest_name,
     amount: fila.amount,
+    motivo,
   })
 
   const tx = db.transaction(() => {
@@ -121,8 +131,8 @@ export function cancelBooking(db: DB, reservationId: string): CancelledBooking |
     db.prepare('DELETE FROM reservations WHERE id = ?').run(fila.id)
     db.prepare(
       `INSERT INTO audit_log (user_id, action, entity, entity_id, detail, at)
-       VALUES (NULL, 'cancel', 'reservation', ?, ?, ?)`
-    ).run(fila.id, detalle, ahora)
+       VALUES (NULL, ?, 'reservation', ?, ?, ?)`
+    ).run(motivo, fila.id, detalle, ahora)
   })
   tx()
 

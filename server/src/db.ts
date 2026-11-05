@@ -198,6 +198,11 @@ const MIGRATIONS = [
    //     hash anterior aceptado unos minutos, el reintento repara la sesión.
    `ALTER TABLE login_tokens ADD COLUMN previous_hash TEXT`,
    `ALTER TABLE login_tokens ADD COLUMN previous_expires_at INTEGER`,
+   // 34: instante en que la reserva dejó de aparecer en el snapshot del scraper
+   //     (#331). Permite medir CUÁNTAS horas lleva ausente una solicitud nunca
+   //     confirmada antes de expirarla, en vez de fiarse de airbnb_synced_at,
+   //     que también se actualiza al marcar matched.
+   `ALTER TABLE reservations ADD COLUMN missing_since INTEGER`,
 ]
 
 export function migrate(db: DB) {

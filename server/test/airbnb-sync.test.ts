@@ -4,9 +4,9 @@ import { mkdirSync, mkdtempSync, readFileSync, rmSync, statSync, writeFileSync }
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { openDb } from '../src/db.js'
+import { kvGet, openDb } from '../src/db.js'
 import type { DB } from '../src/db.js'
-import { aplicarCruce, syncAirbnb, crearPairing, pairingVigente, consumirPairing, guardarSesion, marcarSesionRestaurada, listingIdDePropiedad, mapaListings } from '../src/airbnb-sync.js'
+import { aplicarCruce, esSolicitudPendiente, expirarSolicitudes, syncAirbnb, crearPairing, pairingVigente, consumirPairing, guardarSesion, marcarSesionRestaurada, listingIdDePropiedad, mapaListings } from '../src/airbnb-sync.js'
 
 // notifyAll de push.js se mockea para capturar los avisos de sesión.
 vi.mock('../src/push.js', async (importOriginal) => {
@@ -458,5 +458,81 @@ describe('mapa de listings por listing_id', () => {
     expect(mapa.size).toBe(4)
     expect(mapa.get('935312538627141204')).toBe('pisete')
     expect(mapa.get('941965992844344229')).toBe('apartamento-malvarrosa')
+  })
+})
+
+describe('solicitudes nunca confirmadas (#331)', () => {
+  const futuro = { checkin: '2030-01-04', checkout: '2030-01-10' }
+
+  it('con la sesión muerta no se declara ausente ninguna reserva', () => {
+    insertaReserva('res-1', 'HM1', { ...futuro, uid: 'res-1@airbnb.com' })
+    escribeReservas([])
+    escribeSesion(false, 'sesión caducada')
+    aplicarCruce(db)
+    const fila = db.prepare('SELECT airbnb_sync_state, missing_since FROM reservations WHERE id = ?').get('res-1') as any
+    expect(fila.airbnb_sync_state).not.toBe('missing')
+    expect(fila.missing_since).toBeNull()
+  })
+
+  it('con la extracción fallida tampoco, aunque la sesión figure viva', () => {
+    insertaReserva('res-1', 'HM1', { ...futuro, uid: 'res-1@airbnb.com' })
+    escribeReservas([{ confirmation_code: 'OTRA' }])
+    writeFileSync(join(dataDir, 'airbnb_sesion.json'), JSON.stringify({ viva: true, extraccion_ok: false }))
+    aplicarCruce(db)
+    const fila = db.prepare('SELECT airbnb_sync_state FROM reservations WHERE id = ?').get('res-1') as any
+    expect(fila.airbnb_sync_state).not.toBe('missing')
+  })
+
+  it('apunta missing_since al ausentarse y lo limpia al reaparecer', () => {
+    insertaReserva('res-1', 'HM1', { ...futuro, uid: 'res-1@airbnb.com' })
+    escribeSesion(true)
+    escribeReservas([{ confirmation_code: 'OTRA' }])
+    aplicarCruce(db)
+    const ausente = db.prepare('SELECT airbnb_sync_state, missing_since FROM reservations WHERE id = ?').get('res-1') as any
+    expect(ausente.airbnb_sync_state).toBe('missing')
+    expect(ausente.missing_since).toBeGreaterThan(0)
+
+    escribeReservas([{ confirmation_code: 'HM1', status: 'pending', status_localized: 'Reserva solicitada' }])
+    aplicarCruce(db)
+    const vuelta = db.prepare('SELECT airbnb_sync_state, missing_since FROM reservations WHERE id = ?').get('res-1') as any
+    expect(vuelta.airbnb_sync_state).toBe('matched')
+    expect(vuelta.missing_since).toBeNull()
+  })
+
+  it('expira la solicitud ausente más de 24 h, con traza y tombstone', () => {
+    insertaReserva('res-1', 'HM1', { ...futuro, uid: 'res-1@airbnb.com' })
+    db.prepare("UPDATE reservations SET airbnb_status = 'pending', airbnb_status_localized = 'Reserva solicitada', missing_since = ? WHERE id = ?")
+      .run(Date.now() - 25 * 3600 * 1000, 'res-1')
+    const expiradas = expirarSolicitudes(db)
+    expect(expiradas).toHaveLength(1)
+    expect(db.prepare('SELECT COUNT(*) n FROM reservations WHERE id = ?').get('res-1')).toEqual({ n: 0 })
+    const audit = db.prepare("SELECT action, detail FROM audit_log WHERE entity_id = ?").get('res-1') as any
+    expect(audit.action).toBe('expire')
+    expect(JSON.parse(audit.detail).motivo).toBe('expire')
+    expect(kvGet(db, 'canceladas')).toContain('HM1')
+  })
+
+  it('no expira antes de la ventana', () => {
+    insertaReserva('res-1', 'HM1', { ...futuro, uid: 'res-1@airbnb.com' })
+    db.prepare("UPDATE reservations SET airbnb_status = 'pending', missing_since = ? WHERE id = ?")
+      .run(Date.now() - 3600 * 1000, 'res-1')
+    expect(expirarSolicitudes(db)).toHaveLength(0)
+    expect(db.prepare('SELECT COUNT(*) n FROM reservations WHERE id = ?').get('res-1')).toEqual({ n: 1 })
+  })
+
+  it('nunca expira una reserva confirmada, aunque lleve días ausente', () => {
+    insertaReserva('res-1', 'HM1', { ...futuro, uid: 'res-1@airbnb.com' })
+    db.prepare("UPDATE reservations SET airbnb_status = 'complete', missing_since = ? WHERE id = ?")
+      .run(Date.now() - 300 * 3600 * 1000, 'res-1')
+    expect(expirarSolicitudes(db)).toHaveLength(0)
+    expect(db.prepare('SELECT COUNT(*) n FROM reservations WHERE id = ?').get('res-1')).toEqual({ n: 1 })
+  })
+
+  it('reconoce los estados de solicitud y no los confunde con una cancelación', () => {
+    expect(esSolicitudPendiente('pending', 'Reserva solicitada')).toBe(true)
+    expect(esSolicitudPendiente('REQUESTED', null)).toBe(true)
+    expect(esSolicitudPendiente('', 'Solicitud pendiente')).toBe(true)
+    expect(esSolicitudPendiente('complete', 'Reserva confirmada')).toBe(false)
+    expect(esSolicitudPendiente('cancelled', 'Cancelada')).toBe(false)
   })
 })
