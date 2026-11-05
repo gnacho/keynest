@@ -312,6 +312,7 @@ const TIPOS_NOTIF = [
   'checkin_hoy',
   'checkout_hoy',
   'reserva_nueva',
+  'reserva_cancelada',
   'transaccion',
   'tedee_offline',
   'tedee_ok',

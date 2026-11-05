@@ -243,6 +243,60 @@ describe('aplicarCruce', () => {
     const fila = db.prepare('SELECT airbnb_sync_state, airbnb_status, guests FROM reservations WHERE id = ?').get('res-reciente') as Record<string, any>
     expect(fila).toMatchObject({ airbnb_sync_state: 'matched', airbnb_status: 'upcoming', guests: 3 })
   })
+
+  // #334: una cancelación confirmada en el scraper borra en cascada y avisa.
+  it('borra reserva, pagos y limpiezas cuando el scraper confirma la cancelación', () => {
+    insertaReserva('res-cancel', 'HM-CANCEL', {
+      uid: 'cancel@airbnb.com',
+      checkin: '2027-01-04',
+      checkout: '2027-03-14',
+      airbnb_sync_state: 'matched',
+    })
+    db.prepare(
+      `INSERT INTO reservation_payments (id, reservation_id, confirmation_code, paid_on, amount, currency, status, external_ref, detected_at)
+       VALUES ('pay-cancel','res-cancel','HM-CANCEL','2027-01-05',2441.5,'EUR','SCHEDULED','ext-cancel',0)`,
+    ).run()
+    db.prepare(
+      `INSERT INTO cleanings (id, property_id, reservation_id, date, status, created_at)
+       VALUES ('limp-cancel','p1','res-cancel','2027-03-14','pending',0)`,
+    ).run()
+    escribeReservas([
+      { confirmation_code: 'HM-CANCEL', status: 'cancelled', cancellation_status: 'CANCELLED_BY_GUEST' },
+    ])
+
+    const res = aplicarCruce(db)
+
+    expect(res.canceladas).toHaveLength(1)
+    expect(res.canceladas[0]).toMatchObject({
+      reservationId: 'res-cancel',
+      confirmationCode: 'HM-CANCEL',
+      checkin: '2027-01-04',
+      checkout: '2027-03-14',
+      matched: true,
+    })
+    expect(db.prepare("SELECT COUNT(*) n FROM reservations WHERE id = 'res-cancel'").get()).toEqual({ n: 0 })
+    expect(db.prepare("SELECT COUNT(*) n FROM reservation_payments WHERE reservation_id = 'res-cancel'").get()).toEqual({ n: 0 })
+    expect(db.prepare("SELECT COUNT(*) n FROM cleanings WHERE reservation_id = 'res-cancel'").get()).toEqual({ n: 0 })
+    const audit = db.prepare("SELECT action, entity, entity_id FROM audit_log WHERE action = 'cancel'").get()
+    expect(audit).toEqual({ action: 'cancel', entity: 'reservation', entity_id: 'res-cancel' })
+  })
+
+  it('una solicitud pendiente (REQUESTED/PENDING) NO se trata como cancelación', () => {
+    insertaReserva('res-pendiente', 'HM-PENDIENTE', {
+      uid: 'pendiente@airbnb.com',
+      checkin: '2027-01-04',
+      checkout: '2027-03-14',
+    })
+    escribeReservas([
+      { confirmation_code: 'HM-PENDIENTE', guests: 2, amount: 900, status: 'request', cancellation_status: 'REQUESTED' },
+    ])
+
+    const res = aplicarCruce(db)
+
+    expect(res.canceladas).toHaveLength(0)
+    const fila = db.prepare('SELECT airbnb_sync_state, airbnb_cancellation_status FROM reservations WHERE id = ?').get('res-pendiente')
+    expect(fila).toMatchObject({ airbnb_sync_state: 'matched', airbnb_cancellation_status: 'REQUESTED' })
+  })
 })
 
 describe('syncAirbnb', () => {
@@ -271,6 +325,36 @@ describe('syncAirbnb', () => {
       'airbnb_sesion_ok',
       expect.anything(),
       expect.objectContaining({ severity: 'normal' }),
+    )
+  })
+
+  it('avisa por push la reserva cancelada al cruzarla con el scraper (#334)', async () => {
+    insertaReserva('res-cancel-push', 'HM-CANCEL-PUSH', {
+      uid: 'cancel-push@airbnb.com',
+      checkin: '2027-01-04',
+      checkout: '2027-03-14',
+      airbnb_sync_state: 'matched',
+    })
+    escribeSesion(true)
+    db.prepare("UPDATE reservations SET amount = 5434.3, guest_name = 'Lisa Buchter' WHERE id = 'res-cancel-push'").run()
+    escribeReservas([
+      { confirmation_code: 'HM-CANCEL-PUSH', guest_name: 'Lisa Buchter', amount: 5434.3, status: 'cancelled' },
+    ])
+
+    await syncAirbnb(db)
+
+    expect(notifyAll).toHaveBeenCalledWith(
+      expect.anything(),
+      'reserva_cancelada',
+      expect.objectContaining({
+        resumen: 'A',
+        huesped: 'Lisa Buchter',
+        codigo: 'HM-CANCEL-PUSH',
+        checkin: '2027-01-04',
+        checkout: '2027-03-14',
+        importe: 5434.3,
+      }),
+      expect.objectContaining({ severity: 'high', url: '/reservas' }),
     )
   })
 })

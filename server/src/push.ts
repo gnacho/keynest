@@ -83,6 +83,13 @@ const CATALOGO: Record<string, Record<string, CatalogoEntrada>> = {
       },
     },
     reservas_nuevas: { titulo: 'Reservas nuevas', cuerpo: (d) => `${d.total} reservas nuevas importadas` },
+    reserva_cancelada: {
+      titulo: 'Reserva cancelada',
+      cuerpo: (d) => {
+        const extra = d.importe ? ` · ${d.importe} €` : ''
+        return `${d.propiedad}: «${d.huesped || d.resumen}» (${d.checkin} → ${d.checkout})${extra}`
+      },
+    },
     tedee_offline: { titulo: 'Cerradura offline', cuerpo: (d) => `La cerradura «${d.nombre}» no responde` },
     tedee_ok: { titulo: 'Cerradura recuperada', cuerpo: (d) => `La cerradura «${d.nombre}» vuelve a estar online` },
     tedee_bateria: { titulo: 'Batería cerradura baja', cuerpo: (d) => `«${d.nombre}» al ${d.nivel}%` },
@@ -105,6 +112,13 @@ const CATALOGO: Record<string, Record<string, CatalogoEntrada>> = {
       },
     },
     reservas_nuevas: { titulo: 'New bookings', cuerpo: (d) => `${d.total} new bookings imported` },
+    reserva_cancelada: {
+      titulo: 'Booking cancelled',
+      cuerpo: (d) => {
+        const extra = d.importe ? ` · ${d.importe} €` : ''
+        return `${d.propiedad}: “${d.huesped || d.resumen}” (${d.checkin} → ${d.checkout})${extra}`
+      },
+    },
     tedee_offline: { titulo: 'Lock offline', cuerpo: (d) => `Lock “${d.nombre}” is not responding` },
     tedee_ok: { titulo: 'Lock recovered', cuerpo: (d) => `Lock “${d.nombre}” is back online` },
     tedee_bateria: { titulo: 'Low lock battery', cuerpo: (d) => `“${d.nombre}” at ${d.nivel}%` },
@@ -123,6 +137,7 @@ export const TIPOS_ALERTA = [
   'checkin_hoy',
   'checkout_hoy',
   'reserva_nueva',
+  'reserva_cancelada',
   'tedee_offline',
   'tedee_ok',
   'tedee_bateria',
