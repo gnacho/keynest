@@ -997,6 +997,12 @@
   },
   "airbnb": {
     "sesionCaida": "La sesión de Airbnb ha caducado; el scraper no puede actualizar los datos.",
+    "motivo": {
+      "http": "Airbnb rechaza el acceso (sesión caducada o bloqueo).",
+      "vacio": "El scraper no ha extraído ninguna reserva.",
+      "errores": "Alguna página del panel ha fallado al extraerse.",
+      "otro": "El scraper no puede acceder a Airbnb."
+    },
     "descartar": "Descartar",
     "renovar": "Renovar",
     "renovarTitulo": "Renovar sesión de Airbnb",

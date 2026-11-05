@@ -997,6 +997,12 @@
   },
   "airbnb": {
     "sesionCaida": "The Airbnb session has expired; the scraper cannot update the data.",
+    "motivo": {
+      "http": "Airbnb is rejecting access (expired session or block).",
+      "vacio": "The scraper extracted no bookings.",
+      "errores": "Some panel pages failed to extract.",
+      "otro": "The scraper cannot reach Airbnb."
+    },
     "descartar": "Dismiss",
     "renovar": "Renew",
     "renovarTitulo": "Renew Airbnb session",
