@@ -827,6 +827,7 @@
       "tedee_offline": "Lock offline",
       "tedee_ok": "Lock recovered",
       "tedee_bateria": "Low lock battery",
+      "tedee_keypad_bateria": "Low keypad battery",
       "limpieza_pendiente": "Cleaning pending",
       "mantenimiento_recordatorio": "Maintenance reminder"
     },
