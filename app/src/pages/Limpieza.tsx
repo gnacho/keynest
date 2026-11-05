@@ -156,7 +156,7 @@ export default function Limpieza() {
                   onClick={() => navigate(`/limpieza?tarea=${c.id}`)}
                   className="flex items-center justify-between gap-2 rounded-lg px-2 py-1.5 text-left text-[13px] transition-colors hover:bg-[var(--surface-2)]"
                 >
-                  <span className="min-w-0 truncate font-medium">{p?.name ?? '—'}</span>
+                  <span className="min-w-0 truncate font-medium">{p?.name ?? '-'}</span>
                   <span className="shrink-0 text-xs" style={{ color: 'var(--text-muted)' }}>
                     {fmtDateShort(c.date)}
                   </span>

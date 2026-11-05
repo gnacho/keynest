@@ -428,7 +428,7 @@ export function SessionCard({ isDemo }: { isDemo: boolean }) {
   };
 
   const avatarSrc = user?.avatar || null;
-  const displayName = user?.display_name || user?.username || '—';
+  const displayName = user?.display_name || user?.username || '-';
 
   const actionBtnCls =
     'flex h-9 shrink-0 items-center gap-1.5 rounded-lg border px-3 text-xs font-semibold transition-colors hover:bg-[var(--surface-2)]';

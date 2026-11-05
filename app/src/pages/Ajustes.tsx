@@ -1526,7 +1526,7 @@ function AuditPanel() {
               <TableCell className="whitespace-nowrap text-[13px]" style={{ color: 'var(--text-muted)' }}>
                 {fmtDateShort(new Date(r.at))}
               </TableCell>
-              <TableCell className="text-[13px]">{r.user_id ?? '—'}</TableCell>
+              <TableCell className="text-[13px]">{r.user_id ?? '-'}</TableCell>
               <TableCell className="text-[13px]">{r.action}</TableCell>
               <TableCell className="text-[13px]" style={{ color: 'var(--text-muted)' }}>
                 {r.entity}

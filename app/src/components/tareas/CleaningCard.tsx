@@ -121,7 +121,7 @@ export default function CleaningCard({ cleaning: c, variants, highlight = false,
           <span className="min-w-0 flex-1">
             <span className="block truncate text-[15px] font-semibold">{property.name}</span>
             <span className="block truncate text-xs" style={{ color: 'var(--text-muted)' }}>
-              {fmtDateShort(c.date)} · {assignedPeople.map((p) => p.name).join(' + ') || '—'} ·{' '}
+              {fmtDateShort(c.date)} · {assignedPeople.map((p) => p.name).join(' + ') || '-'} ·{' '}
               <MoneyText value={cost} className="text-xs font-semibold text-rose-500" /> · {t('tareas.fotos', { count: photos.length })}
             </span>
           </span>

@@ -242,7 +242,7 @@ export default function MantenimientoToken() {
             <>
               <p className="flex items-center gap-2 text-sm font-semibold text-emerald-500">
                 <Check className="h-4 w-4" />
-                {t('wo.finalizadaOk', { cost: task.cost != null ? `${task.cost} €` : '—' })}
+                {t('wo.finalizadaOk', { cost: task.cost != null ? `${task.cost} €` : '-' })}
               </p>
               <button
                 type="button"

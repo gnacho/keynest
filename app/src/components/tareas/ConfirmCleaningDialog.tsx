@@ -81,7 +81,7 @@ export default function ConfirmCleaningDialog({
   // Edición: también personas del workLog que ya no estén asignadas
   for (const w of initialWorkLog ?? []) {
     if (!laborPerPerson.some((l) => l.person.id === w.personId)) {
-      const ghost = { id: w.personId, name: '—', initials: '?', role: 'limpieza' as const, specialty: '', hourlyRate: 0, phone: '' };
+      const ghost = { id: w.personId, name: '-', initials: '?', role: 'limpieza' as const, specialty: '', hourlyRate: 0, phone: '' };
       laborPerPerson.push({ person: ghost, hours: hoursBy[w.personId] ?? w.hours, amount: 0 });
     }
   }

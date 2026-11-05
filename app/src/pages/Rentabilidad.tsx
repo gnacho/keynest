@@ -145,7 +145,7 @@ function rangeLabel(r: Range, g: Granularity): string {
   if (g === 'dia') return fmtDateShort(r.start);
   if (g === 'mes') return `${capitalize(fmtMonth(r.start))} ${r.start.getFullYear()}`;
   if (g === 'ano') return String(r.start.getFullYear());
-  return `${fmtDateShort(r.start)} – ${fmtDateShort(r.end)}`;
+  return `${fmtDateShort(r.start)} - ${fmtDateShort(r.end)}`;
 }
 
 /** Ingresos prorrateados por noche dentro del rango (design.md §8, generalizado). */
@@ -1006,7 +1006,7 @@ export default function Rentabilidad() {
                     <span className="min-w-0 flex-1">
                       <span className="block truncate text-sm font-medium">{e.label}</span>
                       <span className="block truncate text-xs" style={{ color: 'var(--text-muted)' }}>
-                        {p?.name ?? '—'} · {capitalize(fmtMonth(new Date(e.year, e.month, 15), false))} {e.year} · {t(EXPENSE_META[e.type].labelKey)}
+                        {p?.name ?? '-'} · {capitalize(fmtMonth(new Date(e.year, e.month, 15), false))} {e.year} · {t(EXPENSE_META[e.type].labelKey)}
                       </span>
                     </span>
                     <MoneyText value={e.amount} className="shrink-0 text-sm" />
