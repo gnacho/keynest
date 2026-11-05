@@ -33,6 +33,7 @@ import { createHub } from './sse.js'
 import type { DB, CleaningRow, PropertyRow } from './db.js'
 import type { TedeeLock, TedeeAccess } from './tedee.js'
 import type { IcsReservation } from './ical.js'
+import type { CancelledBooking } from './cancel-booking.js'
 
 type Row = Record<string, any>
 
@@ -1417,13 +1418,14 @@ guarded.post('/properties/:id/photo', async (c) => {
 
 let syncing = false
 const onSyncNews = (prop: string, items: IcsReservation[]) => alerts.notifyReservasNuevas(prodDb, prop, items)
+const onSyncCancelled = (prop: string, items: CancelledBooking[]) => alerts.notifyReservasCanceladas(prodDb, items)
 guarded.post('/sync', async (c) => {
   if (c.get('user').is_demo) return c.json({ ok: true, results: [] })
   if (auth.rateLimitAction(prodDb, 'sync', c, 5)) return c.json({ error: 'demasiadas sincronizaciones, espera 1 minuto' }, 429)
   if (syncing) return c.json({ error: 'ya hay una sincronización en curso' }, 409)
   syncing = true
   try {
-    const results = await syncAll(prodDb, { onNews: onSyncNews })
+    const results = await syncAll(prodDb, { onNews: onSyncNews, onCancelled: onSyncCancelled })
     // Cruce inmediato (#330): resuelve el estado Airbnb real (p. ej. solicitud
     // pendiente de aprobación) en vez de esperar al job horario
     await syncAirbnb(prodDb).catch((e) => console.error('[keynest] airbnb post-sync error:', e.message))
@@ -1578,7 +1580,7 @@ function purgeExpiredPhotos(db: DB, dataDir: string) {
 }
 
 const runSync = async () => {
-  await syncAll(prodDb, { onNews: onSyncNews }).catch((e) => console.error('[sync] error job:', e.message))
+  await syncAll(prodDb, { onNews: onSyncNews, onCancelled: onSyncCancelled }).catch((e) => console.error('[sync] error job:', e.message))
   // Cruce inmediato (#330): el snapshot del scraper suele llegar antes que el
   // iCal, así que el estado real puede resolverse en el mismo ciclo
   await syncAirbnb(prodDb).catch((e) => console.error('[keynest] airbnb post-sync error:', e.message))

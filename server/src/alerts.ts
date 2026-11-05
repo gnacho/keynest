@@ -135,6 +135,38 @@ export function notifyReservasNuevas(db: DB, propiedad: string, items: ReservaIt
   }
 }
 
+// ── Cancelación de una reserva confirmada (#334) ────────────────────────────
+// La fila ya está borrada cuando se llama; el deep-link va a la lista, no a la
+// reserva. Solo llegan reservas que estuvieron confirmadas (matched).
+export interface ReservaCanceladaItem {
+  propertyName: string
+  summary: string
+  checkin: string
+  checkout: string
+  guestName?: string
+  confirmationCode?: string
+  amount?: number
+}
+
+export function notifyReservasCanceladas(db: DB, items: ReservaCanceladaItem[], notifyFn: NotifyFn = notifyAll): void {
+  for (const i of items) {
+    notifyFn(
+      db,
+      'reserva_cancelada',
+      {
+        propiedad: i.propertyName,
+        resumen: i.summary,
+        huesped: i.guestName || '',
+        checkin: i.checkin,
+        checkout: i.checkout,
+        codigo: i.confirmationCode || '',
+        importe: i.amount && i.amount > 0 ? i.amount : 0,
+      },
+      { severity: 'high', url: '/reservas' }
+    )
+  }
+}
+
 // ── Transacción abonada: 24h después del check-in con importe ────────────────
 // Airbnb suele abonar el pago ~24h tras el check-in; solo se avisa si la
 // reserva tiene importe registrado (amount > 0, del CSV). Dedupe por kv:

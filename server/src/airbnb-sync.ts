@@ -21,6 +21,9 @@ import path from 'node:path'
 import { kvGet, kvSet } from './db.js'
 import type { DB } from './db.js'
 import { notifyAll } from './push.js'
+import { notifyReservasCanceladas } from './alerts.js'
+import { cancelBooking, esCancelacionConfirmada } from './cancel-booking.js'
+import type { CancelledBooking } from './cancel-booking.js'
 
 const DEF_DIR = '/opt/airbnb-scraper/data'
 const DEF_SESION = '/opt/airbnb-scraper/.auth/airbnb_session.json'
@@ -173,6 +176,7 @@ export function aplicarCruce(db: DB) {
   `)
   let cruzadas = 0
   let sinMatch = 0
+  const canceladas: CancelledBooking[] = []
 
   if (reservas && Array.isArray(reservas.reservas)) {
     const tx = db.transaction(() => {
@@ -182,6 +186,12 @@ export function aplicarCruce(db: DB) {
         codes.add(r.confirmation_code)
         const fila = stmtGet.get(r.confirmation_code) as { id: string } | undefined
         if (!fila) { sinMatch++; continue }
+        // Cancelación confirmada en el scraper: borrado en cascada + aviso.
+        // Las solicitudes pendientes (REQUESTED/PENDING) siguen su camino (#331).
+        if (esCancelacionConfirmada(r.status, r.cancellation_status)) {
+          const cancelada = cancelBooking(db, fila.id)
+          if (cancelada) { canceladas.push(cancelada); continue }
+        }
         const result = stmtUpd.run(
           r.guests ?? null,
           r.amount ?? null,
@@ -212,7 +222,7 @@ export function aplicarCruce(db: DB) {
     extraccion_ok: !!sesion?.extraccion_ok,
     detalle: sesion?.detalle || null,
   }))
-  return { cruzadas, sinMatch, sesionViva: viva }
+  return { cruzadas, sinMatch, sesionViva: viva, canceladas }
 }
 
 /**
@@ -226,6 +236,9 @@ export async function syncAirbnb(db: DB) {
   const anterior = (() => { try { return JSON.parse(kvGet(db, CLAVE_ESTADO) || '{}') } catch { return {} } })()
 
   const res = aplicarCruce(db)
+  if (res.canceladas.length > 0) {
+    notifyReservasCanceladas(db, res.canceladas)
+  }
 
   const ahoraMuerta = res.sesionViva === false
   const antesMuerta = anterior.viva === false
@@ -237,7 +250,7 @@ export async function syncAirbnb(db: DB) {
     console.log('[airbnb] sesión recuperada')
     notifyAll(db, 'airbnb_sesion_ok', {}, { severity: 'normal', url: '/reservas' })
   }
-  console.log(`[airbnb] cruce: ${res.cruzadas} reservas, ${res.sinMatch} sin match, sesión ${res.sesionViva ? 'viva' : 'MUERTA'}`)
+  console.log(`[airbnb] cruce: ${res.cruzadas} reservas, ${res.sinMatch} sin match, ${res.canceladas.length} canceladas, sesión ${res.sesionViva ? 'viva' : 'MUERTA'}`)
   return res
 }
 
