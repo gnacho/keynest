@@ -827,6 +827,7 @@
       "tedee_offline": "Cerradura offline",
       "tedee_ok": "Cerradura recuperada",
       "tedee_bateria": "Batería de cerradura baja",
+      "tedee_keypad_bateria": "Batería del teclado baja",
       "limpieza_pendiente": "Limpieza pendiente",
       "mantenimiento_recordatorio": "Recordatorio de mantenimiento"
     },

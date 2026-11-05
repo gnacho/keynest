@@ -317,6 +317,7 @@ const TIPOS_NOTIF = [
   'tedee_offline',
   'tedee_ok',
   'tedee_bateria',
+  'tedee_keypad_bateria',
   'limpieza_pendiente',
   'mantenimiento_recordatorio',
 ] as const;
