@@ -1,13 +1,17 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router';
 import { toast } from 'sonner';
-import { CalendarDays, Sparkles, TrendingUp, Wallet } from 'lucide-react';
+import { CalendarDays, ExternalLink, Sparkles, TrendingUp, Wallet } from 'lucide-react';
 import StatusBadge from '@/components/StatusBadge';
 import { useTranslation } from 'react-i18next';
 import { useData } from '@/data/useData';
 import type { Reservation } from '@/data/types';
 import { capitalize, fmtDateLong, fmtMoney, startOfDay } from '@/lib/format';
+import { pendingRequestNotice } from '@/lib/reservation-status';
 import { requestIcon } from './request-icon';
+
+/** Panel del anfitrión. Ruta verificada: es el Referer que usa el scraper. */
+const AIRBNB_RESERVAS_URL = 'https://www.airbnb.es/hosting/reservations';
 
 const CLEANING_LABEL_KEY: Record<string, string> = {
   pendiente: 'estado.pendiente',
@@ -53,6 +57,11 @@ export default function ReservationDetail({ reservation: r }: { reservation: Res
   const cleaning = data.getCleanings().find((c) => c.reservationId === r.id);
   const assignee = cleaning && cleaning.assigneeIds.length > 0 ? data.getPerson(cleaning.assigneeIds[0]) : undefined;
   const ReqIcon = r.specialRequest ? requestIcon(r.specialRequest) : null;
+  const solicitudPendiente = pendingRequestNotice({
+    checkOut: r.checkOut,
+    airbnbStatus: r.airbnbStatus,
+    airbnbCancellationStatus: r.airbnbCancellationStatus,
+  });
 
   return (
     <div
@@ -65,6 +74,26 @@ export default function ReservationDetail({ reservation: r }: { reservation: Res
           style={{ borderColor: 'rgb(245 158 11 / 0.3)', backgroundColor: 'rgb(245 158 11 / 0.08)', color: 'var(--text-muted)' }}
         >
           {t('res.pendienteSincronizacionHint')}
+        </div>
+      )}
+      {/* Solicitud de reserva (#345): el iCal ya la trae, pero las fechas no
+          están bloqueadas hasta que se acepta en el panel de Airbnb. */}
+      {solicitudPendiente && (
+        <div
+          className="flex flex-col gap-2 rounded-xl border px-3 py-2 text-xs sm:flex-row sm:items-center sm:justify-between lg:col-span-3"
+          style={{ borderColor: 'rgb(245 158 11 / 0.35)', backgroundColor: 'rgb(245 158 11 / 0.1)', color: 'var(--text-muted)' }}
+        >
+          <span>{t('res.solicitudPendienteHint')}</span>
+          <a
+            href={AIRBNB_RESERVAS_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex shrink-0 items-center justify-center gap-1.5 rounded-xl px-3 py-1.5 text-xs font-semibold text-white transition-all duration-150 hover:brightness-110"
+            style={{ backgroundColor: '#F59E0B' }}
+          >
+            <ExternalLink className="h-3.5 w-3.5" />
+            {t('res.abrirEnAirbnb')}
+          </a>
         </div>
       )}
       {/* Huésped: mantiene la nacionalidad visible dentro del detalle (#290) */}
