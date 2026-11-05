@@ -19,6 +19,18 @@ describe('production build hygiene', () => {
     expect(body).toMatch(/requireAdmin/)
   })
 
+  // Norma de la casa: guion normal en todo lo que lee una persona. Se ignoran
+  // los comentarios, que no llegan ni a la UI ni a las notificaciones.
+  it('keeps em dashes and en dashes out of user-facing texts', () => {
+    const sinComentarios = (s: string) => s.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/[^\n]*/g, '')
+    const ficheros = ['es', 'en'].map((l) => join(root, `app/src/i18n/locales/${l}/translation.json`))
+    ficheros.push(join(root, 'server/src/push.ts'))
+    for (const f of ficheros) {
+      const resto = sinComentarios(readFileSync(f, 'utf8'))
+      expect(resto, f).not.toMatch(/[—–]/)
+    }
+  })
+
   it('ships no map files when the frontend build exists', () => {
     const assets = join(root, 'app/dist/assets')
     if (!existsSync(assets)) return

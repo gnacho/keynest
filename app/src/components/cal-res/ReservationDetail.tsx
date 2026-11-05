@@ -154,7 +154,7 @@ export default function ReservationDetail({ reservation: r }: { reservation: Res
         {data.isDemo ? (
           <p className="w-full rounded-xl border bg-[var(--surface)] px-3 py-2 text-sm"
              style={{ borderColor: 'var(--border)' }}>
-            {notesStr || '—'}
+            {notesStr || '-'}
           </p>
         ) : (
           <textarea
