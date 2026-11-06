@@ -189,6 +189,8 @@
     "importe": "Amount",
     "pendienteSincronizacion": "Pending sync",
     "pendienteSincronizacionHint": "The status of this reservation could not be confirmed with Airbnb yet: it may be a request waiting for your approval or a newly created booking that has not reached the calendar. The guest name, guest count and amount will be filled in once its details arrive.",
+    "solicitudPendienteHint": "This is a booking request: the dates are not blocked yet. Accept or decline it in the Airbnb panel. If it expires, it disappears from Keynest on its own within 24 hours.",
+    "abrirEnAirbnb": "Open on Airbnb",
     "importeEur": "Amount (€)",
     "sinReservas": "No reservations match these filters",
     "limpiarFiltros": "Clear filters",

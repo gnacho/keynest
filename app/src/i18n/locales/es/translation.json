@@ -189,6 +189,8 @@
     "importe": "Importe",
     "pendienteSincronizacion": "Pendiente de sincronización",
     "pendienteSincronizacionHint": "El estado de esta reserva aún no se ha podido confirmar con Airbnb: puede ser una solicitud pendiente de tu aprobación o una reserva recién creada que todavía no llega al calendario. El nombre, los huéspedes y el importe se completarán en cuanto lleguen sus datos.",
+    "solicitudPendienteHint": "Es una solicitud de reserva: las fechas aún no están bloqueadas. Acéptala o recházala en el panel de Airbnb. Si caduca, desaparece sola de Keynest en 24 horas.",
+    "abrirEnAirbnb": "Abrir en Airbnb",
     "importeEur": "Importe (€)",
     "sinReservas": "No hay reservas con estos filtros",
     "limpiarFiltros": "Limpiar filtros",

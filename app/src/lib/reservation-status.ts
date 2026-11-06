@@ -19,6 +19,24 @@ export function isPendingCancellationStatus(status?: string): boolean {
   return ['PENDING', 'PENDING_REVIEW', 'REQUESTED'].includes((status ?? '').trim().toUpperCase());
 }
 
+export interface PendingRequestInput {
+  checkIn?: Date;
+  checkOut: Date;
+  airbnbStatus?: string;
+  airbnbCancellationStatus?: string;
+}
+
+/**
+ * Aviso accionable de solicitud: solo en solicitudes vivas. Una solicitud que
+ * ya pasó, que está en cancelación o que se convirtió en reserva confirmada no
+ * lo muestra (issue #345).
+ */
+export function pendingRequestNotice(input: PendingRequestInput, now = Date.now()): boolean {
+  if (input.checkOut.getTime() < now) return false;
+  if (isPendingCancellationStatus(input.airbnbCancellationStatus)) return false;
+  return isPendingBookingStatus(input.airbnbStatus);
+}
+
 export function reservationStatusFor(input: ReservationStateInput, now = Date.now()): ReservationStatus {
   if (input.checkOut.getTime() < now) return 'completada';
   if (isPendingCancellationStatus(input.airbnbCancellationStatus)) return 'pendienteCancelacion';
