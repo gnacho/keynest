@@ -1,4 +1,4 @@
-// push.js — Web Push (VAPID) para Keynest: configuración, motor de envío con
+// push.js - Web Push (VAPID) para Keynest: configuración, motor de envío con
 // i18n server-side (es/en), preferencias por usuario, quiet hours con cola
 // consolidada y borrado de suscripciones muertas (404/410).
 // Patrón: skill web-push-alerts, adaptado de Deltos/Helios.

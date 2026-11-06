@@ -133,7 +133,7 @@ export interface Cleaning {
   reservationId?: string;
   date: Date; // día de la limpieza (tras el check-out)
   status: CleaningStatus;
-  /** Personas asignadas (0–2). */
+  /** Personas asignadas (0-2). */
   assigneeIds: string[];
   /** Previsión de horas POR PERSONA (al asignar; por defecto 2 h). */
   estimatedHours?: number;
@@ -155,7 +155,7 @@ export interface AppUser {
   name: string;
   phone?: string;
   role: 'admin' | 'gestion' | 'limpieza';
-  /** Token de acceso directo (/t/<token>) — solo rol limpieza; undefined = revocado. */
+  /** Token de acceso directo (/t/<token>) - solo rol limpieza; undefined = revocado. */
   token?: string;
   /** Vínculo con la persona del maestro (Ajustes → Personas). */
   personId?: string;

@@ -1,4 +1,4 @@
-// airbnb-payments.test.ts — plazos de estancias largas (#298): parseo de
+// airbnb-payments.test.ts - plazos de estancias largas (#298): parseo de
 // importes es-ES, normalización del volcado del scraper, ingesta idempotente y
 // aviso el mismo día en que Airbnb emite el pago (no al confirmarse en banco).
 import { mkdtempSync, rmSync, writeFileSync } from 'node:fs'

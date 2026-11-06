@@ -1,4 +1,4 @@
-// alerts.js — motor de alertas push de Keynest (alertas operativas del negocio).
+// alerts.js - motor de alertas push de Keynest (alertas operativas del negocio).
 //
 // Triggers (decisión del usuario 2-Ago-2026):
 // - checkin_hoy / checkout_hoy: job diario (09:00 local) con las entradas y

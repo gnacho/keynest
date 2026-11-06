@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// demo-backup.cjs — copia verificada de las bases SQLite de la demo.
+// demo-backup.cjs - copia verificada de las bases SQLite de la demo.
 //
 // Uso: node demo-backup.cjs <dataDir> <backupDir> <ruta a better-sqlite3>
 //

@@ -1,4 +1,4 @@
-// update.js — estado y aplicación de actualizaciones. Detecta la última release
+// update.js - estado y aplicación de actualizaciones. Detecta la última release
 // ESTABLE (releases/latest, tag v*) y, si hay versión nueva, la aplica ejecutando
 // keynest-update.sh (deploy/, versionado: releases + checksums + marker semver).
 // El server NO se auto-aplica en runtime: el endpoint escribe un flag en el dir
@@ -239,14 +239,14 @@ function recordUpdate(db: DB, userId: string, fromVer: string, toVer: string, st
   } catch { /* si la tabla no existe aún, no bloquear el apply */ }
 }
 
-// GET /api/updates/history — últimas 30 entradas.
+// GET /api/updates/history - últimas 30 entradas.
 export function getUpdateHistory(db: DB): Array<Record<string, unknown>> {
   try {
     return db.prepare('SELECT * FROM update_history ORDER BY timestamp DESC LIMIT 30').all() as Array<Record<string, unknown>>
   } catch { return [] }
 }
 
-// consumePendingUpdate — si hay un apply pendiente (status='started') y la
+// consumePendingUpdate - si hay un apply pendiente (status='started') y la
 // versión actual ya cambió, lo marca como 'applied' y devuelve los datos
 // para mostrar un toast de confirmación. Si la versión NO cambió (falló),
 // actualiza a 'failed' y devuelve null.

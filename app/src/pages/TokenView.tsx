@@ -5,7 +5,7 @@ import { useTranslation } from 'react-i18next';
 import LimpiezaToken from '@/pages/LimpiezaToken';
 import MantenimientoToken from '@/pages/MantenimientoToken';
 
-/** Dispatcher /t/:token — un token puede ser de persona (limpieza) o de orden de trabajo (proveedor). */
+/** Dispatcher /t/:token - un token puede ser de persona (limpieza) o de orden de trabajo (proveedor). */
 export default function TokenView() {
   const { token } = useParams<{ token: string }>();
   const { t } = useTranslation();

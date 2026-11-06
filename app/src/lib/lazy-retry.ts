@@ -1,4 +1,4 @@
-// lazy-retry.ts — React.lazy tolerante a despliegues (anti pantalla negra).
+// lazy-retry.ts - React.lazy tolerante a despliegues (anti pantalla negra).
 // Ver webapp-shell references/actualizaciones.md. Si un chunk viejo da 404
 // tras un despliegue, recarga la página UNA vez por sesión (flag sessionStorage);
 // si tras la recarga sigue fallando, el error sube al ErrorBoundary.

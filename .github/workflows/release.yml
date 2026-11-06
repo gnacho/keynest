@@ -2,11 +2,11 @@ name: release
 
 # Release estable por tag v*: empaqueta la webapp completa (frontend build +
 # server + node_modules de producción PRE-BUILT por arch). El checksums.txt se
-# genera en un job `release` SEPARADO (needs: build) que combina AMBOS arch —
+# genera en un job `release` SEPARADO (needs: build) que combina AMBOS arch -
 # si cada job de la matriz generara el suyo y lo subiera, el último en subir
 # pisaría al otro y la release quedaría con un solo arch (bug real #192).
 # install.sh consume estos assets (perfil Node del skill installer-one-liner:
-# el servidor no necesita gcc/python/make — crítico para better-sqlite3).
+# el servidor no necesita gcc/python/make - crítico para better-sqlite3).
 
 on:
   push:

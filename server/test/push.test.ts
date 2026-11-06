@@ -1,4 +1,4 @@
-// push.test.js — motor Web Push (notifyUsers, preferencias, quiet hours,
+// push.test.js - motor Web Push (notifyUsers, preferencias, quiet hours,
 // borrado 404/410, demo) y motor de alertas de Keynest (checkin/checkout,
 // reservas nuevas con anti-spam, Tedee offline/batería, limpiezas pendientes).
 import { mkdtempSync, rmSync } from 'node:fs'

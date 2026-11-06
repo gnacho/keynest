@@ -916,7 +916,7 @@ export default function Ajustes() {
           {/* ================================================= TAB PREFERENCIAS */}
           {tab === 'preferencias' && (
             <div className="flex flex-col gap-4">
-              {/* Fila 1: [Apariencia | Operativa (solo admin)] — canon webapp-shell 6-Ago-2026 */}
+              {/* Fila 1: [Apariencia | Operativa (solo admin)] - canon webapp-shell 6-Ago-2026 */}
               <div className={cn('grid items-stretch gap-4', isAdmin && 'xl:grid-cols-2')}>
                 <AppearanceCard />
                 {isAdmin && (
@@ -968,7 +968,7 @@ export default function Ajustes() {
                         />
                       </div>
 
-                      {/* Umbral batería Tedee — compacto, sin descripción */}
+                      {/* Umbral batería Tedee - compacto, sin descripción */}
                       <div className="flex min-h-14 items-center justify-between gap-3 py-3" style={{ borderColor: 'var(--border)' }}>
                         <p className="text-sm font-semibold">{tr('aj.umbralBateria')}</p>
                         <div className="flex w-48 items-center gap-3">
@@ -986,7 +986,7 @@ export default function Ajustes() {
                         </div>
                       </div>
 
-                      {/* Días de aviso — compacto, sin descripción */}
+                      {/* Días de aviso - compacto, sin descripción */}
                       <div className="flex min-h-14 items-center justify-between gap-3 py-3" style={{ borderColor: 'var(--border)' }}>
                         <p className="text-sm font-semibold">{tr('aj.diasAviso')}</p>
                         <LookaheadRow />

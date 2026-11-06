@@ -1,5 +1,5 @@
 /*
- * Keynest — service worker (notificaciones push).
+ * Keynest - service worker (notificaciones push).
  * Mínimo a propósito: SIN caché ni fetch handler (la app siempre va a red;
  * el SW existe solo para Web Push). Solo se registra en contextos seguros
  * (HTTPS o localhost); en LAN HTTP `navigator.serviceWorker` es undefined.
@@ -15,7 +15,7 @@ self.addEventListener('message', (event) => {
 })
 
 // === PUSH: recepción =========================================================
-// REGLA CRÍTICA: TODO evento push termina en showNotification() — si no,
+// REGLA CRÍTICA: TODO evento push termina en showNotification() - si no,
 // Chrome muestra un aviso genérico y Safari REVOCA el permiso.
 // El servidor envía payload híbrido: campos planos (title/body/url/tag) para
 // este handler + bloque "web_push" (Declarative Web Push, Safari/iOS 18.4+).

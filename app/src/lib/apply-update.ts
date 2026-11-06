@@ -1,7 +1,7 @@
-// apply-update.ts — apply de actualización async (patrón app-auto-update).
+// apply-update.ts - apply de actualización async (patrón app-auto-update).
 // El server escribe un flag y un systemd .path lanza keynest-update.sh (root);
 // aquí se sondea /api/version hasta que el build (release-id del marker)
-// CAMBIA — el server se reinicia con el código nuevo — o timeout. Devuelve
+// CAMBIA - el server se reinicia con el código nuevo - o timeout. Devuelve
 // true si se confirmó el cambio de build.
 import { api } from './api';
 

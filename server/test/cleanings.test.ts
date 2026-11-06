@@ -32,7 +32,7 @@ function insertCleaning(id: string, propertyId: string, { checks = '[]', instruc
   ).run(id, propertyId, status, checks, instructions);
 }
 
-describe('issue #39 — snapshot de checklist + instrucciones por limpieza', () => {
+describe('issue #39 - snapshot de checklist + instrucciones por limpieza', () => {
   it('la migración 14 añade cleanings.instructions con DEFAULT ""', () => {
     const cols = (db.prepare("PRAGMA table_info(cleanings)").all() as Array<{ name: string }>).map((c) => c.name);
     expect(cols).toContain('instructions');
@@ -88,7 +88,7 @@ describe('issue #39 — snapshot de checklist + instrucciones por limpieza', () 
   });
 });
 
-describe('issues #40 y #210 — borrado de limpiezas (cualquier estado)', () => {
+describe('issues #40 y #210 - borrado de limpiezas (cualquier estado)', () => {
   it('el borrado elimina la limpieza sin tocar otras ni la reserva origen', () => {
     insertProperty('p-del', { checklist: ['A'], instructions: 'x' });
     db.prepare(`INSERT INTO reservations (id, property_id, uid, checkin, checkout, summary, created_at)

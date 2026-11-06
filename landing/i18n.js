@@ -1,4 +1,5 @@
-/* Keynest landing — i18n ES (canónico) / EN */
+"use strict";
+/* Keynest landing - i18n ES (canónico) / EN */
 const I18N = {
     es: {
         misc: { skip: "Saltar al contenido" },
@@ -70,7 +71,7 @@ const I18N = {
             title: "La categoría que faltaba",
             lead: "Gestión de alquileres para carteras pequeñas, en tu servidor y sin suscripción. Datos contrastados contra las fuentes públicas de cada producto el 5 de agosto de 2026.",
             col: "Función",
-            legend: "✓ nativo  ·  ◐ parcial  ·  ✗ no lo tiene  ·  — no aplica",
+            legend: "✓ nativo  ·  ◐ parcial  ·  ✗ no lo tiene  ·  - no aplica",
             b1: "Plataforma y precio",
             b2: "Reservas y calendario",
             b3: "Operación y equipo",
@@ -205,7 +206,7 @@ const I18N = {
             title: "The missing category",
             lead: "Rental management for small portfolios, on your server and with no subscription. Facts checked against each product's public sources on August 5, 2026.",
             col: "Feature",
-            legend: "✓ native  ·  ◐ partial  ·  ✗ missing  ·  — not applicable",
+            legend: "✓ native  ·  ◐ partial  ·  ✗ missing  ·  - not applicable",
             b1: "Platform and pricing",
             b2: "Bookings and calendar",
             b3: "Operations and team",

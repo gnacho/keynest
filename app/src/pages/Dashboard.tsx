@@ -278,7 +278,7 @@ export default function Dashboard() {
                 </TooltipContent>
               </Tooltip>
             )}
-            {/* Chip Entrada/Salida con hora — oculto en móvil (el color de la tarjeta ya distingue) */}
+            {/* Chip Entrada/Salida con hora - oculto en móvil (el color de la tarjeta ya distingue) */}
             <span
               className="hidden items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold sm:inline-flex"
               style={{ backgroundColor: 'var(--sl-chip-bg)', color: 'var(--sl-chip-text)' }}
@@ -319,7 +319,7 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* ============================== Sección 1 — KPIs */}
+      {/* ============================== Sección 1 - KPIs */}
       <motion.section className="grid gap-5 sm:grid-cols-2" variants={containerV} initial="hidden" animate="show">
         <motion.div variants={itemV} className="h-full">
           <MovementsCard
@@ -343,7 +343,7 @@ export default function Dashboard() {
         </motion.div>
       </motion.section>
 
-      {/* ============================== Sección 2 — Hoy: entradas y salidas */}
+      {/* ============================== Sección 2 - Hoy: entradas y salidas */}
       <motion.section
         className="grid gap-5 lg:grid-cols-2"
         variants={containerV}
@@ -379,7 +379,7 @@ export default function Dashboard() {
         </motion.div>
       </motion.section>
 
-      {/* ============================== Sección 3 — Inmuebles */}
+      {/* ============================== Sección 3 - Inmuebles */}
       <motion.section
         variants={containerV}
         initial="hidden"

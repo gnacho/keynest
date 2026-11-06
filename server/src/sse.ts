@@ -1,4 +1,4 @@
-// sse.js — hub de Server-Sent Events (contrato de eventos, skill api-stack).
+// sse.js - hub de Server-Sent Events (contrato de eventos, skill api-stack).
 // Portado del patrón de la app deltos: eventos NOMBRADOS <dominio>.changed
 // (cleaning.changed, maintenance.changed, …), id monótono, heartbeat ': ping'
 // cada 20 s (crítico tras Nginx Proxy Manager) y resync vía Last-Event-ID.

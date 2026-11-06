@@ -357,7 +357,7 @@ export default function CleaningCard({ cleaning: c, variants, highlight = false,
         </DialogHeader>
         {/* Una sola columna: cada tarjeta al 100% del ancho del diálogo (#211) */}
         <div className="flex flex-col gap-3">
-        {/* 1) CHECKLIST DEL INMUEBLE — lo primero que mira la persona de limpieza */}
+        {/* 1) CHECKLIST DEL INMUEBLE - lo primero que mira la persona de limpieza */}
         <div className="rounded-2xl border p-3" style={{ borderColor: 'var(--border)', backgroundColor: 'var(--surface-2)' }}>
           <p
             className="mb-1.5 text-[11px] font-semibold uppercase tracking-[0.08em]"
@@ -414,7 +414,7 @@ export default function CleaningCard({ cleaning: c, variants, highlight = false,
           </AnimatePresence>
         </div>
 
-        {/* 2) Instrucciones de la limpieza — snapshot heredado del inmueble, editable
+        {/* 2) Instrucciones de la limpieza - snapshot heredado del inmueble, editable
               aquí sin tocar el maestro. Las personas de limpieza las ven (solo lectura). */}
         <div className="rounded-2xl border p-3" style={{ borderColor: 'var(--border)', backgroundColor: 'var(--surface-2)' }}>
           <div className="mb-1.5 flex items-center justify-between gap-2">

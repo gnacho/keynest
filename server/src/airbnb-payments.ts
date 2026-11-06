@@ -1,4 +1,4 @@
-// airbnb-payments.js — transferencias individuales de Airbnb (#298).
+// airbnb-payments.js - transferencias individuales de Airbnb (#298).
 //
 // Las estancias de más de un mes no se cobran en un único pago: Airbnb cobra al
 // huésped en plazos y abona al anfitrión tras cada uno. El aviso de "transacción

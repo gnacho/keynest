@@ -1,4 +1,4 @@
-// cancel-booking.ts — borrado en cascada de reservas canceladas (#334).
+// cancel-booking.ts - borrado en cascada de reservas canceladas (#334).
 //
 // Una reserva confirmada que se cancela en Airbnb desaparece del feed iCal y
 // del snapshot del scraper. Antes se borraba la fila a secas: sin push, sin

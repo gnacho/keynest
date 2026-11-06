@@ -63,7 +63,7 @@ export function saveTedeeConfig(db: DB, url: string, token: string): void {
   if (token) kvSet(db, 'tedee_token', encryptSecret(db, token))
 }
 
-/** Header api_token: hex(sha256(token+ts)) + ts — verificado contra bridge real 31-Jul-2026. */
+/** Header api_token: hex(sha256(token+ts)) + ts - verificado contra bridge real 31-Jul-2026. */
 function authHeader(token: string): string {
   const ts = Date.now().toString()
   const hash = crypto.createHash('sha256').update(token + ts).digest('hex')
@@ -225,7 +225,7 @@ const ACCESS_EVENT_TYPE: Record<number, string> = {
 
 /** Log de accesos reales desde la cloud (GET /api/v37/my/deviceactivity?deviceId=).
  *  Devuelve [{id, at, actorName, actorRole, type, propertyId, lockId, guestName}]
- *  — NUNCA el PIN en claro. guestName (#277) = inquilino de la reserva activa del
+ *  - NUNCA el PIN en claro. guestName (#277) = inquilino de la reserva activa del
  *  inmueble en la fecha del acceso ('' si no hay match). Solo se aplica al actor
  *  cuando NO es una persona conocida (#281): si el alias del evento coincide con
  *  una persona del maestro (limpieza/proveedor), ese es el actor real y su rol.

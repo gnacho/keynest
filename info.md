@@ -1,4 +1,4 @@
-# Research / Spec — PWA Gestor de inmuebles de alquiler (MOCKUP)
+# Research / Spec - PWA Gestor de inmuebles de alquiler (MOCKUP)
 
 Mockup navegable frontend-only con datos mock realistas y coherentes (KPIs computados desde los datos, nunca hardcodeados; mock determinista con semilla). Idioma de la UI: español (es-ES). Formato números: coma decimal, miles con punto, moneda EUR.
 
@@ -25,8 +25,8 @@ Mockup navegable frontend-only con datos mock realistas y coherentes (KPIs compu
 - 3-4 personas (limpieza/mantenimiento) con coste/hora
 - Gastos de 6 meses para gráficos (agua, luz, internet recurrente, administración, extras)
 
-## Sistema de diseño (OBLIGATORIO — skill del usuario "webapp-stack")
-- **Tipografía**: Space Grotesk (500–700) para cifras KPI y titulares; Inter (400–600) para UI. `font-feature-settings: "tnum"` en cifras. Unidad al 60% del tamaño de su cifra, color text-faint.
+## Sistema de diseño (OBLIGATORIO - skill del usuario "webapp-stack")
+- **Tipografía**: Space Grotesk (500-700) para cifras KPI y titulares; Inter (400-600) para UI. `font-feature-settings: "tnum"` en cifras. Unidad al 60% del tamaño de su cifra, color text-faint.
 - **Tokens CSS claro/oscuro** (tema con toggle, default claro):
   - Claro: --bg #F4F6FA, --surface #FFFFFF, --surface-2 #EEF1F6, --border #E3E8F0, --text #0C1425, --text-muted #5B6B84, --text-faint #94A3B8
   - Oscuro: --bg #080D1A, --surface #101828, --surface-2 #182338, --border #1E2B42, --text #E9EEF7, --text-muted #93A1B8, --text-faint #5C6B85

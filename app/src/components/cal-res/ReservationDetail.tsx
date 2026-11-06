@@ -114,7 +114,7 @@ export default function ReservationDetail({ reservation: r }: { reservation: Res
         </div>
       </div>
 
-      {/* Detalles — solo la fecha de reserva (noches y huéspedes ya están en la tarjeta; edades y canal se retiraron) */}
+      {/* Detalles - solo la fecha de reserva (noches y huéspedes ya están en la tarjeta; edades y canal se retiraron) */}
       {r.bookedDate && (
         <div className="flex flex-col gap-1.5">
           <SectionTitle>{t('res.detalles')}</SectionTitle>
@@ -124,7 +124,7 @@ export default function ReservationDetail({ reservation: r }: { reservation: Res
         </div>
       )}
 
-      {/* Peticiones especiales — solo si existen */}
+      {/* Peticiones especiales - solo si existen */}
       {r.specialRequest && ReqIcon && (
         <div className="flex flex-col gap-1.5">
           <SectionTitle>{t('res.peticionesEspeciales')}</SectionTitle>

@@ -41,7 +41,7 @@ function insertExpense(id: string, propertyId: string, over: Record<string, any>
   );
 }
 
-describe('issue #207 — gastos persistidos en BD', () => {
+describe('issue #207 - gastos persistidos en BD', () => {
   it('la migración 21 crea la tabla expenses', () => {
     const tables = (db.prepare("SELECT name FROM sqlite_master WHERE type='table'").all() as Array<{ name: string }>).map((r) => r.name);
     expect(tables).toContain('expenses');

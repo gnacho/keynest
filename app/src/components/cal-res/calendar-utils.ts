@@ -39,7 +39,7 @@ export function nightsOf(r: Reservation): number {
   );
 }
 
-/** Celdas del grid mensual lun–dom: 5–6 semanas × 7. */
+/** Celdas del grid mensual lun-dom: 5-6 semanas × 7. */
 export function monthGrid(year: number, month: number): Date[][] {
   const first = new Date(year, month, 1);
   const mondayOffset = (first.getDay() + 6) % 7; // lun = 0
