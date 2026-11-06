@@ -1,13 +1,22 @@
 import crypto from 'node:crypto'
+import { kvGet, kvSet } from './db.js'
 import type { DB } from './db.js'
 
 /**
  * Seed determinista de la BD demo (dataset de muestra, fechas relativas a hoy).
  * 5 inmuebles con checklist/instrucciones + reservas cubriendo ±1 mes,
  * personas de limpieza/proveedores, limpiezas generadas de los check-outs,
- * tareas de mantenimiento y gastos recurrentes. Solo se ejecuta si la BD demo
- * está vacía. Todos los datos son ficticios (modo demo).
+ * tareas de mantenimiento y gastos recurrentes. Todos los datos son ficticios.
+ *
+ * La primera siembra exige la BD vacía. Como el actualizador conserva las
+ * bases, sin refresco la demo se queda congelada en el día de la instalación
+ * (#347): reseedDemo la regenera cuando la siembra supera DEMO_MAX_EDAD_MS.
+ * Es seguro borrarla: la demo es de solo lectura para el usuario demo, así que
+ * nadie puede perder trabajo propio. Los usuarios y sus sesiones se conservan.
  */
+
+const CLAVE_SEED = 'demo_seed_at'
+export const DEMO_MAX_EDAD_MS = 24 * 3600 * 1000
 
 const PROPS = [
   { slug: 'atico-marina', name: 'Ático Marina', address: 'C/ del Mar 14, Valencia', bedrooms: 2, bathrooms: 1, area: 78, photo: '/prop-marina.svg', checklist: ['Baño', 'Cocina', 'Sábanas y toallas', 'Reposición', 'Revisar terraza', 'Fotos'], instructions: 'Entrar por el portal B (2ºB, llave en la caja del tendedero, código 1420). La terraza se limpia SIEMPRE. Productos bajo el fregadero.' },
@@ -32,7 +41,23 @@ const RESERVATIONS: Array<[number, number, number, string, number, string]> = [
   [0, -18, -11, 'HMDEMO2KK2', 780, 'Isabel García'],
   [2, -12, -8, 'HMDEMO3LL3', 520, 'Pierre Laurent'],
   [3, -9, -5, 'HMDEMO4MM4', 480, 'Ana Beltrán'],
+  // Estancia larga (28 noches) con cobro en plazos, para ver reservation_payments.
+  [2, 20, 48, 'HMDEMO5NN5', 2400, 'Sofia Andersson'],
 ]
+
+// Estados de Airbnb por índice de reserva. El resto se deduce de las fechas.
+// 9: solicitud pendiente, todavía sin bloquear fechas (#345).
+// 6: cancelación solicitada por el huésped, pendiente de resolución.
+const AIRBNB_ESPECIALES: Record<number, { status: string; localized: string; cancellation?: string }> = {
+  9: { status: 'request', localized: 'Reserva solicitada' },
+  6: { status: 'upcoming', localized: 'Próxima', cancellation: 'PENDING' },
+}
+
+function estadoAirbnb(checkin: string, checkout: string, hoy: string): { status: string; localized: string } {
+  if (checkout < hoy) return { status: 'complete', localized: 'Finalizada' }
+  if (checkin <= hoy) return { status: 'current', localized: 'En curso' }
+  return { status: 'upcoming', localized: 'Próxima' }
+}
 
 // Personas: [name, phone, role, specialty, hourlyRate]
 const PEOPLE: Array<[string, string, string, string, number]> = [
@@ -82,8 +107,11 @@ export function seedDemo(db: DB): boolean {
 
   const insProp = db.prepare(`INSERT INTO properties (id, slug, name, address, bedrooms, bathrooms, area, photo, ical_url, checklist, instructions, created_at)
     VALUES (?, ?, ?, ?, ?, ?, ?, ?, '', ?, ?, ?)`)
-  const insRes = db.prepare(`INSERT INTO reservations (id, property_id, uid, checkin, checkout, summary, confirmation_code, phone_last4, guest_name, amount, notes, created_at)
-    VALUES (?, ?, ?, ?, ?, 'Reserved', ?, ?, ?, ?, ?, ?)`)
+  const insRes = db.prepare(`INSERT INTO reservations (id, property_id, uid, checkin, checkout, summary, confirmation_code, phone_last4, guest_name, amount, notes, created_at,
+      airbnb_status, airbnb_status_localized, airbnb_cancellation_status, airbnb_sync_state, airbnb_synced_at, guests, booked_date, guest_location)
+    VALUES (?, ?, ?, ?, ?, 'Reserved', ?, ?, ?, ?, ?, ?, ?, ?, ?, 'matched', ?, ?, ?, ?)`)
+  const insPago = db.prepare(`INSERT INTO reservation_payments (id, reservation_id, confirmation_code, paid_on, amount, currency, status, external_ref, detected_at)
+    VALUES (?, ?, ?, ?, ?, 'EUR', ?, ?, ?)`)
   const insPerson = db.prepare(`INSERT INTO people (id, name, phone, role, specialty, hourly_rate, created_at)
     VALUES (?, ?, ?, ?, ?, ?, ?)`)
   const insCleaning = db.prepare(`INSERT INTO cleanings (id, property_id, reservation_id, date, status, assignee_ids, estimated_hours, checks, photos, work_log, supplies, materials, created_at)
@@ -102,11 +130,48 @@ export function seedDemo(db: DB): boolean {
     }
 
     const resIds: string[] = []
-    for (const [pi, ci, co, code, amount, guest] of RESERVATIONS) {
+    const hoy = ymd(today)
+    const ORIGENES = ['Alemania', 'Irlanda', 'Francia', 'Italia', 'Reino Unido', 'Brasil', 'Polonia', 'Países Bajos', 'Alemania', 'España', 'España', 'Francia', 'España', 'Suecia']
+    for (const [ri, [pi, ci, co, code, amount, guest]] of RESERVATIONS.entries()) {
       const id = crypto.randomUUID()
       resIds.push(id)
-      insRes.run(id, propIds[pi], `demo-${code}@demo.local`, ymd(dayAt(ci)), ymd(dayAt(co)), code, String(1000 + pi * 1111).slice(-4), guest, amount, '', now)
+      const checkin = ymd(dayAt(ci))
+      const checkout = ymd(dayAt(co))
+      const estado = AIRBNB_ESPECIALES[ri] ?? estadoAirbnb(checkin, checkout, hoy)
+      insRes.run(
+        id, propIds[pi], `demo-${code}@demo.local`, checkin, checkout, code,
+        String(1000 + pi * 1111).slice(-4), guest, amount, '', now,
+        estado.status, estado.localized, estado.cancellation ?? '', now,
+        1 + (ri % 4), ymd(dayAt(ci - 20)), ORIGENES[ri] ?? '',
+      )
     }
+
+    // Plazos de la estancia larga: uno cobrado y dos programados (#298).
+    const larga = RESERVATIONS.length - 1
+    const [, ciLarga, , codigoLarga, importeLarga] = RESERVATIONS[larga]
+    const plazos = [
+      { offset: ciLarga - 20, amount: Math.round(importeLarga * 0.3 * 100) / 100, status: 'PAID' },
+      { offset: ciLarga + 1, amount: Math.round(importeLarga * 0.4 * 100) / 100, status: 'SCHEDULED' },
+      { offset: ciLarga + 15, amount: Math.round(importeLarga * 0.3 * 100) / 100, status: 'SCHEDULED' },
+    ]
+    for (const [i, plazo] of plazos.entries()) {
+      insPago.run(crypto.randomUUID(), resIds[larga], codigoLarga, ymd(dayAt(plazo.offset)), plazo.amount, plazo.status, `demo-${codigoLarga}-${i}`, now)
+    }
+
+    // Cancelación reciente: alimenta el aviso rojo de reservas canceladas (#340).
+    db.prepare('INSERT INTO audit_log (user_id, action, entity, entity_id, detail, at) VALUES (NULL, ?, ?, ?, ?, ?)')
+      .run('cancel', 'reservation', crypto.randomUUID(), JSON.stringify({
+        uid: 'demo-HMDEMO0XX0@demo.local',
+        codigo: 'HMDEMO0XX0',
+        summary: 'Reserved',
+        property_id: propIds[1],
+        property_name: PROPS[1].name,
+        guest_name: 'Nora Berger',
+        checkin: ymd(dayAt(6)),
+        checkout: ymd(dayAt(11)),
+        amount: 512.4,
+        motivo: 'cancel',
+      }), now - 2 * 3600 * 1000)
 
     const personIds: string[] = []
     for (const [name, phone, role, specialty, rate] of PEOPLE) {
@@ -154,11 +219,45 @@ export function seedDemo(db: DB): boolean {
     }
     insExpense.run(crypto.randomUUID(), propIds[0], 'extras', 'Frigorífico del ático (repuesto)', 95, today.getMonth(), today.getFullYear(), now)
 
-    // Usuario demo (sin contraseña: entra por /api/auth/demo)
-    db.prepare('INSERT INTO users (id, username, password_hash, language, role, created_at) VALUES (?, ?, ?, ?, ?, ?)')
+    // Usuario demo (sin contraseña: entra por /api/auth/demo). OR IGNORE porque
+    // el reseed conserva usuarios y sesiones: nadie pierde su sesión abierta.
+    db.prepare('INSERT OR IGNORE INTO users (id, username, password_hash, language, role, created_at) VALUES (?, ?, ?, ?, ?, ?)')
       .run('demo-user', 'demo', '', 'auto', 'demo', now)
+    kvSet(db, CLAVE_SEED, String(now))
   })
   tx()
-  console.log('[demo] seed creado: 5 inmuebles, 13 reservas, 4 personas, 9 limpiezas, 8 tareas, gastos demo')
+  console.log(`[demo] seed creado: ${PROPS.length} inmuebles, ${RESERVATIONS.length} reservas, ${PEOPLE.length} personas, ${CLEANINGS.length} limpiezas, ${MAINTENANCE.length} tareas, gastos demo`)
   return true
+}
+
+/** Marca temporal de la siembra. Bases antiguas sin marca: created_at de las
+ *  propiedades, que es justo lo que delata una demo congelada (#347). */
+export function demoSembradoEn(db: DB): number {
+  const marca = Number(kvGet(db, CLAVE_SEED))
+  if (Number.isFinite(marca) && marca > 0) return marca
+  const row = db.prepare('SELECT MAX(created_at) AS sembrado FROM properties').get() as { sembrado: number | null }
+  return row.sembrado ?? 0
+}
+
+export function demoNecesitaReseed(db: DB, ahora = Date.now(), maxEdadMs = DEMO_MAX_EDAD_MS): boolean {
+  const hayDatos = (db.prepare('SELECT COUNT(*) n FROM properties').get() as { n: number }).n > 0
+  if (!hayDatos) return false
+  return ahora - demoSembradoEn(db) > maxEdadMs
+}
+
+/** Regenera el dataset demo cuando envejece. Devuelve true si resembró. */
+export function reseedDemo(db: DB, ahora = Date.now()): boolean {
+  if (!demoNecesitaReseed(db, ahora)) return false
+  const anterior = demoSembradoEn(db)
+  const tx = db.transaction(() => {
+    // Hijos antes que padres. No se tocan users, sessions ni kv: el usuario
+    // demo sigue dentro y los ajustes de la instalación se conservan.
+    for (const tabla of ['cleanings', 'reservation_payments', 'maintenance_tasks', 'expenses', 'reservations', 'properties', 'people', 'audit_log', 'login_tokens', 'notification_queue']) {
+      db.prepare(`DELETE FROM ${tabla}`).run()
+    }
+  })
+  tx()
+  const ok = seedDemo(db)
+  console.log(`[demo] dataset regenerado (siembra anterior de ${new Date(anterior).toISOString()})`)
+  return ok
 }
