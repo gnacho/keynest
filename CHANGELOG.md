@@ -12,6 +12,56 @@ y este proyecto se adhiere a [Versionado Semántico](https://semver.org/lang/es/
 > release usar `scripts/release.sh` (calcula la versión y crea el tag con el
 > mensaje correcto).
 
+## [1.7.0] - 2026-11-06
+
+### Added
+
+- **Aviso de reserva cancelada (#340).** Cuando una reserva se cancela aparece
+  un aviso rojo con el huésped, las fechas y el importe, e informa de que esas
+  fechas vuelven a estar disponibles. Cada aviso se cierra por separado y no
+  vuelve a mostrarse. Llega al instante por SSE y se recupera al entrar con
+  `GET /api/cancellations/recent` (últimos 7 días).
+- **Solicitudes pendientes enlazadas con Airbnb (#345).** El detalle de una
+  reserva pendiente de confirmación muestra un aviso ámbar que recuerda que las
+  fechas aún no están bloqueadas y un botón para abrir el panel de Airbnb y
+  aceptarla o rechazarla.
+- **Datos de demo vivos (#347).** El dataset de la demo se regenera solo cada
+  día, y también al arrancar si la siembra tiene más de 24 horas. Las fechas son
+  relativas a hoy e incluye una solicitud pendiente, una estancia larga con sus
+  plazos y una cancelación reciente para el aviso.
+- **Actualizador de la demo verificado (#327, #329).** `deploy/demo-update.sh`
+  instala una release con copia de las bases verificada, comprobación de salud
+  y vuelta atrás automática si algo falla, y termina con una comprobación de
+  humo de la superficie pública.
+
+### Changed
+
+- **El cruce con el panel de Airbnb se ejecuta justo después de cada
+  sincronización iCal (#330)**, y la pista de pendiente de sincronización
+  explica mejor lo que falta.
+- **Textos sin guiones tipográficos (#339, #349).** La interfaz, las
+  notificaciones, los comentarios y la web usan guion normal. Un test de
+  higiene recorre el repositorio y lo impide en adelante.
+
+### Fixed
+
+- **Las cancelaciones se borran en cascada y con aviso (#334).** Antes una
+  reserva cancelada desaparecía sin notificación y dejaba pagos y limpiezas
+  huérfanos. Ahora reserva, pagos y limpiezas se borran en una transacción,
+  queda constancia en el registro de auditoría y se envía un push. Un tombstone
+  de 90 días evita que un calendario desfasado la resucite.
+- **Las solicitudes nunca confirmadas caducan (#331).** Si una solicitud sale
+  del panel de Airbnb sin confirmarse y lleva más de 24 horas ausente, se
+  elimina sin push. Una reserva confirmada nunca se borra por esta regla, y un
+  scraper caído ya no marca ausencias.
+- **Sesiones persistentes (#333).** Todo inicio de sesión es persistente y se
+  endurece la rotación del token de recuperación y el cierre de sesión, así que
+  la PWA deja de pedir credenciales tras cada despliegue.
+- **La batería del teclado se puede silenciar (#335).** El aviso de batería baja
+  del teclado Tedee ya tiene su interruptor en Ajustes.
+- **La demo ya no acusa una sesión de Airbnb caducada (#303).** Sin fichero de
+  estado del scraper no se inventa una caída, y el motivo del aviso se traduce.
+
 ## [1.6.1] - 2026-10-28
 
 ### Added
