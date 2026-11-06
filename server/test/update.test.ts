@@ -231,3 +231,79 @@ describe('latestInfo anti rate-limit (#265)', () => {
     })
   })
 })
+
+describe('respaldo por redirección cuando la API está limitada (#353)', () => {
+  const withDb = async (fn: (db: DB, dir: string) => Promise<void>) => {
+    const dir = mkdtempSync(join(tmpdir(), 'keynest-redirect-'))
+    const db = openDb(dir, 'test.db')
+    try {
+      await fn(db, dir)
+    } finally {
+      vi.unstubAllGlobals()
+      db.close()
+      rmSync(dir, { recursive: true, force: true })
+    }
+  }
+  const apiCaida = {
+    ok: false,
+    status: 403,
+    headers: { get: () => null },
+  }
+  const redirige = (location: string) => ({
+    ok: false,
+    status: 302,
+    headers: { get: (h: string) => (h === 'location' ? location : null) },
+  })
+  // La API da 403 y github.com responde con la redirección al tag estable.
+  const stubMixto = (location: string) =>
+    vi.stubGlobal('fetch', vi.fn((url: any) => Promise.resolve(
+      String(url).startsWith('https://api.github.com') ? apiCaida : redirige(location),
+    )))
+  const cacheGuardada = (db: DB) =>
+    JSON.parse((db.prepare('SELECT value FROM kv WHERE key = ?').get('gh_latest_release') as { value: string }).value)
+
+  it('resuelve la versión por la redirección y deja de ser checkFailed', async () => {
+    await withDb(async (db, dir) => {
+      seedCache(db, { at: Date.now() - 12 * 60 * 60 * 1000, id: '1.6.1', body: '', etag: 'W/"a1"' })
+      stubMixto('https://github.com/gnacho/keynest/releases/tag/v9.9.12')
+      const st = await updateStatus(db, dir)
+      expect(st.latest).toBe('9.9.12')
+      expect(st.checkFailed).toBe(false)
+      expect(st.stale).toBe(false)
+      const saved = cacheGuardada(db)
+      expect(saved.id).toBe('9.9.12')
+      expect(saved.etag).toBe('')
+    })
+  })
+
+  it('reusa las notas de la caché cuando la versión coincide', async () => {
+    await withDb(async (db, dir) => {
+      seedCache(db, { at: Date.now() - 10 * 60 * 1000, id: '9.9.12', body: '- nota previa' })
+      stubMixto('https://github.com/gnacho/keynest/releases/tag/v9.9.12')
+      const st = await updateStatus(db, dir)
+      expect(st.latest).toBe('9.9.12')
+      expect(st.notes).toBe('- nota previa')
+      expect(st.stale).toBe(false)
+    })
+  })
+
+  it('una redirección sin tag válido conserva el last-known-good', async () => {
+    await withDb(async (db, dir) => {
+      seedCache(db, { at: Date.now() - 10 * 60 * 1000, id: '9.9.9', body: '- nota', etag: 'W/"a1"' })
+      stubMixto('https://github.com/gnacho/keynest/releases')
+      const st = await updateStatus(db, dir)
+      expect(st.latest).toBe('9.9.9')
+      expect(st.stale).toBe(true)
+      expect(st.checkFailed).toBe(false)
+    })
+  })
+
+  it('sin API ni redirección útil sigue siendo checkFailed', async () => {
+    await withDb(async (db, dir) => {
+      stubMixto('https://github.com/gnacho/keynest/releases')
+      const st = await updateStatus(db, dir)
+      expect(st.latest).toBeNull()
+      expect(st.checkFailed).toBe(true)
+    })
+  })
+})
