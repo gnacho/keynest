@@ -19,7 +19,7 @@ import type { AppEnv } from './auth.js'
 import { audit, openDb, kvGet, kvSet, encryptSecret, decryptSecret, hydrateCleaning, cleaningCostOf, syncCleaningExpense, removeCleaningExpense, ensurePrivateDir } from './db.js'
 import { syncAll, syncStatus } from './sync.js'
 import { fetchIcs, icsToReservations, parseIcs } from './ical.js'
-import { seedDemo } from './seed-demo.js'
+import { reseedDemo, seedDemo } from './seed-demo.js'
 import { saveTedeeConfig, tedeeConfig, tedeeLocks, tedeeAccesses } from './tedee.js'
 import { currentId, updateStatus, updateProgress, getUpdateHistory, consumePendingUpdate, requestUpdate, requestRollback } from './update.js'
 import { importAirbnb, parseAirbnbCsv } from './import-airbnb.js'
@@ -91,6 +91,9 @@ ensureExternalSecrets(config.dataDir, [prodDb, demoDb])
 if (migrateLegacySecrets(prodDb)) console.log('[security] claves legacy migradas en producción')
 if (migrateLegacySecrets(demoDb)) console.log('[security] claves legacy migradas en demo')
 seedDemo(demoDb)
+// La demo se degrada sola: sin refresco, las fechas de la siembra inicial se
+// quedan en el pasado (#347). Al arrancar y una vez al día, se regenera.
+reseedDemo(demoDb)
 await auth.ensureBootstrapAdmin(prodDb, config)
 auth.cleanExpiredSessions(prodDb)
 configurePush({
@@ -1640,6 +1643,9 @@ alerts.scheduleDaily(9, () => alerts.checkReservasHoy(prodDb), 'reservas-hoy')
 alerts.scheduleDaily(9, () => alerts.checkTransacciones(prodDb, notifyUsers), 'transacciones')
 alerts.scheduleDaily(9, () => alerts.checkMantenimientoRecordatorios(prodDb, notifyUsers), 'mantenimiento-recordatorio')
 alerts.scheduleDaily(12, () => alerts.checkLimpiezas(prodDb), 'limpiezas-pendientes')
+
+/* Refresco diario del dataset demo (#347), antes del backup de las 03:00 */
+alerts.scheduleDaily(2, () => reseedDemo(demoDb), 'demo-reseed')
 
 /* Backup diario a las 03:00 si está habilitado */
 alerts.scheduleDaily(3, async () => {
