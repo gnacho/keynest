@@ -469,7 +469,7 @@ describe('inquilino del acceso (#277)', () => {
   })
 })
 
-describe('tedeeLocks — propertyId', () => {
+describe('tedeeLocks - propertyId', () => {
   it('asocia propertyId cuando tedee_lock_id coincide', async () => {
     const id = insertarPropiedad(176718)
     configurarTedeeCloud(db)

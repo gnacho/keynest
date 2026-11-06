@@ -53,7 +53,7 @@ interface NavItem {
    En móvil entra en la bottom-nav directa. */
 /* NAV_ITEMS es la fuente única (webapp-shell). En DESKTOP (sidebar + raíl) se
    muestran TODOS los de dominio; en MÓVIL la bottom-nav muestra solo los 4
-   esenciales (Resumen/Limpieza/Rentabilidad/Ajustes) — Calendario/Reservas/
+   esenciales (Resumen/Limpieza/Rentabilidad/Ajustes) - Calendario/Reservas/
    Mantenimiento quedan ocultos en móvil pero siguen accesibles por URL directa
    y enlaces del dashboard (y visibles en desktop). */
 const NAV_ITEMS: NavItem[] = [
@@ -76,7 +76,7 @@ const HIDDEN_ROUTES = ['/calendario', '/mantenimiento', '/tedee'];
 const SETTINGS_ITEM: NavItem = { to: '/ajustes', labelKey: 'ajustes', icon: Settings };
 
 /* Móvil (bottom-nav): esenciales (Resumen/Reservas/Limpieza/Rentabilidad) sin
-   Ajustes — Ajustes se accede desde el avatar de usuario del header. Inmuebles
+   Ajustes - Ajustes se accede desde el avatar de usuario del header. Inmuebles
    tampoco va: se gestiona desde el Sheet del inmueble en Resumen. */
 /* Móvil (bottom-nav): TODAS las secciones de dominio, en una fila
    deslizable horizontalmente (overflow-x-auto). */

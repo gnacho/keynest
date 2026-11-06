@@ -1,8 +1,8 @@
 #!/bin/sh
-# keynest-update.sh — auto-actualizador de Keynest (versionado en el repo).
+# keynest-update.sh - auto-actualizador de Keynest (versionado en el repo).
 #
 # Reemplaza al antiguo cron rogue del CT 226. Diferencias con el original:
-#  1. Descarga de la release ESTABLE (releases/latest, tag v*) — nunca de main.
+#  1. Descarga de la release ESTABLE (releases/latest, tag v*) - nunca de main.
 #  2. Verifica sha256 contra checksums.txt antes de desplegar.
 #  3. Marker con la versión SEMVER real, no un ID numérico de release.
 #  4. Despliegue con backup y sin tocar datos (SQLite en /var/lib o /opt/keynest/data).

@@ -30,7 +30,7 @@ ${events.join('\n')}
 END:VCALENDAR`;
 }
 
-describe('syncAll — conservación de reservas finalizadas (issue #21)', () => {
+describe('syncAll - conservación de reservas finalizadas (issue #21)', () => {
   let dir: string, db: DB;
 
   beforeAll(() => {
@@ -135,7 +135,7 @@ END:VEVENT`,
   });
 });
 
-describe('syncAll — cancelación en cascada (issue #334)', () => {
+describe('syncAll - cancelación en cascada (issue #334)', () => {
   let dir: string, db: DB;
 
   beforeAll(() => {

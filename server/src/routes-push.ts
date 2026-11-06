@@ -1,4 +1,4 @@
-// routes-push.js — endpoints de suscripción y preferencias Web Push (Keynest).
+// routes-push.js - endpoints de suscripción y preferencias Web Push (Keynest).
 // Auth: sesión por cookie HttpOnly SameSite=Lax mismo-origen (middleware
 // requireAuth del router `guarded`: c.get('user') / c.get('db'); la BD es la
 // de demo si la sesión es demo). El endpoint push es una capability URL

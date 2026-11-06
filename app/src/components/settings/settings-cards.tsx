@@ -585,7 +585,7 @@ export function SessionCard({ isDemo }: { isDemo: boolean }) {
           </button>
         )}
 
-        {/* Logout — SIEMPRE a la derecha, rojo; texto solo en ≥sm */}
+        {/* Logout - SIEMPRE a la derecha, rojo; texto solo en ≥sm */}
         <button
           type="button"
           onClick={() => { void logout(); }}

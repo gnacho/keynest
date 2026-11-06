@@ -1,4 +1,4 @@
-// airbnb-sync.js — cruce de reservas de Airbnb con el scraper local.
+// airbnb-sync.js - cruce de reservas de Airbnb con el scraper local.
 //
 // El scraper (proyecto local, fuera del repo) descarga /api/v2/reservations
 // del panel de anfitrión cada hora y escribe dos ficheros JSON:

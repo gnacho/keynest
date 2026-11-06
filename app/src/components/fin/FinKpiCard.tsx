@@ -29,7 +29,7 @@ interface FinKpiCardProps {
   decimals?: number;
   /** Delta vs período anterior en % */
   deltaPct?: number;
-  /** true: subida = bueno (emerald). false: subida = malo (rose) — p. ej. gastos */
+  /** true: subida = bueno (emerald). false: subida = malo (rose) - p. ej. gastos */
   deltaGoodWhenUp?: boolean;
   sub?: string;
   spark?: number[];

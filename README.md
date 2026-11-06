@@ -32,7 +32,7 @@ One Node + SQLite service, self-hosted on a small Linux box.
 
 > **Try the live demo**
 >
-> See it running without installing anything. Head to **[demo.keynest.cloudless.club](https://demo.keynest.cloudless.club)** — sample properties, reservations and cleanings, no sign-up required. In read-only mode, so you can explore freely.
+> See it running without installing anything. Head to **[demo.keynest.cloudless.club](https://demo.keynest.cloudless.club)** - sample properties, reservations and cleanings, no sign-up required. In read-only mode, so you can explore freely.
 
 ## Why does this exist?
 

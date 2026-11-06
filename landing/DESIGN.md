@@ -1,4 +1,4 @@
-# DESIGN — Landing de Keynest
+# DESIGN - Landing de Keynest
 
 ## Qué es (artefacto y audiencia)
 
@@ -92,8 +92,8 @@ Contraste AA verificado en ambos temas (audit de tokens con script, no a ojo).
 ## Signature move
 
 **La barra de estancia**: en las tarjetas de features y en el hero hay una barra
-horizontal con los 3 tramos de una estancia típica — `entrada (emerald) →
-estancia (blue) → salida (amber)` — con etiquetas pequeñas. Es la única
+horizontal con los 3 tramos de una estancia típica - `entrada (emerald) →
+estancia (blue) → salida (amber)` - con etiquetas pequeñas. Es la única
 decoración "dibujada" de la web y dice en una imagen lo que la app hace: la
 estancia del huésped, del check-in al check-out, y todo lo que la rodea
 (limpieza, mantenimiento, rentabilidad). Aparece en el hero, en la sección de
@@ -113,7 +113,7 @@ de software).
 - **Slider de capturas**: imagen principal + flechas prev/next + miniaturas
   clicables; idioma+tema cambian la captura (JS). Alt descriptivo por vista.
 - **Comparativa**: matrices por bloque de funcionalidades con leyenda
-  ✓ nativo / ◐ parcial / ✗ no / — n/a. Columna Keynest resaltada a la izquierda.
+  ✓ nativo / ◐ parcial / ✗ no / - n/a. Columna Keynest resaltada a la izquierda.
   Lado honesto al final.
 - **Motion**: transiciones 150-250ms ease-out solo opacity/transform; reveal on
   scroll con IntersectionObserver; `prefers-reduced-motion` → estático.

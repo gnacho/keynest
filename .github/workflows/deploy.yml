@@ -19,7 +19,7 @@ jobs:
           node-version: 24
 
       # 1) Backend: deps + typecheck + build + tests (Vitest)
-      - name: Server — install, typecheck, build & test
+      - name: Server - install, typecheck, build & test
         working-directory: server
         run: |
           npm ci
@@ -28,13 +28,13 @@ jobs:
           npx vitest run
 
       # 2) Frontend: lint + build
-      - name: App — lint
+      - name: App - lint
         working-directory: app
         run: |
           npm ci
           npm run lint
 
-      - name: App — build
+      - name: App - build
         working-directory: app
         run: npm run build
 

@@ -1,5 +1,5 @@
 #!/bin/sh
-# demo-update.sh — actualiza la demo pública de Keynest desde la última release.
+# demo-update.sh - actualiza la demo pública de Keynest desde la última release.
 #
 # La demo se desplegaba a mano (copiar dist, reiniciar y escribir el marker), y
 # ese camino ya dejó el marker atrás: la API decía una versión y el código era

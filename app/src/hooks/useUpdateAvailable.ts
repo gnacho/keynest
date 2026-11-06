@@ -1,4 +1,4 @@
-// update-check.ts — aviso proactivo de versión nueva (anti pantalla negra).
+// update-check.ts - aviso proactivo de versión nueva (anti pantalla negra).
 // Ver webapp-shell references/actualizaciones.md. Sondea la versión del PROPIO
 // servidor (no GitHub) y avisa cuando cambia tras un despliegue.
 import { useEffect, useState } from 'react';

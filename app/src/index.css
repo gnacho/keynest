@@ -122,7 +122,7 @@
     --text-muted: #5b6b84;
     --text-faint: #94a3b8;
 
-    /* Tints semánticos (chips) — claro */
+    /* Tints semánticos (chips) - claro */
     --em-chip-bg: #d1fae5;
     --em-chip-text: #065f46;
     --or-chip-bg: #ffedd5;
@@ -168,7 +168,7 @@
     --text-muted: #93a1b8;
     --text-faint: #5c6b85;
 
-    /* Tints semánticos (chips) — oscuro */
+    /* Tints semánticos (chips) - oscuro */
     --em-chip-bg: #052e22;
     --em-chip-text: #6ee7b7;
     --or-chip-bg: #431407;
@@ -301,7 +301,7 @@
  * shell (header móvil + bottom nav) permanece estático. Se capturan como grupos
  * de view-transition PROPIOS (keynest-header/keynest-nav) para no depender de
  * cómo el navegador capture el grupo root con position:fixed (falla en
- * dispositivos reales — lección Helios #93). */
+ * dispositivos reales - lección Helios #93). */
 @media (max-width: 767px) {
   main {
     view-transition-name: keynest-content;

@@ -1,4 +1,4 @@
-# Plan — Mockup PWA "Gestor de inmuebles de alquiler"
+# Plan - Mockup PWA "Gestor de inmuebles de alquiler"
 
 ## Objetivo
 Mockup navegable (frontend-only, datos mock deterministas) de la PWA de gestión de inmuebles Airbnb,
@@ -14,17 +14,17 @@ provider síncrono de datos, tokens de diseño, layout app-like (sidebar desktop
 
 ## Etapas
 
-### Stage 1 — Orquestación y scaffolding (skill: vibecoding-webapp-swarm)
+### Stage 1 - Orquestación y scaffolding (skill: vibecoding-webapp-swarm)
 - Cargar skill vibecoding-webapp-swarm y seguir su workflow
 - Setup del proyecto React+Vite+Tailwind en worktree/entorno de trabajo
 - Design system: tokens CSS, fuentes, layout (sidebar 232px / bottom-nav 64px + safe-area)
 
-### Stage 2 — Datos mock + Provider
+### Stage 2 - Datos mock + Provider
 - DataProvider síncrono con dataset determinista (semilla): 4-5 inmuebles, reservas ~2 meses,
   accesos Tedee, tareas limpieza/mantenimiento, gastos, personas
 - KPIs computados desde los datos (regla del skill: nunca escritos a mano)
 
-### Stage 3 — Vistas (8 pantallas)
+### Stage 3 - Vistas (8 pantallas)
 1. Login (mock)
 2. Dashboard: ocupación actual, próximas entradas/salidas, alertas limpieza, accesos Tedee, rentabilidad rápida
 3. Calendario mensual: colores por tipo, filtros inmueble/tipo, días fuera de mes oscurecidos, click → detalle reserva
@@ -35,12 +35,12 @@ provider síncrono de datos, tokens de diseño, layout app-like (sidebar desktop
 8. Rentabilidad: barras + quesito, comparativa período anterior, desglose por inmueble, alta de gasto
 9. Maestros/Ajustes: inmuebles (solo lectura + tuerca), personas, tipos de gasto
 
-### Stage 4 — PWA + build + entrega
+### Stage 4 - PWA + build + entrega
 - manifest.webmanifest, theme-color dinámico, icono
 - Build de producción, verificación visual (screenshots desktop + móvil)
 - Entrega con mshtools-website_version_manager (build_version, type: static)
 
 ## Asignación de sub-agentes
-- 1 coder principal (build completo del mockup) — tarea grande pero cohesiva; dividir en
+- 1 coder principal (build completo del mockup) - tarea grande pero cohesiva; dividir en
   componentes compartidos + vistas si el skill swarm lo indica
 - Verificación visual por el orquestador (screenshots)

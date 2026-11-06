@@ -316,7 +316,7 @@ app.post('/api/update/apply', auth.requireAdmin(prodDb, demoDb), async (c) => {
   return c.json({ requested: true, restarting: true }, 202)
 })
 
-/* Rollback (#154): misma mecánica que el apply — escribe el flag
+/* Rollback (#154): misma mecánica que el apply - escribe el flag
    .rollback-requested; el .path lanza keynest-update.service que restaura el
    último backup (public.bak-X / server.bak-X) y reinicia. Async: el front
    sondea /api/version hasta que el build cambia (o aparece el marker anterior). */
@@ -396,7 +396,7 @@ app.delete('/api/users/:id', auth.requireAdmin(prodDb, demoDb), (c) => {
 
 /* Importar CSV "Historial de transacciones" de Airbnb (solo admin).
  * dry=true (defecto) = vista previa; dry=false = aplica (idempotente).
- * map: { nombreListing: propertyId } — vive en la petición, no en el repo. */
+ * map: { nombreListing: propertyId } - vive en la petición, no en el repo. */
 const importSchema = z.object({
   csv: z.string().min(1).max(5 * 1024 * 1024),
   dry: z.boolean().default(true),
@@ -1043,7 +1043,7 @@ guarded.delete('/people/:id', (c) => {
 })
 
 /* Token de acceso por enlace (capability URL): se guarda SOLO el hash; el plano se devuelve una vez.
-   REGLA: solo personas de limpieza — los proveedores usan token POR ORDEN de trabajo.
+   REGLA: solo personas de limpieza - los proveedores usan token POR ORDEN de trabajo.
    v12: además del hash se guarda el token en claro CIFRADO (token_cipher, AES-GCM con ENC_KEY)
    para poder recuperarlo y volver a copiarlo (GET) sin regenerar el enlace. */
 guarded.post('/people/:id/token', (c) => {

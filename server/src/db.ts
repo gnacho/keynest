@@ -43,7 +43,7 @@ export interface UserRow {
 /**
  * Migraciones versionadas (patrón skill references/sqlite.md):
  * una versión por entrada, en transacción, registrada en schema_version.
- * NUNCA editar una ya aplicada — añadir una nueva al final.
+ * NUNCA editar una ya aplicada - añadir una nueva al final.
  */
 const MIGRATIONS = [
   // 1: bathrooms en properties

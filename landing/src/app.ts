@@ -1,4 +1,4 @@
-/* Keynest landing — app.js: i18n, tema, slider, comparativa, copiar */
+/* Keynest landing - app.js: i18n, tema, slider, comparativa, copiar */
 
 const SHOTS = [
   { id: 'dashboard', alt: 'shots.altDashboard' },
@@ -19,7 +19,7 @@ const COMPARE = [
       ['compare.rPrice', '0 €', 'desde 28 €/mes', 'desde ~47 $/mes', 'por listado', 'desde 15,50 €/mes', 'desde 9 $/listado'],
       ['compare.rSelf', '✓', '✗', '✗', '✗', '✗', '✗'],
       ['compare.rOpen', '✓', '✗', '✗', '✗', '✗', '✗'],
-      ['compare.rCom', '✓', '◐', '✗', '—', '✗', '—'],
+      ['compare.rCom', '✓', '◐', '✗', '-', '✗', '-'],
     ],
   },
   {

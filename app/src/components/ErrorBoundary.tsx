@@ -1,4 +1,4 @@
-// ErrorBoundary.tsx — red de seguridad de render (anti pantalla negra).
+// ErrorBoundary.tsx - red de seguridad de render (anti pantalla negra).
 // Ver webapp-shell references/actualizaciones.md. Envolver el <Suspense> de las
 // vistas: cualquier error de render muestra tarjeta con botón "Recargar".
 import { Component } from 'react';

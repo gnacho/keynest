@@ -33,7 +33,7 @@ una caja Linux pequeña.
 
 > **Prueba la demo en vivo**
 >
-> Mírala en funcionamiento sin instalar nada. Entra en **[demo.keynest.cloudless.club](https://demo.keynest.cloudless.club)** — inmuebles, reservas y limpiezas de ejemplo, sin registro. En modo de solo lectura, para que explores sin riesgo.
+> Mírala en funcionamiento sin instalar nada. Entra en **[demo.keynest.cloudless.club](https://demo.keynest.cloudless.club)** - inmuebles, reservas y limpiezas de ejemplo, sin registro. En modo de solo lectura, para que explores sin riesgo.
 
 ## ¿Por qué existe?
 

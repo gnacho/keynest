@@ -1,6 +1,6 @@
 #!/bin/sh
 # =============================================================================
-# Keynest — one-liner installer (Linux server)
+# Keynest - one-liner installer (Linux server)
 #
 #   Self-hosted property management for Airbnb hosts: reservations (iCal),
 #   cleanings, smart locks and profitability (Node 24 + SQLite, frontend built).
@@ -53,7 +53,7 @@ run()   { if [ "$DRY_RUN" -eq 1 ]; then info "[dry-run] $*"; else "$@"; fi; }
 
 usage() {
     cat <<EOF
-Keynest — installer ($DESCRIPTION)
+Keynest - installer ($DESCRIPTION)
 
 Usage: sh install.sh [options]
   --version=X.Y.Z   version to install (default: latest stable release)
@@ -148,7 +148,7 @@ if [ -n "${AVAIL_MB:-}" ]; then
 fi
 MEM_MB=$(awk '/^MemAvailable:/ {print int($2/1024)}' /proc/meminfo 2>/dev/null || true)
 if [ -n "${MEM_MB:-}" ] && [ "$MEM_MB" -lt 400 ]; then
-    warn "low memory: ${MEM_MB} MB available — Node 24 + Keynest is happier with 400+ MB"
+    warn "low memory: ${MEM_MB} MB available - Node 24 + Keynest is happier with 400+ MB"
 fi
 
 # ------------------------------------------------------ port pre-flight -----
@@ -172,7 +172,7 @@ pick_port() {
 
 tty_ok() { (exec 3<>/dev/tty) 2>/dev/null; }
 
-# choose_port WANT — interactive (TTY): asks which port to use, suggesting the
+# choose_port WANT - interactive (TTY): asks which port to use, suggesting the
 # next free one and rejecting busy/invalid answers. Non-interactive: prints the
 # next free port. Prints the chosen port on stdout; fails if none is free.
 choose_port() {
@@ -205,8 +205,8 @@ PORT="$DEFAULT_PORT"
 if [ ! -f "$ENV_FILE" ]; then
     if port_in_use "$DEFAULT_PORT"; then
         PORT=$(choose_port "$DEFAULT_PORT") \
-            || fatal 25 "port $DEFAULT_PORT is busy and no free port found in $((DEFAULT_PORT + 1))-$((DEFAULT_PORT + 21)) — set one manually in $ENV_FILE after install"
-        warn "port $DEFAULT_PORT is already in use — Keynest will listen on $PORT instead"
+            || fatal 25 "port $DEFAULT_PORT is busy and no free port found in $((DEFAULT_PORT + 1))-$((DEFAULT_PORT + 21)) - set one manually in $ENV_FILE after install"
+        warn "port $DEFAULT_PORT is already in use - Keynest will listen on $PORT instead"
     else
         ok "port $DEFAULT_PORT is free"
     fi
@@ -249,7 +249,7 @@ fetch_to "$BASE_URL/checksums.txt" "$TMP/checksums.txt" || fatal 32 "checksums.t
 SUM_FILE=$(sha256sum "$TMP/$ASSET" | awk '{print $1}')
 SUM_REF=$(grep "  $ASSET\$" "$TMP/checksums.txt" | awk '{print $1}')
 [ -n "$SUM_REF" ] || fatal 33 "$ASSET not listed in checksums.txt"
-[ "$SUM_FILE" = "$SUM_REF" ] || fatal 33 "sha256 MISMATCH for $ASSET — corrupt or tampered download"
+[ "$SUM_FILE" = "$SUM_REF" ] || fatal 33 "sha256 MISMATCH for $ASSET - corrupt or tampered download"
 ok "sha256 verified"
 tar -tzf "$TMP/$ASSET" >/dev/null 2>&1 || fatal 34 "tarball is corrupt"
 
@@ -319,7 +319,7 @@ fi
 if [ "$DRY_RUN" -eq 1 ]; then info "[dry-run] would write systemd unit + enable --now"; else
     $SUDO tee "/etc/systemd/system/$SERVICE_NAME.service" >/dev/null <<EOF
 [Unit]
-Description=Keynest — $DESCRIPTION
+Description=Keynest - $DESCRIPTION
 After=network-online.target
 Wants=network-online.target
 
@@ -387,7 +387,7 @@ else
         $SUDO systemctl enable --now "$SERVICE_NAME-update.timer"
         ok "auto-update timer instalado (semanal; releases estables + sha256)"
     else
-        warn "deploy/keynest-update.sh no está en el release — auto-update no instalado"
+        warn "deploy/keynest-update.sh no está en el release - auto-update no instalado"
     fi
 fi
 
@@ -399,7 +399,7 @@ printf 'Node:     %s\n' "$NODE_BIN"
 printf 'Data:     %s\n' "$STATE_DIR"
 printf 'Access:   http://<this-machine-ip>:%s\n' "$PORT"
 if [ "${FRESH_CREDENTIALS:-0}" -eq 1 ] && [ "$DRY_RUN" -eq 0 ]; then
-    printf '\nInitial credentials (shown ONCE — change them after logging in):\n'
+    printf '\nInitial credentials (shown ONCE - change them after logging in):\n'
     printf '  user:     admin\n  password: %s\n' "$ADMIN_PASS"
 fi
 printf '\nUseful commands:\n'
@@ -408,7 +408,7 @@ printf '  sh install.sh              # update to the latest stable version\n'
 printf '  sh install.sh --uninstall\n'
 printf '\nNotes:\n'
 printf '  - Demo data (5 sample properties + reservations) is seeded alongside the\n'
-printf '    real database — enable demo mode from Settings to explore safely.\n'
+printf '    real database - enable demo mode from Settings to explore safely.\n'
 printf '  - No firewall port was opened. If you need one:\n'
 printf '      firewall-cmd --permanent --add-port=%s/tcp && firewall-cmd --reload\n' "$PORT"
 printf '      ufw allow %s/tcp\n' "$PORT"

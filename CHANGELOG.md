@@ -644,7 +644,7 @@ y este proyecto se adhiere a [Versionado Semántico](https://semver.org/lang/es/
 
 ### Fixed
 
-- **Vulnerabilidad HIGH (CSRF en modo RSC)**: GHSA-qwww-vcr4-c8h2, afectaba a react-router 7.12.0–8.2.0; cerrada con react-router 8.3.0.
+- **Vulnerabilidad HIGH (CSRF en modo RSC)**: GHSA-qwww-vcr4-c8h2, afectaba a react-router 7.12.0-8.2.0; cerrada con react-router 8.3.0.
 - Subir foto de inmueble devolvía 500 (d.name indefinido).
 
 ## [1.4.0] - 2026-08-01

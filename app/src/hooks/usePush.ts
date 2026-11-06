@@ -1,4 +1,4 @@
-// usePush — Web Push: detección de soporte, suscripción y baja.
+// usePush - Web Push: detección de soporte, suscripción y baja.
 // Reglas (skill web-push-alerts): el prompt nativo SOLO tras gesto del usuario;
 // iOS necesita la PWA instalada; sin secure context (LAN HTTP) el push está
 // dormido y se activará solo cuando la app se sirva por HTTPS.

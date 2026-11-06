@@ -1,4 +1,4 @@
-// airbnb-sync.test.js — cruce del scraper de Airbnb: guests+amount por
+// airbnb-sync.test.js - cruce del scraper de Airbnb: guests+amount por
 // confirmation_code + aviso push de sesión muerta/recuperada (forzar: true).
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'

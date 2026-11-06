@@ -33,7 +33,7 @@ function insertCleaning(id: string, { workLog = '[]', supplies = '[]', materials
   ).run(id, date, workLog, supplies, materials);
 }
 
-describe('issue #209 — gasto automático de limpieza vinculado', () => {
+describe('issue #209 - gasto automático de limpieza vinculado', () => {
   it('la migración 22 añade source_cleaning_id a expenses', () => {
     const cols = (db.prepare('PRAGMA table_info(expenses)').all() as Array<{ name: string }>).map((c) => c.name);
     expect(cols).toContain('source_cleaning_id');

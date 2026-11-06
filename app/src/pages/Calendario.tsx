@@ -66,7 +66,7 @@ const KIND_TEXT: Record<string, { bg: string; text: string; solid: string }> = {
   estancia: { bg: 'var(--bl-chip-bg)', text: 'var(--bl-chip-text)', solid: '#3B82F6' },
 };
 
-/* Chip con nombre de inmueble (vista "todos", desktop) — semántica invariable */
+/* Chip con nombre de inmueble (vista "todos", desktop) - semántica invariable */
 const NAME_CHIP_STYLE: Record<string, { backgroundColor?: string; backgroundImage?: string; color: string }> = {
   entrada: { backgroundColor: 'var(--em-chip-bg)', color: 'var(--em-chip-text)' },
   salida: { backgroundColor: 'var(--or-chip-bg)', color: 'var(--or-chip-text)' },
@@ -87,7 +87,7 @@ export default function Calendario() {
   const [params, setParams] = useSearchParams();
 
   const now = new Date();
-  // Letras de día lun–dom según idioma
+  // Letras de día lun-dom según idioma
   const WEEKDAYS = useMemo(() => {
     const base = new Date(2024, 0, 1); // lunes
     return Array.from({ length: 7 }, (_, i) =>
@@ -108,7 +108,7 @@ export default function Calendario() {
   const inmueble = params.get('inmueble') ?? 'todos';
   const reservaParam = params.get('reserva');
   const typeFilters = parseTipoParam(params.get('tipo'));
-  // Modo "solo desocupado": el único filtro activo — los inmuebles LIBRES generan entradas.
+  // Modo "solo desocupado": el único filtro activo - los inmuebles LIBRES generan entradas.
   const onlyDesocupado =
     typeFilters.desocupado && !typeFilters.entrada && !typeFilters.salida && !typeFilters.estancia;
   const allProps = data.getProperties();
@@ -337,7 +337,7 @@ export default function Calendario() {
         </div>
       </div>
 
-      {/* Cabecera de semana lun–dom */}
+      {/* Cabecera de semana lun-dom */}
       <div className="grid grid-cols-7 gap-px">
         {WEEKDAYS.map((d) => (
           <p
@@ -459,7 +459,7 @@ export default function Calendario() {
                   )}
                 </span>
 
-                {/* Marcadores — también en días fuera de mes, apagados */}
+                {/* Marcadores - también en días fuera de mes, apagados */}
                 <span className={cn('mt-auto flex flex-col gap-[3px] pt-1', !inMonth && 'opacity-45')}>
                   {single && singleInfo
                     ? singleMarker(singleInfo)
