@@ -87,13 +87,40 @@ async function latestInfo(prodDb: DB): Promise<{ id: string; body: string; stale
         console.error(`[update] rate-limit de GitHub (cuota agotada; reset ${cuando})`)
       }
     }
-  } catch { /* red caída: caer al last-known-good */ }
+  } catch { /* red caída: probar el respaldo y luego el last-known-good */ }
+  // Respaldo sin cuota (#353): la API sin token da 60 req/h por IP y se agota,
+  // pero github.com/<repo>/releases/latest sigue respondiendo 302 al tag de la
+  // última estable. Solo da la versión, así que las notas se reusan de la caché
+  // cuando coinciden. Se guarda sin etag para que el próximo chequeo vuelva a
+  // intentar la API y recupere el changelog completo.
+  const porRedirect = await latestPorRedireccion()
+  if (porRedirect) {
+    const body = cached?.id === porRedirect ? cached.body ?? '' : ''
+    kvSet(prodDb, CACHE_KEY, JSON.stringify({ at: Date.now(), id: porRedirect, body, etag: '' }))
+    return { id: porRedirect, body, stale: false }
+  }
   // Last-known-good (#265): servir la versión conocida ≤24h como stale en
   // vez de "sin novedades"; solo sin dato útil devolvemos null (checkFailed).
   if (cached && Date.now() - cached.at < STALE_TTL) {
     return { id: cached.id, body: cached.body ?? '', stale: true }
   }
   return null
+}
+
+// Resuelve la última estable por la redirección pública de GitHub, sin API.
+async function latestPorRedireccion(): Promise<string | null> {
+  try {
+    const res = await fetch(`https://github.com/${REPO}/releases/latest`, {
+      headers: { 'User-Agent': 'keynest-updater' },
+      redirect: 'manual',
+      signal: AbortSignal.timeout(10000),
+    })
+    const location = res.headers.get('location') ?? ''
+    const m = location.match(/\/releases\/tag\/v?(\d+\.\d+\.\d+)\s*$/)
+    return m ? m[1] : null
+  } catch {
+    return null
+  }
 }
 
 // Comparación semver numérica: '1.10.0' > '1.9.0'; prefijos 'v' y pre-release ignorados.

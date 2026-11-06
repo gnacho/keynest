@@ -18,6 +18,7 @@ import {
   Settings2,
   ShieldCheck,
   Trash2,
+  TriangleAlert,
   UserRoundPlus,
   Users,
   Wallet,
@@ -122,6 +123,18 @@ const inputCls =
 const inputStyle = { borderColor: 'var(--border)' };
 
 /* ================================================================== Página */
+// Estado del actualizador (#353): checkFailed y stale distinguen "no se pudo
+// comprobar" de "no hay novedades". Sin ellos la UI decía "al día" con GitHub
+// caído o con la cuota de la API agotada.
+interface UpdateStatusInfo {
+  current: string;
+  latest: string | null;
+  available: boolean;
+  checkFailed?: boolean;
+  stale?: boolean;
+  readiness?: { disk: { ok: boolean; detail: string }; writable: { ok: boolean; detail: string }; concurrent: { ok: boolean; detail: string }; asset: { ok: boolean; detail: string } };
+}
+
 export default function Ajustes() {
   const { t: tr } = useTranslation();
   const data = useData();
@@ -218,10 +231,7 @@ export default function Ajustes() {
 
   /* ---- Preferencias ---- */
   const [demoOn, setDemoOn] = useState(true);
-  const [updateInfo, setUpdateInfo] = useState<{
-    current: string; latest: string | null; available: boolean;
-    readiness?: { disk: { ok: boolean; detail: string }; writable: { ok: boolean; detail: string }; concurrent: { ok: boolean; detail: string }; asset: { ok: boolean; detail: string } };
-  } | null>(null);
+  const [updateInfo, setUpdateInfo] = useState<UpdateStatusInfo | null>(null);
   const [applying, setApplying] = useState(false);
   const [rollingBack, setRollingBack] = useState(false);
   const [openPanel, setOpenPanel] = useState<'backup' | 'users' | 'audit' | null>(null);
@@ -243,7 +253,7 @@ export default function Ajustes() {
 
   const checkUpdate = async () => {
     try {
-      const data = await api<{ current: string; latest: string | null; available: boolean }>('/api/update/status');
+      const data = await api<UpdateStatusInfo>('/api/update/status');
       setUpdateInfo(data);
       if (data?.available && data.latest) notifyRibbon(data.latest);
     } catch { /* noop */ }
@@ -1069,6 +1079,22 @@ export default function Ajustes() {
                             {tr('aj.rollback')}
                           </button>
                         </>
+                      ) : updateInfo.checkFailed || updateInfo.stale ? (
+                        <div className="flex flex-col gap-1">
+                          <span className="inline-flex h-9 items-center gap-1.5 text-xs font-medium" style={{ color: 'rgb(var(--warn-rgb))' }}>
+                            <TriangleAlert className="h-3.5 w-3.5" />
+                            {tr(updateInfo.checkFailed ? 'aj.actualizacionSinComprobar' : 'aj.actualizacionStale')}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => { setUpdateInfo(null); void checkUpdate(); }}
+                            className="inline-flex h-7 w-fit items-center gap-1 rounded-lg border px-2 text-[11px] font-semibold transition-colors hover:bg-[var(--surface-2)]"
+                            style={{ borderColor: 'var(--border)', color: 'var(--text-muted)' }}
+                          >
+                            <RefreshCw className="h-3 w-3" />
+                            {tr('aj.reintentarComprobacion')}
+                          </button>
+                        </div>
                       ) : (
                         <span className="inline-flex h-9 items-center gap-1.5 text-xs font-medium text-emerald-500">
                           <Check className="h-3.5 w-3.5" />
