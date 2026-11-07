@@ -244,6 +244,50 @@ describe('aplicarCruce', () => {
     expect(fila).toMatchObject({ airbnb_sync_state: 'matched', airbnb_status: 'upcoming', guests: 3 })
   })
 
+  it('detecta una salida anticipada una sola vez y actualiza las fechas (#356)', () => {
+    db.prepare("INSERT INTO properties (id, slug, name, created_at) VALUES ('p1', 'el-47', 'El 47', 0)").run()
+    insertaReserva('res-short', 'HM-SHORT', {
+      uid: 'short@airbnb.com',
+      checkin: '2026-08-10',
+      checkout: '2026-08-20',
+      guest_name: 'Test Guest',
+      airbnb_sync_state: 'matched',
+    })
+    escribeReservas([{
+      confirmation_code: 'HM-SHORT',
+      checkin: '2026-08-10',
+      checkout: '2026-08-15',
+      guests: 1,
+      amount: 500,
+    }])
+
+    const primera = aplicarCruce(db)
+
+    expect(primera.acortadas).toEqual([{
+      reservationId: 'res-short',
+      propertyName: 'El 47',
+      summary: 'A',
+      checkin: '2026-08-10',
+      previousCheckout: '2026-08-20',
+      checkout: '2026-08-15',
+      guestName: 'Test Guest',
+      confirmationCode: 'HM-SHORT',
+      amount: 500,
+    }])
+    expect(db.prepare("SELECT checkin, checkout FROM reservations WHERE id = 'res-short'").get()).toEqual({
+      checkin: '2026-08-10',
+      checkout: '2026-08-15',
+    })
+
+    const repetida = aplicarCruce(db)
+    expect(repetida.acortadas).toHaveLength(0)
+
+    escribeReservas([{ confirmation_code: 'HM-SHORT', checkin: '2026-08-10', checkout: '2026-08-22' }])
+    const ampliada = aplicarCruce(db)
+    expect(ampliada.acortadas).toHaveLength(0)
+    expect(db.prepare("SELECT checkout FROM reservations WHERE id = 'res-short'").get()).toEqual({ checkout: '2026-08-22' })
+  })
+
   // #334: una cancelación confirmada en el scraper borra en cascada y avisa.
   it('borra reserva, pagos y limpiezas cuando el scraper confirma la cancelación', () => {
     insertaReserva('res-cancel', 'HM-CANCEL', {
@@ -325,6 +369,42 @@ describe('syncAirbnb', () => {
       'airbnb_sesion_ok',
       expect.anything(),
       expect.objectContaining({ severity: 'normal' }),
+    )
+  })
+
+  it('avisa por push la salida anticipada al cruzarla con el scraper (#356)', async () => {
+    db.prepare("INSERT INTO properties (id, slug, name, created_at) VALUES ('p1', 'el-47', 'El 47', 0)").run()
+    insertaReserva('res-short-push', 'HM-SHORT-PUSH', {
+      uid: 'short-push@airbnb.com',
+      checkin: '2027-01-04',
+      checkout: '2027-03-14',
+      guest_name: 'Test Guest',
+      airbnb_sync_state: 'matched',
+    })
+    escribeSesion(true)
+    escribeReservas([{
+      confirmation_code: 'HM-SHORT-PUSH',
+      checkin: '2027-01-04',
+      checkout: '2027-03-10',
+      guest_name: 'Test Guest',
+      amount: 500,
+    }])
+
+    await syncAirbnb(db)
+
+    expect(notifyAll).toHaveBeenCalledWith(
+      expect.anything(),
+      'reserva_acortada',
+      expect.objectContaining({
+        propiedad: 'El 47',
+        huesped: 'Test Guest',
+        codigo: 'HM-SHORT-PUSH',
+        checkin: '2027-01-04',
+        checkout_anterior: '2027-03-14',
+        checkout: '2027-03-10',
+        importe: 500,
+      }),
+      expect.objectContaining({ severity: 'high', url: '/reservas?reserva=res-short-push' }),
     )
   })
 

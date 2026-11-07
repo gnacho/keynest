@@ -4,6 +4,7 @@ import { kvGet, kvSet } from './db.js'
 import type { DB } from './db.js'
 import type { IcsReservation } from './ical.js'
 import { hoyLocal } from './alerts.js'
+import type { ReservaAcortadaItem } from './alerts.js'
 import { cancelBooking, estaCancelada, tombstonesVigentes } from './cancel-booking.js'
 import type { CancelledBooking } from './cancel-booking.js'
 
@@ -20,9 +21,10 @@ import type { CancelledBooking } from './cancel-booking.js'
  */
 export async function syncAll(
   db: DB,
-  { onNews, onCancelled, fetchIcs: fetchFeed = fetchIcs } = {} as {
+  { onNews, onCancelled, onShortened, fetchIcs: fetchFeed = fetchIcs } = {} as {
     onNews?: (name: string, items: IcsReservation[]) => void
     onCancelled?: (name: string, items: CancelledBooking[]) => void
+    onShortened?: (name: string, items: ReservaAcortadaItem[]) => void
     fetchIcs?: typeof fetchIcs
   }
 ) {
@@ -56,9 +58,37 @@ export async function syncAll(
           phone_last4 = excluded.phone_last4,
           airbnb_sync_state = CASE WHEN reservations.airbnb_sync_state = '' THEN 'pending' ELSE reservations.airbnb_sync_state END
       `)
+      const findExisting = db.prepare(
+        `SELECT id, property_id, checkin, checkout, summary, confirmation_code, guest_name, amount
+         FROM reservations WHERE uid = ?`
+      )
       const canceladas: CancelledBooking[] = []
+      const acortadas: ReservaAcortadaItem[] = []
       const tx = db.transaction(() => {
         for (const i of items) {
+          const prev = findExisting.get(i.uid) as {
+            id: string
+            property_id: string
+            checkin: string
+            checkout: string
+            summary: string
+            confirmation_code: string
+            guest_name: string | null
+            amount: number | null
+          } | undefined
+          if (prev && prev.property_id === p.id && i.checkout < prev.checkout) {
+            acortadas.push({
+              reservationId: prev.id,
+              propertyName: p.name,
+              summary: i.summary || prev.summary,
+              checkin: i.checkin,
+              previousCheckout: prev.checkout,
+              checkout: i.checkout,
+              confirmationCode: i.confirmation_code || prev.confirmation_code,
+              guestName: prev.guest_name || '',
+              amount: prev.amount || 0,
+            })
+          }
           upsert.run(crypto.randomUUID(), p.id, i.uid, i.checkin, i.checkout, i.summary, i.confirmation_code, i.phone_last4, now)
         }
         // Solo borra uds ORIGEN iCal (@airbnb.com): las reservas importadas
@@ -91,6 +121,7 @@ export async function syncAll(
         const avisables = canceladas.filter((c) => c.matched)
         if (avisables.length > 0) onCancelled(p.name, avisables)
       }
+      if (onShortened && acortadas.length > 0) onShortened(p.name, acortadas)
       const status = { ok: true, at: now, count: items.length, cancelled: canceladas.length }
       kvSet(db, key, JSON.stringify(status))
       results.push({ propertyId: p.id, name: p.name, ...status })

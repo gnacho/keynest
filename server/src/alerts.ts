@@ -135,6 +135,38 @@ export function notifyReservasNuevas(db: DB, propiedad: string, items: ReservaIt
   }
 }
 
+export interface ReservaAcortadaItem {
+  reservationId: string
+  propertyName: string
+  summary: string
+  checkin: string
+  previousCheckout: string
+  checkout: string
+  guestName?: string
+  confirmationCode?: string
+  amount?: number
+}
+
+export function notifyReservasAcortadas(db: DB, items: ReservaAcortadaItem[], notifyFn: NotifyFn = notifyAll): void {
+  for (const i of items) {
+    notifyFn(
+      db,
+      'reserva_acortada',
+      {
+        propiedad: i.propertyName,
+        resumen: i.summary,
+        huesped: i.guestName || '',
+        codigo: i.confirmationCode || '',
+        checkin: i.checkin,
+        checkout_anterior: i.previousCheckout,
+        checkout: i.checkout,
+        importe: i.amount && i.amount > 0 ? i.amount : 0,
+      },
+      { severity: 'high', url: `/reservas?reserva=${i.reservationId}` }
+    )
+  }
+}
+
 // ── Cancelación de una reserva confirmada (#334) ────────────────────────────
 // La fila ya está borrada cuando se llama; el deep-link va a la lista, no a la
 // reserva. Solo llegan reservas que estuvieron confirmadas (matched).

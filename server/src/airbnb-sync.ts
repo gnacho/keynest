@@ -21,9 +21,10 @@ import path from 'node:path'
 import { kvGet, kvSet } from './db.js'
 import type { DB } from './db.js'
 import { notifyAll } from './push.js'
-import { hoyLocal, notifyReservasCanceladas } from './alerts.js'
+import { hoyLocal, notifyReservasAcortadas, notifyReservasCanceladas } from './alerts.js'
 import { cancelBooking, esCancelacionConfirmada } from './cancel-booking.js'
 import type { CancelledBooking } from './cancel-booking.js'
+import type { ReservaAcortadaItem } from './alerts.js'
 
 const DEF_DIR = '/opt/airbnb-scraper/data'
 const DEF_SESION = '/opt/airbnb-scraper/.auth/airbnb_session.json'
@@ -168,9 +169,16 @@ export function aplicarCruce(db: DB) {
   const parsedSnapshot = Date.parse(reservas?.extraido || '')
   const snapshotMs = Number.isFinite(parsedSnapshot) ? parsedSnapshot : Date.now()
 
-  const stmtGet = db.prepare('SELECT id FROM reservations WHERE confirmation_code = ?')
+  const stmtGet = db.prepare(`
+    SELECT r.id, r.checkin, r.checkout, r.summary, r.confirmation_code, r.guest_name, r.amount,
+           r.airbnb_synced_at, p.name AS property_name
+    FROM reservations r LEFT JOIN properties p ON p.id = r.property_id
+    WHERE r.confirmation_code = ?
+  `)
   const stmtUpd = db.prepare(`
     UPDATE reservations SET
+      checkin = COALESCE(?, checkin),
+      checkout = COALESCE(?, checkout),
       guests = ?,
       amount = ?,
       guest_name = CASE WHEN TRIM(COALESCE(guest_name, '')) = '' THEN COALESCE(?, guest_name) ELSE guest_name END,
@@ -200,6 +208,7 @@ export function aplicarCruce(db: DB) {
   let cruzadas = 0
   let sinMatch = 0
   const canceladas: CancelledBooking[] = []
+  const acortadas: ReservaAcortadaItem[] = []
   const viva = sesion?.viva !== false
 
   if (reservas && Array.isArray(reservas.reservas)) {
@@ -208,7 +217,17 @@ export function aplicarCruce(db: DB) {
       for (const r of reservas.reservas) {
         if (!r || !r.confirmation_code) continue
         codes.add(r.confirmation_code)
-        const fila = stmtGet.get(r.confirmation_code) as { id: string } | undefined
+        const fila = stmtGet.get(r.confirmation_code) as {
+          id: string
+          checkin: string
+          checkout: string
+          summary: string
+          confirmation_code: string
+          guest_name: string | null
+          amount: number | null
+          airbnb_synced_at: number | null
+          property_name: string | null
+        } | undefined
         if (!fila) { sinMatch++; continue }
         // Cancelación confirmada en el scraper: borrado en cascada + aviso.
         // Las solicitudes pendientes (REQUESTED/PENDING) siguen su camino (#331).
@@ -216,7 +235,25 @@ export function aplicarCruce(db: DB) {
           const cancelada = cancelBooking(db, fila.id)
           if (cancelada) { canceladas.push(cancelada); continue }
         }
+        const checkin = typeof r.checkin === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(r.checkin) ? r.checkin : null
+        const checkout = typeof r.checkout === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(r.checkout) ? r.checkout : null
+        const snapshotAplicable = fila.airbnb_synced_at === null || fila.airbnb_synced_at <= snapshotMs
+        if (snapshotAplicable && checkout && checkout < fila.checkout) {
+          acortadas.push({
+            reservationId: fila.id,
+            propertyName: fila.property_name || '',
+            summary: fila.summary,
+            checkin: checkin || fila.checkin,
+            previousCheckout: fila.checkout,
+            checkout,
+            guestName: r.guest_name || fila.guest_name || '',
+            confirmationCode: fila.confirmation_code,
+            amount: r.amount ?? fila.amount ?? 0,
+          })
+        }
         const result = stmtUpd.run(
+          checkin,
+          checkout,
           r.guests ?? null,
           r.amount ?? null,
           r.guest_name ?? null,
@@ -253,7 +290,7 @@ export function aplicarCruce(db: DB) {
     extraccion_ok: !!sesion?.extraccion_ok,
     detalle: sesion?.detalle || null,
   }))
-  return { cruzadas, sinMatch, sesionViva: viva, canceladas }
+  return { cruzadas, sinMatch, sesionViva: viva, canceladas, acortadas }
 }
 
 /**
@@ -327,6 +364,9 @@ export async function syncAirbnb(db: DB) {
   const res = aplicarCruce(db)
   if (res.canceladas.length > 0) {
     notifyReservasCanceladas(db, res.canceladas)
+  }
+  if (res.acortadas.length > 0) {
+    notifyReservasAcortadas(db, res.acortadas)
   }
   const expiradas = expirarSolicitudes(db)
   if (expiradas.length > 0) {

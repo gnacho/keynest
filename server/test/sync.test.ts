@@ -133,6 +133,42 @@ END:VEVENT`,
     const row = db.prepare("SELECT airbnb_sync_state FROM reservations WHERE uid = 'nueva-sync-state@airbnb.com'").get() as { airbnb_sync_state: string };
     expect(row.airbnb_sync_state).toBe('pending');
   });
+
+  it('avisa una sola vez cuando el feed anticipa la salida (#356)', async () => {
+    db.prepare("DELETE FROM reservations").run();
+    const entrada = ymd(daysFrom(10));
+    const salidaAnterior = ymd(daysFrom(20));
+    const salidaNueva = ymd(daysFrom(15));
+    db.prepare(
+      `INSERT INTO reservations (id, property_id, uid, checkin, checkout, summary, confirmation_code, guest_name, airbnb_sync_state, created_at)
+       VALUES ('r-acortada','p1','shortened@airbnb.com',?,?,'Reserved','HMSHORT','Test Guest','matched',0)`,
+    ).run(entrada, salidaAnterior);
+    (fetchIcs as any).mockResolvedValue(feedWith([
+      'BEGIN:VEVENT',
+      `DTSTART;VALUE=DATE:${icsDT(daysFrom(10))}`,
+      `DTEND;VALUE=DATE:${icsDT(daysFrom(15))}`,
+      'UID:shortened@airbnb.com',
+      'SUMMARY:Reserved',
+      'DESCRIPTION:Reservation URL: https://www.airbnb.com/hosting/reservations/details/HMSHORT',
+      'END:VEVENT',
+    ]));
+    const onShortened = vi.fn();
+
+    await syncAll(db, { onShortened } as any);
+    await syncAll(db, { onShortened } as any);
+
+    expect(db.prepare("SELECT checkout FROM reservations WHERE id = 'r-acortada'").get()).toEqual({ checkout: salidaNueva });
+    expect(onShortened).toHaveBeenCalledTimes(1);
+    expect(onShortened).toHaveBeenCalledWith('Casa', [expect.objectContaining({
+      reservationId: 'r-acortada',
+      propertyName: 'Casa',
+      confirmationCode: 'HMSHORT',
+      guestName: 'Test Guest',
+      checkin: entrada,
+      previousCheckout: salidaAnterior,
+      checkout: salidaNueva,
+    })]);
+  });
 });
 
 describe('syncAll - cancelación en cascada (issue #334)', () => {
