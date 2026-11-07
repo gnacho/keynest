@@ -34,6 +34,7 @@ import type { DB, CleaningRow, PropertyRow } from './db.js'
 import type { TedeeLock, TedeeAccess } from './tedee.js'
 import type { IcsReservation } from './ical.js'
 import type { CancelledBooking } from './cancel-booking.js'
+import type { ReservaAcortadaItem } from './alerts.js'
 import { registerCancellationRoutes } from './routes-cancellations.js'
 
 type Row = Record<string, any>
@@ -1433,11 +1434,16 @@ const onSyncCancelled = (prop: string, items: CancelledBooking[]) => {
   // feed, no de una mutacion HTTP, asi que el middleware no emite por si solo.
   hub.broadcast('cancellations')
 }
+const onSyncShortened = (_prop: string, items: ReservaAcortadaItem[]) => {
+  alerts.notifyReservasAcortadas(prodDb, items)
+  hub.broadcast('reservations')
+}
 
-/* Cruce del scraper + aviso SSE si trajo cancelaciones (#340). */
+/* Cruce del scraper + aviso SSE si trajo cambios de reserva. */
 const syncAirbnbConAvisos = async () => {
   const res = await syncAirbnb(prodDb)
   if (res.canceladas.length > 0) hub.broadcast('cancellations')
+  if (res.acortadas.length > 0) hub.broadcast('reservations')
   return res
 }
 guarded.post('/sync', async (c) => {
@@ -1446,7 +1452,7 @@ guarded.post('/sync', async (c) => {
   if (syncing) return c.json({ error: 'ya hay una sincronización en curso' }, 409)
   syncing = true
   try {
-    const results = await syncAll(prodDb, { onNews: onSyncNews, onCancelled: onSyncCancelled })
+    const results = await syncAll(prodDb, { onNews: onSyncNews, onCancelled: onSyncCancelled, onShortened: onSyncShortened })
     // Cruce inmediato (#330): resuelve el estado Airbnb real (p. ej. solicitud
     // pendiente de aprobación) en vez de esperar al job horario
     await syncAirbnbConAvisos().catch((e) => console.error('[keynest] airbnb post-sync error:', e.message))
@@ -1601,7 +1607,7 @@ function purgeExpiredPhotos(db: DB, dataDir: string) {
 }
 
 const runSync = async () => {
-  await syncAll(prodDb, { onNews: onSyncNews, onCancelled: onSyncCancelled }).catch((e) => console.error('[sync] error job:', e.message))
+  await syncAll(prodDb, { onNews: onSyncNews, onCancelled: onSyncCancelled, onShortened: onSyncShortened }).catch((e) => console.error('[sync] error job:', e.message))
   // Cruce inmediato (#330): el snapshot del scraper suele llegar antes que el
   // iCal, así que el estado real puede resolverse en el mismo ciclo
   await syncAirbnbConAvisos().catch((e) => console.error('[keynest] airbnb post-sync error:', e.message))

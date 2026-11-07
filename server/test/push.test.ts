@@ -13,6 +13,7 @@ import { configurePush, notifyUsers, flushNotificationQueue, _setSendFn, _resetF
 import {
   checkReservasHoy,
   notifyReservasNuevas,
+  notifyReservasAcortadas,
   createTedeeChecker,
   checkLimpiezas,
   checkTransacciones,
@@ -151,6 +152,45 @@ describe('motor notifyUsers', () => {
     expect(enviados[0].payload.title).toBe('Cerradura offline')
     expect(enviados[0].payload.body).toContain('Portal')
     expect(db.prepare('SELECT * FROM push_subscriptions').all()).toHaveLength(1)
+  })
+
+  it('compone la salida anticipada en español e inglés (#356)', async () => {
+    const es = insertUser('ana', 'es')
+    const en = insertUser('bob', 'en')
+    insertSub(es, 'https://push.example.com/es')
+    insertSub(en, 'https://push.example.com/en')
+    const enviados: Array<Record<string, any>> = []
+    _setSendFn(async (sub, payload) => {
+      enviados.push({ endpoint: sub.endpoint, payload: JSON.parse(payload) })
+    })
+    configura()
+
+    const res = await notifyUsers(db, [es, en], 'reserva_acortada', {
+      propiedad: 'El 47',
+      huesped: 'Test Guest',
+      checkout_anterior: '2026-11-10',
+      checkout: '2026-11-08',
+    }, { severity: 'high', url: '/reservas?reserva=r-short' })
+
+    expect(res.enviados).toBe(2)
+    expect(enviados).toEqual([
+      {
+        endpoint: 'https://push.example.com/es',
+        payload: expect.objectContaining({
+          title: 'Salida anticipada',
+          body: 'El 47: «Test Guest» sale antes: 2026-11-10 → 2026-11-08',
+          url: '/reservas?reserva=r-short',
+        }),
+      },
+      {
+        endpoint: 'https://push.example.com/en',
+        payload: expect.objectContaining({
+          title: 'Early checkout',
+          body: 'El 47: “Test Guest” leaves earlier: 2026-11-10 → 2026-11-08',
+          url: '/reservas?reserva=r-short',
+        }),
+      },
+    ])
   })
 
   it('respeta preferencias: tipo desactivado = omitido', async () => {
@@ -294,6 +334,39 @@ describe('alertas: reservas nuevas', () => {
       resumen: 'A',
       tiempo: '2026-08-10 → 2026-08-12',
     })
+  })
+})
+
+describe('alertas: salida anticipada', () => {
+  it('avisa con la salida anterior y la nueva, severidad alta y enlace directo (#356)', () => {
+    const { llamadas, notifyFn } = captura()
+
+    notifyReservasAcortadas(db, [{
+      reservationId: 'r-short',
+      propertyName: 'El 47',
+      summary: 'Airbnb (HMSHORT)',
+      checkin: '2026-10-31',
+      previousCheckout: '2026-11-10',
+      checkout: '2026-11-08',
+      guestName: 'Test Guest',
+      confirmationCode: 'HMSHORT',
+      amount: 661.75,
+    }], notifyFn)
+
+    expect(llamadas).toEqual([{
+      tipo: 'reserva_acortada',
+      datos: {
+        propiedad: 'El 47',
+        resumen: 'Airbnb (HMSHORT)',
+        huesped: 'Test Guest',
+        codigo: 'HMSHORT',
+        checkin: '2026-10-31',
+        checkout_anterior: '2026-11-10',
+        checkout: '2026-11-08',
+        importe: 661.75,
+      },
+      opciones: { severity: 'high', url: '/reservas?reserva=r-short' },
+    }])
   })
 })
 

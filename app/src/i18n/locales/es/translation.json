@@ -828,6 +828,7 @@
       "checkout_hoy": "Check-out del día",
       "reserva_nueva": "Reserva nueva importada",
       "reserva_cancelada": "Reserva cancelada",
+      "reserva_acortada": "Salida anticipada",
       "transaccion": "Aviso de pago (mis inmuebles)",
       "tedee_offline": "Cerradura offline",
       "tedee_ok": "Cerradura recuperada",
