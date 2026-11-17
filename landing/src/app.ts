@@ -276,7 +276,22 @@ function fallbackCopy(text, done) {
 }
 
 /* ---------- Inicialización ---------- */
+// Clic en la demo: evento de GoatCounter (path demo-click) para verlo en las
+// estadísticas y poder filtrar solo eventos en goatdash. Delegado y en fase de
+// captura para cubrir todos los CTA y salir antes de la navegación.
+function initDemoEvent() {
+  document.addEventListener('click', (e) => {
+    const t = e.target as HTMLElement | null;
+    if (!t || typeof t.closest !== 'function') return;
+    if (!t.closest('a[href*="demo.keynest.cloudless.club"]')) return;
+    const gc = (window as any).goatcounter;
+    if (!gc || typeof gc.count !== 'function') return;
+    gc.count({ path: 'demo-click', title: 'Demo click', event: true });
+  }, true);
+}
+
 function init() {
+  initDemoEvent();
   const savedLang = (() => { try { return localStorage.getItem('keynest-landing-lang'); } catch (e) { return null; } })();
   const navLang = (navigator.language || 'es').toLowerCase().startsWith('en') ? 'en' : 'es';
   STATE.lang = savedLang === 'en' || savedLang === 'es' ? savedLang : navLang;
