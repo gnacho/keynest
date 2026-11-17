@@ -1,4 +1,3 @@
-"use strict";
 /* Keynest landing - i18n ES (canónico) / EN */
 const I18N = {
     es: {

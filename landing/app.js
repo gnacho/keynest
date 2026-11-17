@@ -1,4 +1,3 @@
-"use strict";
 /* Keynest landing - app.js: i18n, tema, slider, comparativa, copiar */
 const SHOTS = [
     { id: 'dashboard', alt: 'shots.altDashboard' },
@@ -267,7 +266,24 @@ function fallbackCopy(text, done) {
     done();
 }
 /* ---------- Inicialización ---------- */
+// Clic en la demo: evento de GoatCounter (path demo-click) para verlo en las
+// estadísticas y poder filtrar solo eventos en goatdash. Delegado y en fase de
+// captura para cubrir todos los CTA y salir antes de la navegación.
+function initDemoEvent() {
+    document.addEventListener('click', (e) => {
+        const t = e.target;
+        if (!t || typeof t.closest !== 'function')
+            return;
+        if (!t.closest('a[href*="demo.keynest.cloudless.club"]'))
+            return;
+        const gc = window.goatcounter;
+        if (!gc || typeof gc.count !== 'function')
+            return;
+        gc.count({ path: 'demo-click', title: 'Demo click', event: true });
+    }, true);
+}
 function init() {
+    initDemoEvent();
     const savedLang = (() => { try {
         return localStorage.getItem('keynest-landing-lang');
     }
