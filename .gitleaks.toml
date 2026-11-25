@@ -1,0 +1,10 @@
+[extend]
+useDefault = true
+
+# The Airbnb web API key is public: it ships in every page of airbnb.es and is
+# not tied to any account. Without allowlisting it, the generic-api-key rule
+# flags the constant in scripts/import-airbnb-session.py on every edit.
+[[allowlists]]
+description = "Public Airbnb web API key (client-side constant, not a credential)"
+regexTarget = "match"
+regexes = ['''d306zoyjsyarp7ifhu67rjxn52tv0t20''']
