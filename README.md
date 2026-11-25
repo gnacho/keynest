@@ -151,6 +151,21 @@ A public demo can be updated from the latest stable release with `deploy/demo-up
 
 Uploaded photos and avatars are private: the server only delivers them to an authenticated session or to a short-lived signed URL (`exp` + `sig`) bound to that exact file. The demo session is created without credentials, so it does not grant access to these files: demo pages rely on signed URLs like any other public link. Public provider and cleaning links receive signed URLs in their JSON payload, so they keep showing their images without exposing the rest of the media directory. A signature is rejected if it is reused for another file or once it expires (24 hours). Rotating `SESSION_SECRET` invalidates every signed URL already handed out, so keep it stable unless you need to revoke them all.
 
+## Airbnb host session
+
+Guest names and amounts come from the Airbnb host panel, not from the iCal feed, so Keynest needs a real browser session of the host account. Airbnb invalidates that session from time to time and the app raises a red ribbon with a **Renovar** button (admin only): it mints a one-time pairing code that expires in ten minutes and waits for the upload.
+
+`scripts/import-airbnb-session.py` completes the flow without browser automation. It takes the cookies of a logged-in browser profile, validates them against `GET /api/v2/reservations` and only then spends the code:
+
+```bash
+python3 scripts/import-airbnb-session.py --pairing-code ABC123 \
+    --keynest-url http://127.0.0.1:8081 --session storage-state.json
+```
+
+Input can be a Playwright `storage_state`, a cookie list exported by any browser extension, or any JSON with a `cookies` list (stdin by default). Dependencies: `httpx` plus `h2`. A dead session exits with code `2` and leaves the code unused, a rejected code exits with `3`, unusable input with `4`.
+
+Firefox and LibreWolf keep cookie values in plain text in `cookies.sqlite` (`moz_cookies`), so a `SELECT host, name, value, expiry FROM moz_cookies WHERE host LIKE '%airbnb%'` is enough to build the input. Chromium encrypts them with the system keyring and does not work as a source.
+
 ## Development
 
 ```bash
@@ -168,6 +183,9 @@ npm run dev
 # Tests & lint
 cd server && npm test
 cd app && npm run lint
+
+# Repair tooling tests (stdlib only)
+python3 -m unittest discover -s scripts/tests -t .
 ```
 
 ## Deploy

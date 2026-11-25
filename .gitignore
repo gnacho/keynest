@@ -27,5 +27,9 @@ data/*.db
 
 # Logs
 *.log
+
+# Python tooling
+__pycache__/
+*.pyc
 server/node_modules
 app/node_modules

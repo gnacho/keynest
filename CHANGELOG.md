@@ -12,6 +12,18 @@ y este proyecto se adhiere a [Versionado Semántico](https://semver.org/lang/es/
 > release usar `scripts/release.sh` (calcula la versión y crea el tag con el
 > mensaje correcto).
 
+## [Unreleased]
+
+### Added
+
+- **Importar la sesión de Airbnb sin navegador (#364).** `scripts/import-airbnb-session.py`
+  completa el flujo del código de emparejamiento a partir de las cookies de un
+  navegador ya logueado, sin Playwright ni automatización. Valida la sesión
+  contra Airbnb antes de gastar el código, así que una sesión muerta no consume
+  el emparejamiento. Acepta un `storage_state` de Playwright, una lista de
+  cookies exportada o cualquier JSON con `cookies[]`. Tests unitarios del
+  normalizador en `scripts/tests/`.
+
 ## [1.7.0] - 2026-11-06
 
 ### Added

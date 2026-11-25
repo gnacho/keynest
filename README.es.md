@@ -155,6 +155,21 @@ Una demo pública se puede actualizar desde la última release estable con `depl
 
 Las fotos y avatares subidos son privados: el servidor solo los entrega a una sesión autenticada o a una URL firmada de vida corta (`exp` + `sig`) ligada a ese fichero exacto. La sesión demo se emite sin credenciales, así que no da acceso a esos ficheros: sus páginas usan URLs firmadas como cualquier enlace público. Los enlaces públicos de proveedor y limpieza reciben URLs firmadas en su JSON, así siguen mostrando sus imágenes sin exponer el resto del directorio de medios. Una firma se rechaza si se reutiliza para otro fichero o cuando caduca (24 horas). Rotar `SESSION_SECRET` invalida todas las URLs firmadas ya emitidas, así que conviene mantenerlo estable salvo que quieras revocarlas todas.
 
+## Sesión de anfitrión de Airbnb
+
+Los nombres de huésped y los importes vienen del panel de anfitrión de Airbnb, no del iCal, así que Keynest necesita una sesión real de navegador de la cuenta anfitriona. Airbnb invalida esa sesión cada cierto tiempo y la app muestra un ribbon rojo con un botón **Renovar** (solo admin): genera un código de emparejamiento de un solo uso que caduca en diez minutos y espera la subida.
+
+`scripts/import-airbnb-session.py` completa el flujo sin automatización de navegador. Toma las cookies de un perfil ya logueado, las valida contra `GET /api/v2/reservations` y solo entonces gasta el código:
+
+```bash
+python3 scripts/import-airbnb-session.py --pairing-code ABC123 \
+    --keynest-url http://127.0.0.1:8081 --session storage-state.json
+```
+
+La entrada puede ser un `storage_state` de Playwright, una lista de cookies exportada por cualquier extensión o cualquier JSON con una lista `cookies` (por defecto por stdin). Dependencias: `httpx` y `h2`. Una sesión muerta termina con código `2` y deja el código sin usar, un código rechazado con `3` y una entrada inválida con `4`.
+
+Firefox y LibreWolf guardan los valores de las cookies en claro en `cookies.sqlite` (`moz_cookies`), así que basta un `SELECT host, name, value, expiry FROM moz_cookies WHERE host LIKE '%airbnb%'` para construir la entrada. Chromium las cifra con el llavero del sistema y no sirve como origen.
+
 ## Desarrollo
 
 ```bash
@@ -172,6 +187,9 @@ npm run dev
 # Tests y lint
 cd server && npm test
 cd app && npm run lint
+
+# Tests del utillaje de reparación (solo stdlib)
+python3 -m unittest discover -s scripts/tests -t .
 ```
 
 ## Despliegue
